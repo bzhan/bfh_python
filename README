@@ -1,0 +1,21 @@
+Computations in Bordered Heegaard Floer Homology
+
+Copyright (C) 2013  Bohua Zhan
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; either version 2 of the License, or (at your option) any later
+version.
+
+Based on a previous program (written in Sage) by Robert Lipshitz, Peter Ozsvath
+and Dylan Thurston:
+www.math.columbia.edu/~lipshitz/research.html
+
+Implements various algorithms described in:
+
+(all of which by R. Lipshitz, P. Ozsvath, and D. Thurston)
+arXiv:math/0810.0687 Bordered Heegaard Floer homology: Invariance and pairing
+arXiv:math/1003.0598 Bimodules in bordered Heegaard Floer homology
+arXiv:math/1005.1248 Heegaard Floer homology as morphism spaces
+arXiv:math/1010.2550 Computing HF^ by factoring mapping classes
+
+as well as other (not yet published) work.
