@@ -126,6 +126,45 @@ class TypeDGraph(ConcreteDiGraph):
                         self.graph_node[gen_from], self.graph_node[gen_to],
                         alg_coeff))
 
+class UniversalDiGraphNode(DiGraphNode, tuple):
+    """A node in the universal digraph of an algebra. A sequence of algebra
+    generators.
+
+    """
+    def __new__(cls, parent, data):
+        return tuple.__new__(cls, data)
+
+    def __init__(self, parent, data):
+        """Specifies parent DiGraph. data is the list of generators."""
+        self.parent = parent
+        # Note tuple initialization is automatic
+    
+class UniversalDiGraph(DiGraph):
+    """The universal digraph of an algebra (usually strand algebra of a PMC.)
+    Nodes correspond to ordered sequences of algebra generators. From each
+    node the set of outward edges is the set of algebra generators, appending
+    that generator onto the sequence.
+
+    """
+    def __init__(self, algebra):
+        """Create the universal digraph for the given algebra."""
+        self.algebra = algebra
+
+    def getOutEdges(self, gen_from):
+        result = []
+        for alg_gen in self.algebra.getGenerators():
+            if not alg_gen.isIdempotent():
+                gen_to = UniversalDiGraphNode(self, gen_from + (alg_gen,))
+                result.append(TypeDGraphEdge(gen_from, gen_to, alg_gen))
+        return result
+
+    def getInitialNode(self):
+        """Return the starting node, consisting of the empty sequence of
+        generators.
+
+        """
+        return UniversalDiGraphNode(self, tuple())
+
 class TypeDDGraphNode(DiGraphNode):
     """A node in a type DD graph. Stores the generator of type DD structure as
     well as a strand diagram whose right idempotent agrees with the left
@@ -569,6 +608,22 @@ class TypeAAGraph(DiGraph):
                                               d1_end.ddgen, d2_end.ddgen)
                 ddstr.addDelta(gen_start, gen_end, d1_end.sd, d2_end.sd, 1)
         return ddstr
+
+    def getTypeDA(self, dd_graph):
+        """Returns the type DA structure formed by tensoring dd_graph with
+        self. For now self is placed at left, and dd_graph is placed at right.
+
+        """
+        assert dd_graph.tensor_side == 1
+        assert dd_graph.algebra1 == self.pmc_alg
+        univ_digraph = UniversalDiGraph(self.pmc_alg.opp())
+        for ddgen, d2_pos in dd_graph.ddgen_node.items():
+            d1_pos = univ_digraph.getInitialNode()
+            aa_pos = self.homology_node[ddgen.idem1.comp()]
+            pos = [(d1_pos, d2_pos, aa_pos)]
+            end_states = self._searchDoubleD(univ_digraph, dd_graph, pos)[0]
+            for d1_end, d2_end, aa_end in end_states:
+                print d1_end, d2_end.sd
 
 @memorize
 def getTypeAAGraph(pmc):

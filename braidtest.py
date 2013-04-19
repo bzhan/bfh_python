@@ -46,7 +46,7 @@ class HFTest(unittest.TestCase):
         to_test = ["3_1", "4_1",
                    # "12n_0210", # 1*[3 2 2 2 2 2]
                    # "12n_0292", # 1*[1 0 2 2 0 0 2 2]
-                   # "11n_6", "11n_9", "11n_24", # 3-bridge
+                   "11n_6", "11n_9", "11n_24", # 3-bridge
                    # "11a_14", "12n_0055", "12n_0056", # 4-bridge
                    ]
         with open('data/input_12_FL.txt', 'r') as input_file:

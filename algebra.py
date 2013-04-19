@@ -484,7 +484,10 @@ def expandTensor(prod, parent = None):
                 expanded2.append(((subterm[0:i]+(gen,)+subterm[i+1:]),
                                  coeff*coeff2))
         expanded = expanded2
-    return TensorElement(dict(expanded), parent)
+    if isinstance(parent, TensorStarAlgebra):
+        return TensorStarElement(dict(expanded), parent)
+    else:
+        return TensorElement(dict(expanded), parent)
 
 class TensorDGAlgebra(Tensor, DGAlgebra):
     """Tensor product of DGAlgebras is a DGAlgebra."""
@@ -525,6 +528,51 @@ class TensorIdempotent(tuple):
         assert isinstance(parent, TensorDGAlgebra)
         return TensorGenerator(tuple([self[i].toAlgElt(parent[i])
                                       for i in range(len(self))]), parent)
+
+class TensorStarGenerator(Generator, tuple):
+    """Represents a generator of the tensor star algebra - a tuple (possibly
+    with zero components) of elements in the same algebra.
+
+    """
+    def __new__(cls, data, parent = None):
+        return tuple.__new__(cls, tuple(data))
+
+    def __init__(self, data, parent):
+        """Specifies the tuple of generators, and the algebra."""
+        # Note tuple initialization is automatic
+        Generator.__init__(self, parent)
+
+class TensorStarElement(Element):
+    """Represents an element of the tensor star algebra."""
+    def __init__(self, data = {}, parent = None):
+        """If the keys are tuples, convert them to tensor star generators."""
+        data_processed = {}
+        for term, coeff in dict(data).items():
+            if isinstance(term, TensorStarGenerator):
+                data_processed[term] = coeff
+            else:
+                data_processed[TensorStarGenerator(term, parent)] = coeff
+        Element.__init__(self, data_processed)
+
+class TensorStarAlgebra(DGAlgebra):
+    """The tensor star algebra of a DGAlgebra A is itself a DGAlgebra. It is
+    the direct sum of n'th tensor product of A, over n >= 0. So each generator
+    of the tensor star algebra is a (possibly empty) sequence of generators of
+    A. Multiplication is by joining the two sequences, and differential is by
+    either taking the differential of one term of the sequence, or multiplying
+    together two adjacent terms of the sequence.
+
+    """
+    def diff(self, gen):
+        result = E0
+        for i in range(len(gen)):
+            result += expandTensor(gen[:i]+(gen[i].diff(),)+gen[i+1:], self)
+        for i in range(len(gen)-1):
+            result += expandTensor(gen[:i]+(gen[i]*gen[i+1],)+gen[i+2:], self)
+        return result
+
+    def multiply(self, gen1, gen2):
+        return TensorStarGenerator(tuple(gen1)+tuple(gen2), self)
 
 def simplifyComplex(arrows, default_coeff = 0, find_homology_basis = False):
     """Simplify complex using the cancellation lemma.

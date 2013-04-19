@@ -166,5 +166,115 @@ class ExperimentalTest(unittest.TestCase):
     def testAlgSize(self):
         print len(splitPMC(3).getAlgebra().getGenerators())
 
+    def testGetTypeDA(self):
+        pmc = linearPMC(2)
+        aa_graph = getTypeAAGraph(pmc)
+        ddstr = identityDD(pmc)
+        dd_graph = TypeDDGraph(ddstr, 1)
+        aa_graph.getTypeDA(dd_graph)
+
+    def testTypeDInvariant(self):
+        d_start = infTypeD(2, is_dual = True, abs_gr_info = [2,2])
+        # (b_1, c_1) for arcslides
+        cases = [
+            # Original
+            [],
+            # Twisting a handle
+            [(2,1)],
+            # Twisting a knob (half twist)
+            [(2,3),(1,2)]*3,
+            # Interchanging two knobs
+            [(3,4),(6,7),(5,6),(4,5),(2,3),(5,6),(4,5),(3,4),
+             (1,2),(4,5),(3,4),(2,3),(0,1),(3,4),(2,3),(1,2)],
+            # Slide1
+            [(4,3),(1,0),(1,2),(5,4),(6,5)],
+            # Slide2
+            [(0,1),(3,4),(6,7),(6,5),(2,3),(1,2),(3,2)]
+            ]
+        for slides in cases[0:1]+cases[3:4]:
+            # Convert (b_1, c_1) into arcslides and then DD structures
+            cur_pmc = splitPMC(2)
+            slides_dd = []
+            for b1, c1 in slides:
+                arcslide = Arcslide(cur_pmc, b1, c1)
+                cur_pmc = arcslide.end_pmc
+                slides_dd.append(arcslide.getDDStructure(0))
+
+            # Tensor each of the DD structures onto d_start
+            d_mid = d_start
+            for dd in slides_dd:
+                d_mid = computeATensorDD(d_mid, dd)
+                d_mid.simplify()
+            d_mid.reindex()
+
+            print "Case: %s" % slides
+            print d_mid
+            print d_mid.gr_set.simplifiedSet()
+            for gen in d_mid.getGenerators():
+                print gen, d_mid.grading[gen].simplifiedElt()
+
+    def testTrefoilSurgery(self):
+        """Computes HF for +1 and -1 surgery on left-handed trefoil. Currently
+        DOES NOT APPEAR TO BE CORRECT.
+
+        """
+        # Everything is over the PMC of genus 1
+        pmc = splitPMC(1)
+        algebra = pmc.getAlgebra()
+        # Two idempotents
+        i0 = pmc.idem([0])
+        i1 = pmc.idem([1])
+        # Some algebra elements
+        rho1 = pmc.sd([(0,1)])
+        rho2 = pmc.sd([(1,2)])
+        rho3 = pmc.sd([(2,3)])
+        rho23 = pmc.sd([(1,3)])
+        rho123 = pmc.sd([(0,3)])
+        # Now CFD(H_+1)
+        d_p1 = SimpleDStructure(F2, algebra)
+        a = SimpleDGenerator(d_p1, i1, "a")
+        b = SimpleDGenerator(d_p1, i0, "b")
+        d_p1.addGenerator(a)
+        d_p1.addGenerator(b)
+        d_p1.addDelta(a, b, rho2, 1)
+        print "CFD(H_+1): ", d_p1
+        # CFD(H_-1)
+        d_p2 = SimpleDStructure(F2, algebra)
+        a = SimpleDGenerator(d_p2, i1, "a")
+        b = SimpleDGenerator(d_p2, i0, "b")
+        d_p2.addGenerator(a)
+        d_p2.addGenerator(b)
+        d_p2.addDelta(b, a, rho1, 1)
+        d_p2.addDelta(b, a, rho3, 1)
+        print "CFD(H_-1): ", d_p2
+        # CFD(trefoil)
+        d_trefoil = SimpleDStructure(F2, algebra)
+        x = SimpleDGenerator(d_trefoil, i0, "x")
+        y = SimpleDGenerator(d_trefoil, i0, "y")
+        z = SimpleDGenerator(d_trefoil, i0, "z")
+        k = SimpleDGenerator(d_trefoil, i1, "k")
+        l = SimpleDGenerator(d_trefoil, i1, "l")
+        mu1 = SimpleDGenerator(d_trefoil, i1, "mu1")
+        mu2 = SimpleDGenerator(d_trefoil, i1, "mu2")
+        for gen in [x, y, z, k, l, mu1, mu2]:
+            d_trefoil.addGenerator(gen)
+        d_trefoil.addDelta(x, k, rho1, 1)
+        d_trefoil.addDelta(y, k, rho123, 1)
+        d_trefoil.addDelta(mu2, x, rho2, 1)
+        d_trefoil.addDelta(mu1, mu2, rho23, 1)
+        d_trefoil.addDelta(z, mu1, rho123, 1)
+        d_trefoil.addDelta(l, y, rho2, 1)
+        d_trefoil.addDelta(z, l, rho3, 1)
+        print "CFD(trefoil): ", d_trefoil
+        # Compute the Mor complexes
+        cx1 = d_p1.morToD(d_trefoil)
+        # cx1 = computeATensorD(d_p1, d_trefoil)
+        cx1.simplify()
+        print "First result: ", cx1
+        cx2 = d_p2.morToD(d_trefoil)
+        # cx2 = computeATensorD(d_p2, d_trefoil)
+        cx2.simplify()
+        print "Second result: ", cx2
+
 if __name__ == "__main__":
     unittest.main()
