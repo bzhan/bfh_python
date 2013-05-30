@@ -163,13 +163,13 @@ Generator.ELT_CLASS = Element
 # Short-hand for empty element
 E0 = Element()
 
-class ChainComplex():
+class ChainComplex(FreeModule):
     """Represents a general chain complex."""
     def diff(self, gen):
         """Returns the differential of a generator. """
         raise NotImplementedError("Differential not implemented.")
 
-class SimpleChainComplex(FreeModule, ChainComplex):
+class SimpleChainComplex(ChainComplex):
     """Represents a chain complex with a finite number of generators, with
     explicitly stored generating set and differential. The generating set is
     stored as a python set, and differential is stored as a dictionary mapping
@@ -179,7 +179,7 @@ class SimpleChainComplex(FreeModule, ChainComplex):
     """
     def __init__(self, ring):
         """Initialize an empty chain complex."""
-        FreeModule.__init__(self, ring)
+        ChainComplex.__init__(self, ring)
         self.generators = set()
         self.differential = dict()
 
@@ -392,7 +392,7 @@ class TensorGenerator(Generator, tuple):
         return hash((tuple(self), "Tensor"))
 
     def __str__(self):
-        return "*".join(str(comp) for comp in self)
+        return "**".join(str(comp) for comp in self)
 
     def getLeftIdem(self):
         """Get the left idempotent. Only works if same function is implemented
@@ -537,10 +537,25 @@ class TensorStarGenerator(Generator, tuple):
     def __new__(cls, data, parent = None):
         return tuple.__new__(cls, tuple(data))
 
-    def __init__(self, data, parent):
+    def __init__(self, data, parent = None):
         """Specifies the tuple of generators, and the algebra."""
         # Note tuple initialization is automatic
+        if parent == None:
+            assert len(data) > 0
+            parent = TensorStar(data[0].parent)
+        assert all([factor.parent == parent.baseModule for factor in data])
         Generator.__init__(self, parent)
+
+    def slice(self, start, end = None):
+        """Returns the generator of TensorStar that contains factors in the
+        range [start, end) (same convention as python slicing).
+
+        If end is omitted, slice to the end of sequence.
+
+        """
+        if end is None:
+            end = len(self)
+        return TensorStarGenerator(self[start:end], self.parent)
 
 class TensorStarElement(Element):
     """Represents an element of the tensor star algebra."""
@@ -554,25 +569,70 @@ class TensorStarElement(Element):
                 data_processed[TensorStarGenerator(term, parent)] = coeff
         Element.__init__(self, data_processed)
 
-class TensorStarAlgebra(DGAlgebra):
-    """The tensor star algebra of a DGAlgebra A is itself a DGAlgebra. It is
-    the direct sum of n'th tensor product of A, over n >= 0. So each generator
-    of the tensor star algebra is a (possibly empty) sequence of generators of
-    A. Multiplication is by joining the two sequences, and differential is by
-    either taking the differential of one term of the sequence, or multiplying
-    together two adjacent terms of the sequence.
+class TensorStar(FreeModule):
+    """Represents a free module that is the direct sum of n'th tensor product,
+    over n >= 0, of some free module A. So each generator is a (possibly empty)
+    sequence of generators of A.
 
     """
-    def diff(self, gen):
+    def __init__(self, baseModule):
+        """Specifies the base module A. All generators are then tuples of
+        generators in A.
+
+        """
+        self.baseModule = baseModule
+        FreeModule.__init__(self, baseModule.ring)
+
+class CobarAlgebra(TensorStar, DGAlgebra):
+    """The tensor star module over a dg-algebra can be given a dg-algebra
+    structure. Multiplication is by joining the two sequences, and differential
+    is the dual of either taking differential of one term of the sequence, or
+    multiplying together two adjacent terms of the sequence.
+
+    """
+    def __init__(self, baseAlgebra):
+        """Specifies the base algebra A. """
+        assert isinstance(baseAlgebra, DGAlgebra)
+        TensorStar.__init__(self, baseAlgebra)
+        DGAlgebra.__init__(self, baseAlgebra.ring)
+
+    def _singleDiff(self, gen):
+        """Compute the differential, in the cobar-algebra, of the generator
+        ((gen)), where gen is a generator of the base algebra. Sum of the dual
+        of differential and multiplication.
+
+        antiDiff() and factor() must be implemented for generators of the base
+        algebra.
+
+        """
+        assert gen.parent == self.baseModule
         result = E0
-        for i in range(len(gen)):
-            result += expandTensor(gen[:i]+(gen[i].diff(),)+gen[i+1:], self)
-        for i in range(len(gen)-1):
-            result += expandTensor(gen[:i]+(gen[i]*gen[i+1],)+gen[i+2:], self)
+        for term, coeff in gen.antiDiff().items():
+            result += coeff * TensorStarGenerator((term,), self)
+        for ((a, b), coeff) in gen.factor().items():
+            if not (a.isIdempotent() or b.isIdempotent()):
+                result += coeff * TensorStarGenerator((a, b), self)
         return result
 
+    def diff(self, gen):
+        """Compute the differential, in the cobar-algebra, of any generator.
+        This is defined as either taking the anti-differential or factoring one
+        term of the sequence.
+
+        """
+        return E0.accumulate(
+            [gen.slice(0,i) * self._singleDiff(gen[i]) * gen.slice(i+1)
+             for i in range(len(gen))])
+
     def multiply(self, gen1, gen2):
-        return TensorStarGenerator(tuple(gen1)+tuple(gen2), self)
+        """Multiplication is joining two sequences. """
+        if not isinstance(gen1, TensorStarGenerator):
+            return NotImplemented
+        if not isinstance(gen2, TensorStarGenerator):
+            return NotImplemented
+        assert gen1.parent == self and gen2.parent == self, \
+            "Algebra not compatible."
+        return 1*TensorStarGenerator(tuple(gen1)+tuple(gen2), self)
 
 def simplifyComplex(arrows, default_coeff = 0, find_homology_basis = False):
     """Simplify complex using the cancellation lemma.

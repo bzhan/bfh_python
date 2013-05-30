@@ -237,6 +237,7 @@ class ExperimentalTest(unittest.TestCase):
         d_p1.addGenerator(a)
         d_p1.addGenerator(b)
         d_p1.addDelta(a, b, rho2, 1)
+        d_p1.addDelta(b, a, rho123, 1)
         print "CFD(H_+1): ", d_p1
         # CFD(H_-1)
         d_p2 = SimpleDStructure(F2, algebra)

@@ -353,7 +353,7 @@ class StrandDiagram(Generator):
             self.left_idem = Idempotent(self.pmc, self.left_idem)
 
         # Calculate right idempotent if necessary
-        if right_idem == None:
+        if right_idem is None:
             right_idem = self.strands.propagateRight(self.left_idem)
         self.right_idem = right_idem
         if not isinstance(self.right_idem, Idempotent):
@@ -444,7 +444,21 @@ class StrandDiagram(Generator):
         """Return the right idempotent."""
         return self.right_idem
 
-class StrandAlgebra(FreeModule, DGAlgebra):
+    def antiDiff(self):
+        """Computes the dual of differential. See corresponding function in
+        parent for details.
+
+        """
+        return self.parent.antiDiff(self)
+
+    def factor(self):
+        """Find all ways to factor this generator into a product of two
+        generators. See corresponding function in parent for details.
+
+        """
+        return self.parent.factor(self)
+
+class StrandAlgebra(DGAlgebra):
     """Represents the strand algebra of a PMC."""
 
     def __init__(self, ring, pmc, idem_size, mult_one = False):
@@ -452,7 +466,7 @@ class StrandAlgebra(FreeModule, DGAlgebra):
         multiplicity one algebra.
 
         """
-        FreeModule.__init__(self, ring)
+        DGAlgebra.__init__(self, ring)
         self.pmc = pmc
         self.idem_size = idem_size
         self.mult_one = mult_one
@@ -565,6 +579,54 @@ class StrandAlgebra(FreeModule, DGAlgebra):
             return mult_term.elt()
         else:
             return E0
+
+    @memorize
+    def _getAntiDiffMap(self):
+        """Helper function generating tables of dual of differential, for calls
+        to antiDiff.
+
+        """
+        antiDiffMap = {}
+        for gen in self.getGenerators():
+            antiDiffMap[gen] = E0
+        for gen in self.getGenerators():
+            for dgen, coeff in gen.diff().items():
+                antiDiffMap[dgen] += coeff * gen
+        return antiDiffMap
+
+    def antiDiff(self, gen):
+        """Returns the dual of the differential of gen, as an element of this
+        algebra. The element is a sum of all terms c*y, for which gen appears
+        in the dy with coefficient c.
+
+        """
+        return self._getAntiDiffMap()[gen]
+
+    @memorize
+    def _getFactorMap(self):
+        """Helper function generating tables for factoring generators, for
+        calls to factor.
+
+        """
+        factorMap = {}
+        for gen in self.getGenerators():
+            factorMap[gen] = E0
+        # Resulting element lies in the tensor product of A with itself
+        parent = Tensor((self, self))
+        for gen1 in self.getGenerators():
+            for gen2 in self.getGenerators():
+                for prod, coeff in (gen1*gen2).items():
+                    tensor_gen = TensorGenerator((gen1, gen2), parent)
+                    factorMap[prod] += coeff * tensor_gen
+        return factorMap
+
+    def factor(self, gen):
+        """Returns an element of (A tensor A), where A is the present algebra.
+        The element is the sum of all terms c*(p tensor q), for which gen is a
+        term in p*q with coefficient c.
+
+        """
+        return self._getFactorMap()[gen]
 
 class StrandAlgebraElement(Element):
     """An element of strand algebra."""

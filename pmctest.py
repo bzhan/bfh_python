@@ -201,6 +201,19 @@ class StrandDiagramTest(unittest.TestCase):
         sd11 = self.pmc.sd([3,(0,2)], True)
         self.assertEqual(sd10 * sd11, 0)
 
+    def testAntiDiff(self):
+        self.assertEqual(self.sd1.antiDiff(), 1*self.sd4)
+        self.assertEqual(self.sd2.antiDiff(), 0)
+        sd3_ans = self.pmc.sd([1,(0,2)], False)
+        self.assertEqual(self.sd3.antiDiff(), 1*sd3_ans)
+        self.assertEqual(self.sd4.antiDiff(), 0)
+
+    def testFactor(self):
+        # Number after each strand diagram is the number of factorizations
+        tests = [(self.sd1, 8), (self.sd2, 3), (self.sd3, 2), (self.sd4, 9)]
+        for sd, n in tests:
+            self.assertEqual(len(sd.factor()), n)
+
     def testStrandDiagramOppGrading(self):
         # Verify the relations gr'(a).opp() = gr'(a.opp()) and
         # gr(a).opp() = gr(a.opp()).
