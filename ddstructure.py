@@ -129,7 +129,7 @@ class SimpleDDStructure(DDStructure):
 
     def addDelta(self, gen_from, gen_to, alg_coeff1, alg_coeff2, ring_coeff):
         """Add ring_coeff * (alg_coeff1, alg_coeff2) * gen_to to the delta of
-        gen_from. Both arguments should be generators.
+        gen_from. The first four arguments should be generators.
 
         """
         assert gen_from.parent == self and gen_to.parent == self

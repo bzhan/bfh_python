@@ -27,22 +27,25 @@ class TensorStarTest(unittest.TestCase):
         pmc = splitPMC(2)
         sd1 = pmc.sd([(0,1),(1,2)])
         sd2 = pmc.sd([4,(1,3)])
+        sd3 = pmc.sd([4,(0,1)])
         cobarAlg = CobarAlgebra(pmc.getAlgebra())
         def formGen(*seq):
             return TensorStarGenerator(tuple(seq), cobarAlg)
         gen1 = formGen(sd1)
         gen2 = formGen(sd2)
         gen3 = formGen(sd1, sd2)
-        gen4 = formGen()
+        gen4 = TensorStarGenerator(tuple(), cobarAlg, pmc.getIdempotents()[0])
+        gen5 = formGen(sd3, sd3, sd3)
         # Has sd3.diff() = sd1 and sd4*sd5 = sd2
-        sd3 = pmc.sd([1,(0,2)])
-        sd4 = pmc.sd([4,(1,2)])
-        sd5 = pmc.sd([4,(2,3)])
-        self.assertEqual(gen1.diff(), 1*formGen(sd3))
-        self.assertEqual(gen2.diff(), 1*formGen(sd4, sd5))
+        sd4 = pmc.sd([1,(0,2)])
+        sd5 = pmc.sd([4,(1,2)])
+        sd6 = pmc.sd([4,(2,3)])
+        self.assertEqual(gen1.diff(), 1*formGen(sd4))
+        self.assertEqual(gen2.diff(), 1*formGen(sd5, sd6))
         self.assertEqual(gen3.diff(),
-                         1*formGen(sd1, sd4, sd5)+1*formGen(sd3, sd2))
+                         1*formGen(sd1, sd5, sd6)+1*formGen(sd4, sd2))
         self.assertEqual(gen4.diff(), 0)
+        self.assertEqual(gen5.diff(), 0)
 
 if __name__ == "__main__":
     unittest.main()

@@ -484,7 +484,7 @@ def expandTensor(prod, parent = None):
                 expanded2.append(((subterm[0:i]+(gen,)+subterm[i+1:]),
                                  coeff*coeff2))
         expanded = expanded2
-    if isinstance(parent, TensorStarAlgebra):
+    if isinstance(parent, TensorStar):
         return TensorStarElement(dict(expanded), parent)
     else:
         return TensorElement(dict(expanded), parent)
@@ -534,10 +534,10 @@ class TensorStarGenerator(Generator, tuple):
     with zero components) of elements in the same algebra.
 
     """
-    def __new__(cls, data, parent = None):
+    def __new__(cls, data, parent = None, idem = None):
         return tuple.__new__(cls, tuple(data))
 
-    def __init__(self, data, parent = None):
+    def __init__(self, data, parent = None, idem = None):
         """Specifies the tuple of generators, and the algebra."""
         # Note tuple initialization is automatic
         if parent == None:
@@ -545,6 +545,12 @@ class TensorStarGenerator(Generator, tuple):
             parent = TensorStar(data[0].parent)
         assert all([factor.parent == parent.baseModule for factor in data])
         Generator.__init__(self, parent)
+        if len(data) > 0:
+            self.left_idem = data[0].getLeftIdem()
+            self.right_idem = data[-1].getRightIdem()
+        else:
+            assert idem != None
+            self.left_idem = self.right_idem = idem
 
     def slice(self, start, end = None):
         """Returns the generator of TensorStar that contains factors in the
@@ -555,7 +561,21 @@ class TensorStarGenerator(Generator, tuple):
         """
         if end is None:
             end = len(self)
-        return TensorStarGenerator(self[start:end], self.parent)
+        assert start <= end
+        if start == end == 0:
+            new_left_idem = new_right_idem = self.left_idem
+        elif start == end == len(self):
+            new_left_idem = new_right_idem = self[start-1].getRightIdem()
+        else:
+            new_left_idem = self[start].getLeftIdem()
+            new_right_idem = self[end-1].getRightIdem()
+        return TensorStarGenerator(self[start:end], self.parent, new_left_idem)
+
+    def getLeftIdem(self):
+        return self.left_idem
+
+    def getRightIdem(self):
+        return self.right_idem
 
 class TensorStarElement(Element):
     """Represents an element of the tensor star algebra."""
