@@ -128,6 +128,10 @@ class SimpleDAStructure(DAStructure):
         if (gen_from, coeffs_a) not in self.da_action:
             self.da_action[(gen_from, coeffs_a)] = E0
         self.da_action[(gen_from, coeffs_a)] += target_gen.elt(ring_coeff)
+        # Clean out the zero maps
+        for source, target in self.da_action.items():
+            if target == 0:
+                del self.da_action[source]
 
     def testDelta(self):
         """Verify the type DA structure equations."""

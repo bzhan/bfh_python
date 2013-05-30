@@ -1,7 +1,7 @@
 """Unit test for digraph.py"""
 
 from digraph import *
-from ddstructure import *
+from dastructure import *
 from arcslide import *
 from braid import *
 import unittest
@@ -90,6 +90,34 @@ class TypeAAGraphTest(unittest.TestCase):
         cx = computeATensorD(d1.dual(), d2)
         dstr1 = computeDATensorD(dd_id, d1)
         dstr2 = computeATensorDD(d1, dd_id)
+
+    def testAATensorDD(self):
+        pmc = linearPMC(2)
+        aa_graph = getTypeAAGraph(pmc)
+        ddstr1 = identityDD(pmc)
+        dd_graph1 = TypeDDGraph(ddstr1, 1)
+        dastr1 = aa_graph.tensorAAandDD(dd_graph1)
+        self.assertTrue(dastr1.testDelta())
+
+        pmc2 = PMC([(0,3),(1,6),(2,4),(5,7)])
+        ddstr2 = Arcslide(pmc2, 0, 1).getDDStructure()
+        dd_graph2 = TypeDDGraph(ddstr2, 1)
+        aa_graph2 = getTypeAAGraph(pmc2)
+        dastr2 = aa_graph2.tensorAAandDD(dd_graph2)
+        self.assertTrue(dastr2.testDelta())
+
+    def testDDTensorAA(self):
+        pmc = splitPMC(1)
+        aa_graph = getTypeAAGraph(pmc)
+        ddstr1 = identityDD(pmc)
+        dd_graph1 = TypeDDGraph(ddstr1, 2)
+        dastr1 = aa_graph.tensorDDandAA(dd_graph1)
+        self.assertTrue(dastr1.testDelta())
+
+        ddstr2 = Arcslide(pmc, 0, 1).getDDStructure()
+        dd_graph2 = TypeDDGraph(ddstr2, 2)
+        dastr2 = aa_graph.tensorDDandAA(dd_graph2)
+        self.assertTrue(dastr2.testDelta())
 
 if __name__ == "__main__":
     unittest.main()

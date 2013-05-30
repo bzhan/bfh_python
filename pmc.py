@@ -536,6 +536,13 @@ class StrandAlgebra(DGAlgebra):
             return self.pmc.getMultOneStrandDiagrams()
 
     @memorize
+    def getIdempotents(self):
+        """Returns the set of idempotents. Use corresponding function in PMC.
+
+        """
+        return self.pmc.getIdempotents()
+
+    @memorize
     def multiply(self, gen1, gen2):
         if not isinstance(gen1, StrandDiagram):
             return NotImplemented

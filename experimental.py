@@ -166,13 +166,6 @@ class ExperimentalTest(unittest.TestCase):
     def testAlgSize(self):
         print len(splitPMC(3).getAlgebra().getGenerators())
 
-    def testGetTypeDA(self):
-        pmc = linearPMC(2)
-        aa_graph = getTypeAAGraph(pmc)
-        ddstr = identityDD(pmc)
-        dd_graph = TypeDDGraph(ddstr, 1)
-        aa_graph.getTypeDA(dd_graph)
-
     def testTypeDInvariant(self):
         d_start = infTypeD(2, is_dual = True, abs_gr_info = [2,2])
         # (b_1, c_1) for arcslides

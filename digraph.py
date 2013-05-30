@@ -1,7 +1,7 @@
 """Handles things related to directed graphs."""
 
 from identityaa import *
-from ddstructure import *
+from dastructure import *
 
 class DiGraph:
     """Interface for a general directed graph."""
@@ -609,21 +609,66 @@ class TypeAAGraph(DiGraph):
                 ddstr.addDelta(gen_start, gen_end, d1_end.sd, d2_end.sd, 1)
         return ddstr
 
-    def getTypeDA(self, dd_graph):
+    def tensorAAandDD(self, dd_graph):
         """Returns the type DA structure formed by tensoring dd_graph with
-        self. For now self is placed at left, and dd_graph is placed at right.
+        self, with self placed at left and dd_graph placed at right.
 
         """
         assert dd_graph.tensor_side == 1
         assert dd_graph.algebra1 == self.pmc_alg
-        univ_digraph = UniversalDiGraph(self.pmc_alg.opp())
+        alg_opp = self.pmc_alg.opp()
+        # The generating set for the type DA structure and the dd_graph is the
+        # same.
+        result = SimpleDAStructure(F2, dd_graph.algebra2, alg_opp)
+        ddgen_to_dagen_map = {}
+        for ddgen in dd_graph.ddgen_node:
+            cur_gen = SimpleDAGenerator(
+                result, ddgen.idem2, ddgen.idem1.opp().comp(), str(ddgen))
+            ddgen_to_dagen_map[ddgen] = cur_gen
+            result.addGenerator(cur_gen)
+
+        univ_digraph = UniversalDiGraph(alg_opp)
         for ddgen, d2_pos in dd_graph.ddgen_node.items():
             d1_pos = univ_digraph.getInitialNode()
             aa_pos = self.homology_node[ddgen.idem1.comp()]
             pos = [(d1_pos, d2_pos, aa_pos)]
             end_states = self._searchDoubleD(univ_digraph, dd_graph, pos)[0]
             for d1_end, d2_end, aa_end in end_states:
-                print d1_end, d2_end.sd
+                gen_from = ddgen_to_dagen_map[ddgen]
+                gen_to = ddgen_to_dagen_map[d2_end.ddgen]
+                result.addDelta(gen_from, gen_to, d2_end.sd, tuple(d1_end), 1)
+        return result
+
+    def tensorDDandAA(self, dd_graph):
+        """Returns the type DA structure formed by tensoring dd_graph with
+        self, with dd_graph placed at left and self placed at right.
+
+        """
+        # Currently very slow, only really work in genus 1 case
+        assert dd_graph.tensor_side == 2
+        assert dd_graph.algebra2 == self.pmc_alg.opp()
+        alg = self.pmc_alg
+        # The generating set for the type DA structure and the dd_graph is the
+        # same.
+        result = SimpleDAStructure(F2, dd_graph.algebra1, alg)
+        ddgen_to_dagen_map = {}
+        for ddgen in dd_graph.ddgen_node:
+            cur_gen = SimpleDAGenerator(
+                result, ddgen.idem1, ddgen.idem2.opp().comp(), str(ddgen))
+            ddgen_to_dagen_map[ddgen] = cur_gen
+            result.addGenerator(cur_gen)
+
+        univ_digraph = UniversalDiGraph(alg)
+        for ddgen, d1_pos in dd_graph.ddgen_node.items():
+            d2_pos = univ_digraph.getInitialNode()
+            aa_pos = self.homology_node[ddgen.idem2.comp()]
+            pos = [(d1_pos, d2_pos, aa_pos)]
+            end_states = self._searchDoubleD(dd_graph, univ_digraph, pos)[0]
+            for d1_end, d2_end, aa_end in end_states:
+                gen_from = ddgen_to_dagen_map[ddgen]
+                gen_to = ddgen_to_dagen_map[d1_end.ddgen]
+                result.addDelta(gen_from, gen_to, d1_end.sd, tuple(d2_end), 1)
+        return result
 
 @memorize
 def getTypeAAGraph(pmc):
