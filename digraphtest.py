@@ -91,14 +91,16 @@ class TypeAAGraphTest(unittest.TestCase):
         dstr1 = computeDATensorD(dd_id, d1)
         dstr2 = computeATensorDD(d1, dd_id)
 
-    def testAATensorDD(self):
-        pmc = linearPMC(2)
+    def testAATensorDD1(self):
+        pmc = splitPMC(2)
         aa_graph = getTypeAAGraph(pmc)
         ddstr1 = identityDD(pmc)
         dd_graph1 = TypeDDGraph(ddstr1, 1)
         dastr1 = aa_graph.tensorAAandDD(dd_graph1)
         self.assertTrue(dastr1.testDelta())
+        print dastr1
 
+    def testAATensorDD2(self):
         pmc2 = PMC([(0,3),(1,6),(2,4),(5,7)])
         ddstr2 = Arcslide(pmc2, 0, 1).getDDStructure()
         dd_graph2 = TypeDDGraph(ddstr2, 1)

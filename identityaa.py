@@ -285,6 +285,14 @@ def homotopyMap(sd_left, sd_right):
                          if total_mult[ordering[i]] != 0]
         assert len(unoccupied_id) > 0
         key_pos = ordering[unoccupied_id[0]]
+        # Always use the lowest / highest possible interval, does not appear
+        # helpful.
+        # key_pos = -1
+        # for i in range(len(ordering)):
+        #     if total_mult[ordering[i]] != 0 and \
+        #             (i == 0 or total_mult[ordering[i-1]] == 0):
+        #         if key_pos == -1 or ordering[i] > key_pos:
+        #             key_pos = ordering[i]
         total_mult_one = True
     else:
         # Total multiplicity >1 case
