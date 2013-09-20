@@ -270,5 +270,59 @@ class ExperimentalTest(unittest.TestCase):
         cx2.simplify()
         print "Second result: ", cx2
 
+    def testLinkComplement(self):
+        """Computes type DD structure associated to the complement of a certain
+        link. Sequence of arcslides provided by Adam Levine.
+
+        """
+        twist1 = [(7,6),(7,6),(7,6),(7,6),(7,6),(7,6)]
+        twist2 = [(4,3),(1,0),(2,1),(3,2),
+                  (5,4),(2,1),(3,2),(4,3),
+                  (6,5),(3,2),(4,3),(1,2),(0,1),(6,5)]
+        start_pmc = splitPMC(2)
+        twist_slides = {}
+        twist_slides[1] = []
+        twist_slides[2] = []
+
+        cur_pmc = start_pmc
+        for (b1, c1) in twist1:
+            arcslide = Arcslide(cur_pmc, b1, c1)
+            cur_pmc = arcslide.end_pmc
+            twist_slides[1].append(arcslide)
+
+        cur_pmc = start_pmc
+        for (b1, c1) in twist2:
+            arcslide = Arcslide(cur_pmc, b1, c1)
+            cur_pmc = arcslide.end_pmc
+            twist_slides[2].append(arcslide)
+
+        twist_slides[-1] = [slide.inverse() 
+                            for slide in reversed(twist_slides[1])]
+        twist_slides[-2] = [slide.inverse()
+                            for slide in reversed(twist_slides[2])]
+
+        seq = [-2, -2, 1, 2]
+        # seq = [2, 1, -2, -2]
+        # seq = [-2]
+        # seq = [1]
+        slides_total = []
+        for twist in seq:
+            slides_total.extend(twist_slides[twist])
+
+        d_mid = infTypeD(2)
+        # This shows our choice of starting type D structure is correct.
+        # Doing this Dehn twist only should not change the starting type D
+        # structure.
+        # slides_total = [Arcslide(start_pmc, 6, 7)]
+        for slide in slides_total:
+            print slide
+            print d_mid
+            slide_dd = slide.getDDStructure(0)
+            d_mid = slide_dd.morToD(d_mid)
+            d_mid.simplify()
+            d_mid.reindex()
+
+        print d_mid
+
 if __name__ == "__main__":
     unittest.main()

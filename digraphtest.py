@@ -98,7 +98,7 @@ class TypeAAGraphTest(unittest.TestCase):
         dd_graph1 = TypeDDGraph(ddstr1, 1)
         dastr1 = aa_graph.tensorAAandDD(dd_graph1)
         self.assertTrue(dastr1.testDelta())
-        print dastr1
+        # print dastr1
 
     def testAATensorDD2(self):
         pmc2 = PMC([(0,3),(1,6),(2,4),(5,7)])
