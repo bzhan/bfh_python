@@ -47,6 +47,13 @@ class PMCTest(unittest.TestCase):
         self.assertEqual(connectSumPMC(linearPMC(2), splitPMC(1)),
                          PMC([(0,2),(1,4),(3,6),(5,7),(8,10),(9,11)]))
 
+    def testUnconnectSumPMC(self):
+        self.assertEqual(unconnectSumPMC(splitPMC(2), 1),
+                         (splitPMC(1), splitPMC(1)))
+        self.assertEqual(
+            unconnectSumPMC(connectSumPMC(linearPMC(2), splitPMC(1)), 2),
+            (linearPMC(2), splitPMC(1)))
+
     def testGetIdempotents(self):
         pmc = splitPMC(2)
         idems = pmc.getIdempotents()
@@ -90,6 +97,19 @@ class IdempotentTest(unittest.TestCase):
         self.assertEqual(idem3.opp(), Idempotent(pmc2.opp(), [1,3]))
         self.assertEqual(idem3.comp(), Idempotent(pmc2, [2,3]))
 
+    def testUnconnectSumIdem(self):
+        pmc1, pmc2, pmc3 = splitPMC(1), splitPMC(2), splitPMC(3)
+        idem1 = Idempotent(pmc3, [0, 2, 4])
+        self.assertEqual(unconnectSumIdem(idem1, 1),
+                         (Idempotent(pmc1, [0]), Idempotent(pmc2, [0, 2])))
+        self.assertEqual(unconnectSumIdem(idem1, 2),
+                         (Idempotent(pmc2, [0, 2]), Idempotent(pmc1, [0])))
+        idem2 = Idempotent(pmc3, [0, 1, 2])
+        self.assertEqual(unconnectSumIdem(idem2, 1),
+                         (Idempotent(pmc1, [0, 1]), Idempotent(pmc2, [0])))
+        self.assertEqual(unconnectSumIdem(idem2, 2),
+                         (Idempotent(pmc2, [0, 1, 2]), Idempotent(pmc1, [])))
+
 class StrandsTest(unittest.TestCase):
     def testStrands(self):
         pmc = PMC([(0,2),(1,6),(3,5),(4,7)])
@@ -105,6 +125,15 @@ class StrandsTest(unittest.TestCase):
         self.assertFalse(sd1.leftCompatible(pmc.idem([])))
         self.assertTrue(sd1.rightCompatible(pmc.idem([3])))
         self.assertFalse(sd1.rightCompatible(pmc.idem([2])))
+
+    def testUnconnectSumStrands(self):
+        pmc1, pmc2 = splitPMC(1), splitPMC(2)
+        sd1 = Strands(pmc2, [(0,3),(4,5)])
+        self.assertEqual(unconnectSumStrands(sd1, 1),
+                         (Strands(pmc1, [(0,3)]), Strands(pmc1, [(0,1)])))
+        sd2 = Strands(pmc2, [(5,7)])
+        self.assertEqual(unconnectSumStrands(sd2, 1),
+                         (Strands(pmc1, []), Strands(pmc1, [(1,3)])))
 
 class StrandDiagramTest(unittest.TestCase):
     def setUp(self):
@@ -224,6 +253,15 @@ class StrandDiagramTest(unittest.TestCase):
                              sd.opp().getBigGrading())
             self.assertEqual(sd.getSmallGrading().opp(),
                              sd.opp().getSmallGrading())
+
+    def testUnconnectSumStrandDiagram(self):
+        sd1 = self.pmc.sd([4,(0,3)], False)
+        pmc1 = splitPMC(1)
+        self.assertEqual(unconnectSumStrandDiagram(sd1, 1),
+                         (pmc1.sd([(0,3)], False), pmc1.sd([0], False)))
+        sd2 = self.pmc.sd([(1,2),(6,7)], False)
+        self.assertEqual(unconnectSumStrandDiagram(sd2, 1),
+                         (pmc1.sd([(1,2)], False), pmc1.sd([(2,3)], False)))
 
 if __name__ == "__main__":
     unittest.main()

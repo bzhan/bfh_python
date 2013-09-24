@@ -314,6 +314,7 @@ class ExperimentalTest(unittest.TestCase):
         # Doing this Dehn twist only should not change the starting type D
         # structure.
         # slides_total = [Arcslide(start_pmc, 6, 7)]
+        # slides_total = [Arcslide(start_pmc, 7, 6)]
         for slide in slides_total:
             print slide
             print d_mid
@@ -323,6 +324,12 @@ class ExperimentalTest(unittest.TestCase):
             d_mid.reindex()
 
         print d_mid
+        dd_final = DDStrFromDStr(d_mid, 1)
+        dd_final.testDelta()
+        print dd_final
+        dd_final.simplify()
+        dd_final.reindex()
+        print dd_final
 
 if __name__ == "__main__":
     unittest.main()

@@ -33,7 +33,7 @@ class SimpleDDGenerator(DDGenerator, NamedObject):
         NamedObject.__init__(self, name)
 
     def __str__(self):
-        return "%s,%s" % (str(self.idem1), str(self.idem2))
+        return "%s:%s,%s" % (self.name, str(self.idem1), str(self.idem2))
         
     def __repr__(self):
         return str(self)
@@ -453,4 +453,46 @@ def identityDD(pmc):
         base_gen = gen
         break
     ddstr.registerHDiagram(getIdentityDiagram(pmc), base_gen)
+    return ddstr
+
+def DDStrFromDStr(dstr, genus1):
+    """Obtain the type DD structure from a type D structure that is related by
+    drilling. See section 7.3 of paper 'Computing HF by Factoring Mapping
+    Classes'.
+
+    If dstr has left type D action by algebra A(Z_1 # Z_2), where genus1
+    specifies the genus of Z_1, then ddstr will have left type DD action by
+    A(Z_1) and A(Z_2).
+
+    """
+    assert dstr.side == ACTION_LEFT
+    pmc_all = dstr.algebra.pmc
+    assert dstr.algebra.idem_size == pmc_all.genus
+    pmc1, pmc2 = unconnectSumPMC(pmc_all, genus1)
+    mult_one = dstr.algebra.mult_one
+    
+    ddstr = SimpleDDStructure(F2, pmc1.getAlgebra(None, mult_one),
+                              pmc2.getAlgebra(None, mult_one))
+    gen_map = {}
+    for x in dstr.getGenerators():
+        # Split idempotent of x into two parts
+        xidem = x.idem
+        x1_idem = Idempotent(pmc1,
+                             [pairid for pairid in xidem if pairid < 2*genus1])
+        x2_idem = Idempotent(pmc2,
+                             [pairid-2*genus1 for pairid in xidem
+                              if pairid >= 2*genus1])
+        if len(x1_idem) != genus1:
+            continue
+        gen_map[x] = SimpleDDGenerator(ddstr, x1_idem, x2_idem, x.name)
+        ddstr.addGenerator(gen_map[x])
+
+    cut_point = 4 * genus1
+    for x in dstr.getGenerators():
+        for (a, y), coeff in x.delta().items():
+            if a.multiplicity[cut_point-1] == 0:
+                # The interval (cut_point-1, cut_point) is unoccupied
+                a1, a2 = unconnectSumStrandDiagram(a, genus1)
+                ddstr.addDelta(gen_map[x], gen_map[y], a1, a2, coeff)
+
     return ddstr

@@ -170,6 +170,21 @@ def connectSumPMC(pmc1, pmc2):
     pairs2 = [(p+pmc1.n, q+pmc1.n) for p, q in pmc2.pairs]
     return PMC(pmc1.pairs + pairs2)
 
+@memorize
+def unconnectSumPMC(pmc, genus1):
+    """Returns a pair (pmc1, pmc2) such that pmc1 has genus1 and
+    pmc1 # pmc2 = pmc.
+
+    """
+    cut_point = 4 * genus1
+    for p, q in pmc.pairs:
+        assert (p < cut_point and q < cut_point) or \
+            (p >= cut_point and q >= cut_point)
+    pmc1 = PMC([(p, q) for p, q in pmc.pairs if p < cut_point])
+    pmc2 = PMC([(p-cut_point, q-cut_point)
+                for p, q in pmc.pairs if p >= cut_point])
+    return (pmc1, pmc2)    
+
 class Idempotent(tuple):
     """Represents an idempotent in a certain PMC. Stored as a tuple of pairid
     of occupied pairs.
@@ -218,6 +233,17 @@ class Idempotent(tuple):
         """
         return StrandDiagram(parent, self, [])
 
+def unconnectSumIdem(idem, genus1):
+    """Returns the pair of idempotents (idem1, idem2) in (pmc1, pmc2), where
+    (pmc1, pmc2) is the pair returned by unconnectSumPMC(idem.pmc, genus1).
+
+    """
+    cut_pair = 2 * genus1
+    pmc1, pmc2 = unconnectSumPMC(idem.pmc, genus1)
+    return (Idempotent(pmc1, [pair for pair in idem if pair < cut_pair]),
+            Idempotent(pmc2,
+                       [pair-cut_pair for pair in idem if pair >= cut_pair]))
+
 class Strands(tuple):
     """Represents a (fixed) list of strands in a certain PMC. Stored as a tuple
     of pairs.
@@ -231,6 +257,7 @@ class Strands(tuple):
         # Compute multiplicity at each interval
         self.multiplicity = [0] * (self.pmc.n - 1)
         for st in self:
+            assert len(st) == 2 and st[0] < st[1]
             for pos in range(st[0], st[1]):
                 self.multiplicity[pos] += 1
 
@@ -323,6 +350,19 @@ class Strands(tuple):
 
         """
         return all([n <= 1 for n in self.multiplicity])
+
+def unconnectSumStrands(strands, genus1):
+    """Returns pairs of strands (strand1, strand2) in (pmc1, pmc2), where
+    (pmc1, pmc2) is the pair returned by unconnectSumPMC(strands.pmc, genus1).
+
+    """
+    cut_pos = 4 * genus1
+    pmc1, pmc2 = unconnectSumPMC(strands.pmc, genus1)
+    for p, q in strands:
+        assert q < cut_pos or p >= cut_pos
+    return (Strands(pmc1, [(p, q) for p, q in strands if q < cut_pos]),
+            Strands(pmc2, [(p-cut_pos, q-cut_pos)
+                           for p, q in strands if p >= cut_pos]))
 
 class StrandDiagram(Generator):
     """Represents a strand diagram, or a generator of the strand algebra."""
@@ -457,6 +497,20 @@ class StrandDiagram(Generator):
 
         """
         return self.parent.factor(self)
+
+def unconnectSumStrandDiagram(sd, genus1):
+    """Returns a pair of strand diagrams (sd1, sd2) in the algebra of
+    (pmc1, pmc2), where (pmc1, pmc2) is the pair returned by
+    unconnectSumPMC(sd.pmc, genus1).
+
+    """
+    pmc1, pmc2 = unconnectSumPMC(sd.pmc, genus1)
+    left_idem1, left_idem2 = unconnectSumIdem(sd.left_idem, genus1)
+    strands1, strands2 = unconnectSumStrands(sd.strands, genus1)
+    alg1 = StrandAlgebra(F2, pmc1, len(left_idem1), sd.mult_one)
+    alg2 = StrandAlgebra(F2, pmc2, len(left_idem2), sd.mult_one)
+    return (StrandDiagram(alg1, left_idem1, strands1),
+            StrandDiagram(alg2, left_idem2, strands2))
 
 class StrandAlgebra(DGAlgebra):
     """Represents the strand algebra of a PMC."""
