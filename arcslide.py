@@ -88,7 +88,7 @@ class Arcslide():
     @memorize
     def getDDStructure(self, abs_gr_info = None):
         """Returns the type DD structure corresponding to this arcslide."""
-        self.all_idems = self._getIdems()
+        self.all_idems = self.getIdems()
         self.all_chords = []
         if self.slide_type == UNDER_SLIDE:
             for chord_type in self._UChords:
@@ -219,7 +219,7 @@ class Arcslide():
         ddstr.checkGrading()
         return ddstr
 
-    def _getIdems(self):
+    def getIdems(self):
         """Returns the set of possible idempotent-pairs for generators."""
         all_idems = []
 

@@ -74,6 +74,15 @@ def find(lst, item):
             return i
     return -1
 
+def sumColumns(matrix, num_col):
+    """matrix is a list of lists of length num_col. Sum up by column."""
+    result = [0]*num_col
+    for row in matrix:
+        assert len(row) == num_col
+        for i in range(num_col):
+            result[i] += row[i]
+    return result
+
 def _dictAddTo(dict1, dict2):
     """Add dict2 onto dict1 in place. If dict2 is a list, add each element of
     dict2 in place.
@@ -211,6 +220,12 @@ class ModNElement(RingElement):
     def __init__(self, parent, val):
         self.parent = parent
         self.val = val
+
+    def __str__(self):
+        return str(self.val)
+
+    def __repr__(self):
+        return str(self.val)
 
     def __add__(self, other):
         return self.parent.add(self, other)

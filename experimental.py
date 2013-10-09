@@ -331,5 +331,106 @@ class ExperimentalTest(unittest.TestCase):
         dd_final.reindex()
         print dd_final
 
+    def testSimpleDAStrArcslide(self):
+        # This test shows a hand-constructed type DA bimodule for a certain
+        # arcslide.
+        pmc = splitPMC(2)
+        slide = Arcslide(pmc, 1, 2)
+        dd_idems = slide.getIdems()
+        da_idems = [(l_idem, r_idem.opp().comp())
+                    for l_idem, r_idem in dd_idems]
+        # print da_idems
+        chord_pairs = []
+        chord_pairs.append((Strands(pmc, [(0, 1)]),  # D side
+                            []))  # A side
+        chord_pairs.append((Strands(pmc, [(0, 2)]),
+                            [Strands(pmc, [(0, 1)])]))
+        chord_pairs.append((Strands(pmc, []),
+                            [Strands(pmc, [(1, 2)])]))
+        chord_pairs.append((Strands(pmc, [(2, 3)]),
+                            [Strands(pmc, [(2, 3)])]))
+        chord_pairs.append((Strands(pmc, [(3, 4)]),
+                            [Strands(pmc, [(3, 4)])]))
+        chord_pairs.append((Strands(pmc, [(1, 2)]),
+                            [Strands(pmc, [(1, 2)]), Strands(pmc, [(0, 1)])]))
+        chord_pairs.append((Strands(pmc, [(0, 2)]),
+                            [Strands(pmc, [(0, 2)])]))
+        chord_pairs.append((Strands(pmc, [(0, 1),(1, 2)]),
+                            [Strands(pmc, [(0, 1),(1, 2)])]))
+        chord_pairs.append((Strands(pmc, [(2, 3)]),
+                            [Strands(pmc, [(1, 3)])]))
+        chord_pairs.append((Strands(pmc, [(2, 4)]),
+                            [Strands(pmc, [(2, 4)])]))
+        chord_pairs.append((Strands(pmc, [(2, 3),(3, 4)]),
+                            [Strands(pmc, [(2, 3),(3, 4)])]))
+        chord_pairs.append((Strands(pmc, [(1, 2)]),
+                            [Strands(pmc, [(1, 2)]), Strands(pmc, [(0, 2)])]))
+        chord_pairs.append((Strands(pmc, [(0, 3)]),
+                            [Strands(pmc, [(0, 3)])]))
+        chord_pairs.append((Strands(pmc, [(2, 4)]),
+                            [Strands(pmc, [(1, 4)])]))
+        chord_pairs.append((Strands(pmc, [(0, 2),(3, 4)]),
+                            [Strands(pmc, [(0, 1),(3, 4)])]))
+        chord_pairs.append((Strands(pmc, [(0, 2),(3, 4)]),
+                            [Strands(pmc, [(0, 2),(3, 4)])]))
+        chord_pairs.append((Strands(pmc, [(1, 3)]),
+                            [Strands(pmc, [(1, 2)]), Strands(pmc, [(0, 3)])]))
+        chord_pairs.append((Strands(pmc, [(0, 4)]),
+                            [Strands(pmc, [(0, 4)])]))
+        chord_pairs.append((Strands(pmc, [(0, 1),(1, 4)]),
+                            [Strands(pmc, [(0, 1),(1, 4)])]))
+        chord_pairs.append((Strands(pmc, [(0, 3),(3, 4)]),
+                            [Strands(pmc, [(0, 3),(3, 4)])]))
+        chord_pairs.append((Strands(pmc, [(1, 2),(2, 4)]),
+                            [Strands(pmc, [(1, 2),(2, 4)]),
+                             Strands(pmc, [(0, 1)])]))
+        chord_pairs.append((Strands(pmc, [(1, 2),(2, 4)]),
+                            [Strands(pmc, [(1, 2),(2, 4)]),
+                             Strands(pmc, [(0, 2)])]))
+        chord_pairs.append((Strands(pmc, [(1, 2),(2, 4)]),
+                            [Strands(pmc, [(1, 2),(2, 3)]),
+                             Strands(pmc, [(0, 1),(3, 4)])]))
+        chord_pairs.append((Strands(pmc, [(1, 2),(2, 4)]),
+                            [Strands(pmc, [(1, 2),(2, 3)]),
+                             Strands(pmc, [(0, 2),(3, 4)])]))
+        chord_pairs.append((Strands(pmc, [(1, 2),(2, 3)]),
+                            [Strands(pmc, [(1, 2),(2, 3)]),
+                             Strands(pmc, [(0, 2)])]))
+        chord_pairs.append((Strands(pmc, [(1, 4)]),
+                            [Strands(pmc, [(1, 2)]), Strands(pmc, [(0, 4)])]))
+        chord_pairs.append((Strands(pmc, [(1, 4)]),
+                            [Strands(pmc, [(1, 3)]),
+                             Strands(pmc, [(0, 2),(3, 4)])]))
+        chord_pairs.append((Strands(pmc, [(1, 4)]),
+                            [Strands(pmc, [(1, 3)]),
+                             Strands(pmc, [(0, 1),(3, 4)])]))
+        chord_pairs.append((Strands(pmc, [(1, 4)]),
+                            [Strands(pmc, [(1, 4)]), Strands(pmc, [(0, 2)])]))
+        chord_pairs.append((Strands(pmc, [(1, 4)]),
+                            [Strands(pmc, [(1, 4)]), Strands(pmc, [(0, 1)])]))
+        chord_pairs.append((Strands(pmc, [(1, 3)]),
+                            [Strands(pmc, [(1, 3)]), Strands(pmc, [(0, 2)])]))
+        dastr = DAStrFromChords(slide.start_pmc.getAlgebra(),
+                                slide.end_pmc.opp().getAlgebra(),
+                                da_idems, chord_pairs)
+
+        print dastr.toStrWithMultA([0,0,0,0,0,0,0])
+        print dastr.toStrWithMultA([1,0,0,0,0,0,0])
+        print dastr.toStrWithMultA([0,1,0,0,0,0,0])
+        print dastr.toStrWithMultA([0,0,1,0,0,0,0])
+        print dastr.toStrWithMultA([0,0,0,1,0,0,0])
+        print dastr.toStrWithMultA([1,1,0,0,0,0,0])
+        print dastr.toStrWithMultA([0,1,1,0,0,0,0])
+        print dastr.toStrWithMultA([0,0,1,1,0,0,0])
+        print dastr.toStrWithMultA([1,2,0,0,0,0,0])
+        print dastr.toStrWithMultA([1,1,1,0,0,0,0])
+        print dastr.toStrWithMultA([0,1,1,1,0,0,0])
+        print dastr.toStrWithMultA([1,0,0,1,0,0,0])
+        print dastr.toStrWithMultA([1,1,0,1,0,0,0])
+        print dastr.toStrWithMultA([1,2,1,0,0,0,0])
+        print dastr.toStrWithMultA([1,1,1,1,0,0,0])
+        print dastr.toStrWithMultA([1,2,1,1,0,0,0])
+        self.assertTrue(dastr.testDelta())
+
 if __name__ == "__main__":
     unittest.main()

@@ -460,12 +460,13 @@ class TypeAAGraph(DiGraph):
         d2_pos, aa_pos)). Returns a list of lists of end positions.
 
         """
-        def search(d1_pos, d2_pos, aa_pos, is_homotopy):
+        def search(d1_pos, d2_pos, aa_pos, is_homotopy, depth):
             """Helper function performing a one step search, starting at the
             given locations in the three graphs. If is_homotopy is set, the
             next move must be a homotopy. Otherwise, it must be an algebra
             action (on either side). Returns the list of end states with aa_pos
             at a homology node.
+            -- depth: used for debugging only
 
             """
             result = []
@@ -474,21 +475,21 @@ class TypeAAGraph(DiGraph):
                     result.append((d1_pos, d2_pos, aa_pos))
                 else:
                     for edge in self.getHomotopyEdges(aa_pos):
-                        result += search(d1_pos, d2_pos, edge.target, False)
+                        result += search(d1_pos, d2_pos, edge.target, False, depth+1)
             else:
                 for d1_edge in d_graph1.getOutEdges(d1_pos):
                     target = self.getAlgLeftTarget(aa_pos, d1_edge.coeff.opp())
                     if target is not None:
-                        result += search(d1_edge.target, d2_pos, target, True)
+                        result += search(d1_edge.target, d2_pos, target, True, depth+1)
                 for d2_edge in d_graph2.getOutEdges(d2_pos):
                     target = self.getAlgRightTarget(aa_pos, d2_edge.coeff)
                     if target is not None:
-                        result += search(d1_pos, d2_edge.target, target, True)
+                        result += search(d1_pos, d2_edge.target, target, True, depth+1)
             return result
 
         full_result = []
         for d1_pos, d2_pos, aa_pos in start_pos:
-            full_result.append(search(d1_pos, d2_pos, aa_pos, False))
+            full_result.append(search(d1_pos, d2_pos, aa_pos, False, 0))
         return full_result
 
     def tensorDoubleD(self, d_graph1, d_graph2):

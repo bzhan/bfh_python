@@ -162,6 +162,17 @@ class SimpleDAStructure(DAStructure):
             result += "m(%s; %s) = %s\n" % (gen_from, coeffs_a, target)
         return result
 
+    def toStrWithMultA(self, mult_a):
+        """Print all arrows with the given multiplicities on the D side."""
+        result = "Type DA Structure.\n"
+        for (gen_from, coeffs_a), target in self.da_action.items():
+            total_mult = sumColumns([coeff.multiplicity for coeff in coeffs_a],
+                                    len(mult_a))
+            if mult_a == total_mult:
+            # if all([mult_a[i] >= total_mult[i] for i in range(len(mult_a))]):
+                result += "m(%s; %s) = %s\n" % (gen_from, coeffs_a, target)
+        return result
+
 def identityDA(pmc):
     """Returns the identity type DA structure for a given PMC."""
     alg = pmc.getAlgebra()
@@ -178,4 +189,52 @@ def identityDA(pmc):
             gen_from = idem_to_gen_map[gen.getLeftIdem()]
             gen_to = idem_to_gen_map[gen.getRightIdem()]
             dastr.addDelta(gen_from, gen_to, gen, (gen,), 1)
+    return dastr
+
+def AddChordToDA(dastr, coeff_d, coeffs_a):
+    alg1 = dastr.algebra1
+    alg2 = dastr.algebra2
+    gen_set = dastr.getGenerators()
+    for x in gen_set:
+        for y in gen_set:
+            if alg1.mult_one and not coeff_d.isMultOne():
+                continue
+            if alg2.mult_one and \
+               not all([coeff_a.isMultOne() for coeff_a in coeffs_a]):
+                continue
+            if not coeff_d.idemCompatible(x.idem1, y.idem1):
+                continue
+            alg_d = StrandDiagram(alg1, x.idem1, coeff_d)
+            # Now test that the sequence of A inputs match the idempotents.
+            # Construct the algebra inputs at the same time.
+            alg_a = []
+            cur_idem = x.idem2
+            idem_ok = True
+            for coeff_a in coeffs_a:
+                next_idem = coeff_a.propagateRight(cur_idem)
+                if next_idem is None:
+                    idem_ok = False
+                    break
+                alg_a.append(StrandDiagram(alg2, cur_idem, coeff_a))
+                cur_idem = next_idem
+            if idem_ok and cur_idem == y.idem2:
+                dastr.addDelta(x, y, alg_d, alg_a, 1)
+
+def DAStrFromChords(alg1, alg2, idem_pairs, chord_pairs):
+    """Construct type DA structure from list of idempotent pairs and chord
+    pairs. This is usually used to construct the 'initial' type DA structure,
+    to be completed by DAStrFromBasis.
+    - idem_pairs is list of pairs of Idempotent. Left idempotent is D side,
+    right idempotent is A side.
+    - chord_pairs is list of pairs (coeff_d, coeffs_a), where coeff_d is of
+    class Strands (for D side output), and coeffs_a is a list of Strands (for A
+    side input).
+
+    """
+    dastr = SimpleDAStructure(F2, alg1, alg2)
+    for i in range(len(idem_pairs)):
+        dastr.addGenerator(SimpleDAGenerator(
+            dastr, idem_pairs[i][0], idem_pairs[i][1], i))
+    for coeff_d, coeffs_a in chord_pairs:
+        AddChordToDA(dastr, coeff_d, coeffs_a)
     return dastr

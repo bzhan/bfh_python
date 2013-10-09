@@ -182,6 +182,10 @@ class SimpleDDStructure(DDStructure):
         """Verify d^2 = 0 for this structure."""
         for gen in self.generators:
             if gen.delta().diff() != 0:
+                # Print the offending terms in d^2 for one generator.
+                print gen, "==>"
+                for k, v in gen.delta().diff().items():
+                    print v, "*", k
                 return False
         return True
 
@@ -414,8 +418,10 @@ class SimpleDDStructure(DDStructure):
         return True
 
 def DDStrFromChords(alg1, alg2, idem_pairs, chord_pairs):
-    """Construct type DD structure from list of idempotant pairs and chord
+    """Construct type DD structure from list of idempotent pairs and chord
     pairs.
+    - idem_pairs is list of pairs of Idempotent.
+    - chord_pairs is list of pairs of Strands.
 
     """
     ddstr = SimpleDDStructure(F2, alg1, alg2)
