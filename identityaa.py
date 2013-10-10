@@ -163,7 +163,7 @@ def _moveLeft(sd_pair, a, b):
     sd_left, sd_right = sd_pair
     new_right = _factor(sd_right, a, b)
     assert new_right is not None
-    to_mult = StrandDiagram(sd_left.parent, None, [(a,b)],
+    to_mult = StrandDiagram(sd_left.parent, None, [(a, b)],
                             sd_left.getLeftIdem())
     new_left = to_mult * sd_left
     assert new_left != E0
@@ -178,7 +178,7 @@ def _moveRight(sd_pair, a, b):
     sd_left, sd_right = sd_pair
     new_left = _factor(sd_left, a, b)
     assert new_left is not None
-    to_mult = StrandDiagram(sd_left.parent, None, [(a,b)],
+    to_mult = StrandDiagram(sd_left.parent, None, [(a, b)],
                             sd_right.getLeftIdem())
     new_right = to_mult * sd_right
     assert new_right != E0
@@ -223,13 +223,13 @@ def _factor(sd, a, b):
 
     """
     strand_lst = list(sd.strands)
-    for p, q in [(p,q) for p,q in strand_lst if p == a and q >= b]:
+    for p, q in [(p, q) for p,q in strand_lst if p == a and q >= b]:
         strand_lst.remove((p, q))
         if q > b:
             strand_lst.append((b, q))
         result = StrandDiagram(sd.parent, None, strand_lst,
                                sd.getRightIdem())
-        to_mult = StrandDiagram(sd.parent, None, [(a,b)],
+        to_mult = StrandDiagram(sd.parent, None, [(a, b)],
                                 result.getLeftIdem())
         if to_mult * result == 1 * sd:
             return result
@@ -312,8 +312,8 @@ def homotopyMap(sd_left, sd_right):
 
     left_avail = getStrandsAtPoint(sd_left, key_pos+1)
     right_avail = getStrandsAtPoint(sd_right, key_pos+1)
-    total_avail = sorted([((p,q), _LEFT) for p,q in left_avail] +
-                         [((p,q), _RIGHT) for p,q in right_avail])
+    total_avail = sorted([((p, q), _LEFT) for p, q in left_avail] +
+                         [((p, q), _RIGHT) for p, q in right_avail])
     assert len(total_avail) >= 2
     (start1, end1), side1 = total_avail[0]
     (start2, end2), side2 = total_avail[1]
@@ -324,7 +324,7 @@ def homotopyMap(sd_left, sd_right):
         # Un-cross two strands on the left.
         if end1 <= end2:
             return result
-        result.append((_uncross(sd_left, start1, end1, start2, end2),sd_right))
+        result.append((_uncross(sd_left, start1, end1, start2, end2), sd_right))
     elif side1 == _RIGHT and side2 == _RIGHT:
         # Second case: both lowest available strands are on the right.
         # Cross two strands on the right.
@@ -341,7 +341,7 @@ def homotopyMap(sd_left, sd_right):
     if not total_mult_one:
         return result
     # Three special cases only for the multiplicity one case
-    forbid_start = [a for a,b in sd_left.strands if b == forbid_pos]
+    forbid_start = [a for a, b in sd_left.strands if b == forbid_pos]
     if not forbid_start:
         return result
     forbid_start = forbid_start[0]

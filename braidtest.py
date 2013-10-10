@@ -10,7 +10,7 @@ class BraidTest(unittest.TestCase):
         for i in range(1, 6):
             self.assertTrue(len(br2.getArcslides(i)), pos_size[i-1])
             self.assertTrue(len(br2.getArcslides(-i)), pos_size[i-1])
-        self.assertTrue(len(br2.getArcslides(range(1,6))), sum(pos_size))
+        self.assertTrue(len(br2.getArcslides(range(1, 6))), sum(pos_size))
 
 class BraidCapTest(unittest.TestCase):
     def testBraidCap(self):

@@ -296,7 +296,7 @@ class ExperimentalTest(unittest.TestCase):
             cur_pmc = arcslide.end_pmc
             twist_slides[2].append(arcslide)
 
-        twist_slides[-1] = [slide.inverse() 
+        twist_slides[-1] = [slide.inverse()
                             for slide in reversed(twist_slides[1])]
         twist_slides[-2] = [slide.inverse()
                             for slide in reversed(twist_slides[2])]

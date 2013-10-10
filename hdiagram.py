@@ -97,12 +97,14 @@ class _OrientedSegment:
 
 class _Path(list):
     """A path represented as a list of OrientedSegment."""
-    def __init__(self, data = [], name = "", iscycle = False):
+    def __init__(self, data = None, name = "", iscycle = False):
         """Specify the data as a list of OrientedSegment. Optionally, provide
         a name for the path, and/or whether this path should be considered as a
         cycle.
 
         """
+        if data is None:
+            data = []
         list.__init__(self, data)
         self.name = name
         self.iscycle = iscycle
@@ -167,7 +169,7 @@ class _Cell:
     def __init__(self, name, boundary):
         """Specify the name of the cell, and the boundary as a Path (or a list
         of Path) with ``iscycle`` set to ``True``.
-       
+
         """
         self.name = name
         if isinstance(boundary, _Path):
@@ -378,7 +380,7 @@ class HeegaardDiagram:
             generator. pt_pos is the index of the next point to be considered
             for inclusion. alpha_occupied is a list of booleans on whether each
             alpha cycle / arc is already used. Likewise for beta_occupied.
-            
+
             """
             if len(pts_chosen) == self.genus:
                 # Check each alpha cycle and beta cycle are used
@@ -455,7 +457,7 @@ class HeegaardDiagram:
         self.num_interior_seg = len(self.interior_segs)
         for i in range(self.num_interior_seg):
             self.seg_to_id[self.interior_segs[i]] = i
-        
+
         rows = [cell.bdOneChain() for cell in self.used_cells] + \
             [path.toOneChain() for path in self.alpha + self.beta]
         vec_rows = []
@@ -507,7 +509,7 @@ class HeegaardDiagram:
         specifying idem_size, which is the number of arcs on the first border
         (usually considered the left border) that contain points.
 
-        """               
+        """
         if not self.two_border_case:
             # idem_size is meaningless then
             assert idem_size is None
@@ -817,8 +819,8 @@ def diagramFromCycleInfo(name, num_interior_point = 0, length_border = [],
     """
 
     # Construct the set of points
-    interior_points = [_Point("p%d"%i) for i in range(num_interior_point)]
-    border_points = [[_Point("b%d,%d"%(i,j))
+    interior_points = [_Point("p%d" % i) for i in range(num_interior_point)]
+    border_points = [[_Point("b%d,%d" % (i, j))
                       for j in range(length_border[i])]
                      for i in range(len(length_border))]
     points = interior_points + sum(border_points, [])
@@ -855,12 +857,12 @@ def diagramFromCycleInfo(name, num_interior_point = 0, length_border = [],
         newsegs, newpath = processPath(alpha_cycles[i], "ac%d"%i, True)
         interior_segs.extend(newsegs)
         alpha.append(newpath)
-    
+
     for i in range(len(alpha_arcs)):
         newsegs, newpath = processPath(alpha_arcs[i], "aa%d"%i, False)
         interior_segs.extend(newsegs)
         alpha.append(newpath)
-    
+
     for i in range(len(beta_cycles)):
         newsegs, newpath = processPath(beta_cycles[i], "bc%d"%i, True)
         interior_segs.extend(newsegs)
@@ -929,7 +931,7 @@ def diagramFromCycleInfo(name, num_interior_point = 0, length_border = [],
     # cells.
     bdcells = set([seg.oseg() for seg in segments] + \
                       [seg.orseg() for seg in interior_segs])
-    
+
     while bdcells:
         startbd = bdcells.pop()
         curboundary = [startbd]

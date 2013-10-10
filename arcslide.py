@@ -5,7 +5,7 @@ from ddstructure import *
 # Two types of arcslides:
 UNDER_SLIDE, OVER_SLIDE = 0, 1
 
-class Arcslide():
+class Arcslide:
     """Represents an arcslide."""
     def __init__(self, start_pmc, b1, c1):
         """Specifies the starting pmc, the sliding point (b1), and the point it
@@ -35,7 +35,7 @@ class Arcslide():
                 self.to_r = self._getShiftMap(self.b1, self.c1+2, self.c2-1)
             else: # self.c2 < self.c1
                 self.to_r = self._getShiftMap(self.b1, self.c2, self.c1)
-        
+
         self.end_pmc = PMC([(self.to_r[p], self.to_r[q])
                             for p, q in self.start_pmc.pairs])
         self.pair_to_r = dict()
@@ -131,8 +131,8 @@ class Arcslide():
         # which as the base generator.
         base_idem = [Idempotent(ex_start_pmc, range(2*genus)),
                      Idempotent(ex_end_pmc.opp(), range(2*genus))]
-        base_idem2 = [Idempotent(ex_start_pmc, range(2*genus,4*genus)),
-                      Idempotent(ex_end_pmc.opp(), range(2*genus,4*genus))]
+        base_idem2 = [Idempotent(ex_start_pmc, range(2*genus, 4*genus)),
+                      Idempotent(ex_end_pmc.opp(), range(2*genus, 4*genus))]
         if abs_gr_info == 0:
             base_gen = ex_hdiagram.getGeneratorByIdem(base_idem, True)
         else:
@@ -258,7 +258,7 @@ class Arcslide():
                 if x != self.b1 and y != self.b1 and \
                         self.start_pmc.otherp[x] != y:
                     self._addPair([(x, y)], [(x, y)])
-    
+
     def _U2Chords(self):
         b1, c1, c2 = self.b1, self.c1, self.c2
         if b1 < c1: # so to_r[c2] < to_r[b1]

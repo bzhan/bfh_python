@@ -3,13 +3,13 @@
 from fractions import Fraction
 from linalg import *
 
-class Group():
+class Group:
     """Represents a general group."""
     def multiply(self, elt1, elt2):
         """Returns the product of gen1 and gen2."""
         raise NotImplementedError("Multiply not implemented.")
 
-class GroupElement():
+class GroupElement:
     """Represents an element of a group."""
     def __init__(self, parent):
         """Specifies which group this element is in."""
@@ -96,7 +96,7 @@ class BigGradingElement(GroupElement):
     def __ne__(self, other):
         return not (self == other)
 
-    def __hash__(self, other):
+    def __hash__(self):
         return hash((self.parent, self.maslov, self.spinc))
 
     def __str__(self):
@@ -233,7 +233,7 @@ class SmallGradingElement(GroupElement):
     def __ne__(self, other):
         return not (self == other)
 
-    def __hash__(self, other):
+    def __hash__(self):
         return hash((self.parent, self.maslov, self.spinc))
 
     def __str__(self):
@@ -381,7 +381,7 @@ def averageRefinement(pmc, idem_size = None):
 # Default function for getting refinement data
 DEFAULT_REFINEMENT = averageRefinement
 
-class GradingSet():
+class GradingSet:
     """Represents a general grading set. Can specify an arbitrary number of
     group actions (although only up to two is used).
 
@@ -427,7 +427,7 @@ class GradingSet():
         """
         raise NotImplementedError("Set Ropp not implemented.")
 
-class GradingSetElement():
+class GradingSetElement:
     """Represents an element of a grading set."""
     def __init__(self, parent):
         """Specify which grading set this element is in."""
@@ -446,7 +446,7 @@ class GradingSetElement():
     def __add__(self, other):
         """Adding an integer / rational number ``n`` means adding the maslov
         component by ``n`` (multiplying by lambda^n).
-        
+
         """
         if not isinstance(other, Number):
             return NotImplemented
@@ -656,7 +656,7 @@ class SimpleDbGradingSet(GradingSet):
 
     @memorize
     def opp(self):
-        new_domains = [(d2.opp(), d1.opp()) for d1,d2 in self.periodic_domains]
+        new_domains = [(d2.opp(), d1.opp()) for d1, d2 in self.periodic_domains]
         return SimpleDbGradingSet(self.gr_group2.opp(), oppSide(self.side2),
                                   self.gr_group1.opp(), oppSide(self.side1),
                                   new_domains)
@@ -1025,7 +1025,7 @@ class GeneralGradingSet(GradingSet):
                 else: # side == ACTION_RIGHT
                     elt_list[set_id][action_id] = \
                         elt_list[set_id][action_id] * to_mult
-        return elt_list        
+        return elt_list
 
     def eltEquals(self, elt1, elt2):
         """Equality test for grading elements. Use row system to identify

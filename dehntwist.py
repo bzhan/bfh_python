@@ -2,7 +2,7 @@
 
 from ddstructure import *
 
-class DehnTwist():
+class DehnTwist:
     """Represents a Dehn twist starting at linear PMC."""
     def __init__(self, genus, c_pair, orientation):
         """Specifies genus of the starting pmc, id of the pair of Dehn twist,
@@ -18,7 +18,7 @@ class DehnTwist():
         self.c_pair = c_pair
         assert self.c2 == self.c1 + 3
         # Two positions between c1 and c2, for (d)own and (u)p
-        self.d = self.c1 + 1 
+        self.d = self.c1 + 1
         self.u = self.c1 + 2
         self.d_pair = self.start_pmc.pairid[self.d]
         self.u_pair = self.start_pmc.pairid[self.u]

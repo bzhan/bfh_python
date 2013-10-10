@@ -104,8 +104,10 @@ class Element(SummableDict):
     to coefficients. For example: a+2b will be represented as {a:1,b:2}.
 
     """
-    def __init__(self, data = {}):
+    def __init__(self, data = None):
         """Corrects type of coefficients if necessary."""
+        if data is None:
+            data = {}
         SummableDict.__init__(self, data)
         if self:
             convert = self.getElt().parent.ring.convert
@@ -130,13 +132,15 @@ class Element(SummableDict):
         # First try multiplying each coefficient with other, using the function
         # in SummableDict.
         result = SummableDict.__mul__(self, other)
-        if result != NotImplemented: return result
+        if result != NotImplemented:
+            return result
 
         # Now try to multiply each key by other on the left.
         result = E0
         for k, v in self.items():
             prod = safeMultiply(k, other)
-            if prod is NotImplemented: return NotImplemented
+            if prod is NotImplemented:
+                return NotImplemented
             result += [term * (v * coeff) for term, coeff in prod.items()]
         return result
 
@@ -144,13 +148,15 @@ class Element(SummableDict):
         # First try multiplying each coefficient with other, using the function
         # in SummableDict.
         result = SummableDict.__rmul__(self, other)
-        if result != NotImplemented: return result
+        if result != NotImplemented:
+            return result
 
         # Now try to multiply key by other on the left.
         result = E0
         for k, v in self.items():
             prod = safeMultiply(other, k)
-            if prod is NotImplemented: return NotImplemented
+            if prod is NotImplemented:
+                return NotImplemented
             result += [term * (v * coeff) for term, coeff in prod.items()]
         return result
 
@@ -174,7 +180,7 @@ class SimpleChainComplex(ChainComplex):
     explicitly stored generating set and differential. The generating set is
     stored as a python set, and differential is stored as a dictionary mapping
     from generators to elements. Each generator must be a key in the dictionary
-    (even if its differential is zero). 
+    (even if its differential is zero).
 
     """
     def __init__(self, ring):
@@ -302,7 +308,7 @@ class SimpleChainComplex(ChainComplex):
         return sorted([self.gr_set.eltAbsoluteGrading(self.grading[gen])
                        for gen in self.generators])
 
-class SimpleChainMorphism():
+class SimpleChainMorphism:
     """Represents a morphism between two simple chain complexes (which may be
     the same). Need not be a chain map (so can be used to represent homotopy,
     for example). Represented explicitly.
@@ -414,8 +420,10 @@ class TensorElement(Element):
     TODO: Add support for quickly collecting terms by one of the components.
 
     """
-    def __init__(self, data = {}, parent = None):
+    def __init__(self, data = None, parent = None):
         """If the keys are tuples, convert them to tensor generators."""
+        if data is None:
+            data = {}
         data_processed = {}
         for term, coeff in dict(data).items():
             if isinstance(term, TensorGenerator):
@@ -445,7 +453,7 @@ class TensorElement(Element):
                 if not (1*comp).invertible():
                     return False
         return True
-        
+
     def inverse(self):
         """Returns the inverse of this element, if invertible. Undefined
         behavior if the element is not invertible.
@@ -579,8 +587,10 @@ class TensorStarGenerator(Generator, tuple):
 
 class TensorStarElement(Element):
     """Represents an element of the tensor star algebra."""
-    def __init__(self, data = {}, parent = None):
+    def __init__(self, data = None, parent = None):
         """If the keys are tuples, convert them to tensor star generators."""
+        if data is None:
+            data = {}
         data_processed = {}
         for term, coeff in dict(data).items():
             if isinstance(term, TensorStarGenerator):
@@ -728,7 +738,7 @@ def simplifyComplex(arrows, default_coeff = 0, find_homology_basis = False):
     if find_homology_basis:
         for x in arrows:
             x.prev_meaning = 1*x
-            
+
     def cancelEdge(x, y):
         """Cancel the edge from x to y."""
         coeff = arrows[x][y]
@@ -737,23 +747,23 @@ def simplifyComplex(arrows, default_coeff = 0, find_homology_basis = False):
 
         # List of edges going into y (other than that from x and y)
         alist = [(term, coeff) for term, coeff in rev_arrows[y].items()
-                 if term not in (x,y)]
+                 if term not in (x, y)]
         # List of edges coming from x (other than that going to x and y)
         blist = [(term, coeff) for term, coeff in arrows[x].items()
-                 if term not in (x,y)]
+                 if term not in (x, y)]
 
         # Remove all edges going into x or y
         for term in arrows[x]:
-            if term not in (x,y):
+            if term not in (x, y):
                 del rev_arrows[term][x]
         for term in arrows[y]:
-            if term not in (x,y):
+            if term not in (x, y):
                 del rev_arrows[term][y]
         for term in rev_arrows[x]:
-            if term not in (x,y):
+            if term not in (x, y):
                 del arrows[term][x]
         for term in rev_arrows[y]:
-            if term not in (x,y):
+            if term not in (x, y):
                 del arrows[term][y]
         # Remove x and y
         del arrows[x], arrows[y], rev_arrows[x], rev_arrows[y]

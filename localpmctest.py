@@ -76,7 +76,7 @@ class LocalStrandDiagramTest(unittest.TestCase):
         # Restriction is (0*-1-2-3-4*), (5*-6), where 3 and 6 are paired
         # (pair-id = 2), and 1, 2 have pair-id 0 and 1, respectively.
         local_pmc2, mapping2 = restrictPMC(pmc, [(3, 5), (7, 7)])
-        
+
         # Format is as follows:
         # - idempotent for local_pmc1
         # - strands for local_pmc1

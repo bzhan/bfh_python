@@ -53,7 +53,7 @@ class RowSystem:
         combs = [[0]*self.num_row for i in range(self.num_row)]
         for i in range(self.num_row):
             combs[i][i] = 1
-        
+
         def swap_row(a, b):
             """Swaps row #a and #b of reduced_vecs."""
             for i in range(self.num_col):

@@ -71,7 +71,7 @@ def restrictPMC(pmc, intervals):
     intervals.
     - mapping is a dictionary mapping from points in pmc to points in
     local_pmc.
-    
+
     Input parameters:
     - pmc: must be an object of PMC.
     - intervals: must be ordered, disjoint intervals. Each interval is
@@ -285,7 +285,7 @@ class LocalStrandDiagram:
                 all_local_strands.append((start_pos, (start, end), i))
         all_local_strands = sorted(all_local_strands)
 
-        # First check that every loose end is matched. Otherwise return 
+        # First check that every loose end is matched. Otherwise return.
         for strands_id in range(len(all_local_strands)):
             start_pos, (start, end), pmc_id = all_local_strands[strands_id]
             if start in local_pmc[pmc_id].endpoints:

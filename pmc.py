@@ -50,7 +50,7 @@ class PMC:
     @memorize
     def opp(self):
         """Returns a new PMC that represents the opposite PMC."""
-        return PMC([(self.n-1-p,self.n-1-q) for p, q in self.pairs])
+        return PMC([(self.n-1-p, self.n-1-q) for p, q in self.pairs])
 
     def sd(self, data, mult_one = MULT_ONE):
         """Simple way to obtain a strand diagram for this PMC. Each element of
@@ -129,7 +129,7 @@ class PMC:
                 for p in self.pairs[l_idem[pos]]:
                     for q in self.pairs[r_idem[pos]]:
                         if p < q:
-                            helper(l_idem, r_idem, strands+[(p,q)], pos+1)
+                            helper(l_idem, r_idem, strands + [(p, q)], pos+1)
                 r_idem[i], r_idem[pos] = r_idem[pos], r_idem[i]
         idems = self.getIdempotents(idem_size)
         for l_idem in idems:
@@ -153,17 +153,17 @@ class PMC:
 
 def splitPMC(genus):
     """Returns the split pmc with a given genus."""
-    return PMC(sum([[(4*i,4*i+2),(4*i+1,4*i+3)] for i in range(0,genus)],[]))
+    return PMC(sum([[(4*i, 4*i+2), (4*i+1, 4*i+3)] for i in range(0,genus)],[]))
 
 def linearPMC(genus):
     """Returns the linear pmc with a given genus."""
-    matching = [(0,2),(4*genus-3,4*genus-1)]
-    matching += [(2*i-1,2*i+2) for i in range(1,2*genus-1)]
+    matching = [(0, 2),(4*genus-3, 4*genus-1)]
+    matching += [(2*i-1, 2*i+2) for i in range(1, 2*genus-1)]
     return PMC(matching)
 
 def antipodalPMC(genus):
     """Returns the antipodal pmc with a given genus."""
-    return PMC([(i,2*genus+i) for i in range(2*genus)])
+    return PMC([(i, 2*genus+i) for i in range(2*genus)])
 
 def connectSumPMC(pmc1, pmc2):
     """Return the connect sum of two PMC's."""
@@ -183,7 +183,7 @@ def unconnectSumPMC(pmc, genus1):
     pmc1 = PMC([(p, q) for p, q in pmc.pairs if p < cut_point])
     pmc2 = PMC([(p-cut_point, q-cut_point)
                 for p, q in pmc.pairs if p >= cut_point])
-    return (pmc1, pmc2)    
+    return (pmc1, pmc2)
 
 class Idempotent(tuple):
     """Represents an idempotent in a certain PMC. Stored as a tuple of pairid
@@ -274,7 +274,7 @@ class Strands(tuple):
         return hash((self.pmc, tuple(self), "Strands"))
 
     def __str__(self):
-        return "(%s)" % ",".join("%d->%d" % (s,t) for s, t in self)
+        return "(%s)" % ",".join("%d->%d" % (s, t) for s, t in self)
 
     def __repr__(self):
         return str(self)
@@ -458,12 +458,12 @@ class StrandDiagram(Generator):
         algebra.
 
         """
-        return StrandDiagram(self.parent.opp(), self.right_idem.opp(), 
+        return StrandDiagram(self.parent.opp(), self.right_idem.opp(),
                              self.strands.opp(), self.left_idem.opp())
 
     def numCrossing(self):
         """Returns the number of crossings between moving strands."""
-        return sum(1 for (s1,t1) in self.strands for (s2,t2) in self.strands
+        return sum(1 for (s1, t1) in self.strands for (s2, t2) in self.strands
                    if s1 < s2 and t1 > t2)
 
     def maslov(self):
@@ -570,7 +570,7 @@ class StrandAlgebra(DGAlgebra):
                     new_strands.remove(st2)
                     new_strands.extend([(st1[0], st2[1]), (st2[0], st1[1])])
                     appendCandidate(new_strands)
-        
+
         # Uncross a moving strand with a double horizontal
         for st in cur_strands:
             for i in gen.double_hor:

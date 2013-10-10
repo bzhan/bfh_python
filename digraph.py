@@ -53,7 +53,7 @@ class ConcreteDiGraph(DiGraph):
 
     def getNodes(self):
         return self.nodes
-        
+
     def getOutEdges(self, node):
         return self.edges[node]
 
@@ -138,7 +138,7 @@ class UniversalDiGraphNode(DiGraphNode, tuple):
         """Specifies parent DiGraph. data is the list of generators."""
         self.parent = parent
         # Note tuple initialization is automatic
-    
+
 class UniversalDiGraph(DiGraph):
     """The universal digraph of an algebra (usually strand algebra of a PMC.)
     Nodes correspond to ordered sequences of algebra generators. From each
@@ -377,7 +377,7 @@ class TypeAAGraph(DiGraph):
     ALG_LEFT = TypeAAGraphEdge.ALG_LEFT
     ALG_RIGHT = TypeAAGraphEdge.ALG_RIGHT
     HOMOTOPY = TypeAAGraphEdge.HOMOTOPY
-    
+
     def __init__(self, pmc):
         """Creates a type AA graph simplifying the type AA of identity for the
         given PMC. Uses the chain complex and homotopy calculated in class
@@ -475,16 +475,19 @@ class TypeAAGraph(DiGraph):
                     result.append((d1_pos, d2_pos, aa_pos))
                 else:
                     for edge in self.getHomotopyEdges(aa_pos):
-                        result += search(d1_pos, d2_pos, edge.target, False, depth+1)
+                        result += search(d1_pos, d2_pos, edge.target, False,
+                                         depth+1)
             else:
                 for d1_edge in d_graph1.getOutEdges(d1_pos):
                     target = self.getAlgLeftTarget(aa_pos, d1_edge.coeff.opp())
                     if target is not None:
-                        result += search(d1_edge.target, d2_pos, target, True, depth+1)
+                        result += search(d1_edge.target, d2_pos, target, True,
+                                         depth+1)
                 for d2_edge in d_graph2.getOutEdges(d2_pos):
                     target = self.getAlgRightTarget(aa_pos, d2_edge.coeff)
                     if target is not None:
-                        result += search(d1_pos, d2_edge.target, target, True, depth+1)
+                        result += search(d1_pos, d2_edge.target, target, True,
+                                         depth+1)
             return result
 
         full_result = []

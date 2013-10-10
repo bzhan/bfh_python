@@ -34,7 +34,7 @@ class SimpleDDGenerator(DDGenerator, NamedObject):
 
     def __str__(self):
         return "%s:%s,%s" % (self.name, str(self.idem1), str(self.idem2))
-        
+
     def __repr__(self):
         return str(self)
 
@@ -476,7 +476,7 @@ def DDStrFromDStr(dstr, genus1):
     assert dstr.algebra.idem_size == pmc_all.genus
     pmc1, pmc2 = unconnectSumPMC(pmc_all, genus1)
     mult_one = dstr.algebra.mult_one
-    
+
     ddstr = SimpleDDStructure(F2, pmc1.getAlgebra(None, mult_one),
                               pmc2.getAlgebra(None, mult_one))
     gen_map = {}

@@ -86,7 +86,7 @@ def sumColumns(matrix, num_col):
 def _dictAddTo(dict1, dict2):
     """Add dict2 onto dict1 in place. If dict2 is a list, add each element of
     dict2 in place.
-    
+
     """
     dict2 = [curdict.copy() for curdict in tolist(dict2) if curdict != 0]
     if dict1 == 0:
@@ -110,7 +110,7 @@ def _dictAddTo(dict1, dict2):
 def _dictMult(dict1, scalar):
     """Return a new dictionary with same type as self, the same keys, and
     each value multiplied by scalar.
-    
+
     """
     if not isinstance(scalar, Number):
         return NotImplemented
@@ -173,7 +173,7 @@ class SummableDict(dict):
         """Returns an arbitrary key from this dictionary. Must be non-empty."""
         return iter(self).next()
 
-class Ring():
+class Ring:
     pass
 
 class ModNRing(Ring):
@@ -201,7 +201,7 @@ class ModNRing(Ring):
     def __ne__(self, other):
         return not (self == other)
 
-    def __hash__(self, other):
+    def __hash__(self):
         return hash((self.n, "ModNRing"))
 
     def convert(self, data):

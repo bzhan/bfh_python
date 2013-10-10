@@ -31,7 +31,7 @@ class PathTest(unittest.TestCase):
         self.osegsr = [seg.oseg().opp() for seg in self.segs]
         self.loopseg = _Segment("loop", self.pts[0], self.pts[0])
         self.oloopseg = self.loopseg.oseg()
-        
+
         # These should construct valid paths
         self.path1 = _Path([], "empty")
         self.path2 = _Path([self.oloopseg], "small_loop", True)
@@ -134,7 +134,7 @@ class CommonDiagramsTest(unittest.TestCase):
             self.assertEqual(len(diagram.getPeriodicDomains()), pmc.genus*2)
 
     def testArcslideDiagram(self):
-        slide_to_test = [Arcslide(splitPMC(2), 4, 3), 
+        slide_to_test = [Arcslide(splitPMC(2), 4, 3),
                          Arcslide(splitPMC(2), 2, 3)]
         for slide in slide_to_test:
             diagram = getArcslideDiagram(slide)

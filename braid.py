@@ -29,12 +29,12 @@ class Braid():
         if abs_word == 1:
             slides_info = [(1, 0)]
         elif 1 < abs_word < self.num_strands-2:
-            slides_info = [(2*abs_word-2,2*abs_word-3)] * 2
+            slides_info = [(2*abs_word-2, 2*abs_word-3)] * 2
         elif abs_word == self.num_strands-2:
-            slides_info = [(2*abs_word-2,2*abs_word-3)]
+            slides_info = [(2*abs_word-2, 2*abs_word-3)]
         else: # abs_word = self.num_strands-1
-            slides_info = [(4*i-3,4*i-4) for i in range(self.genus,0,-1)]
-            slides_info += [(2*i+2,2*i+1) for i in range(2*self.genus-2)]
+            slides_info = [(4*i-3, 4*i-4) for i in range(self.genus, 0, -1)]
+            slides_info += [(2*i+2, 2*i+1) for i in range(2*self.genus-2)]
         slides = [Arcslide(self.pmc, slides_info[0][0], slides_info[0][1])]
         for i in range(1, len(slides_info)):
             slides.append(Arcslide(slides[i-1].end_pmc,
@@ -86,13 +86,13 @@ def platTypeD2(genus, is_dual = False):
     for i in range(len(slides)):
         b1, c1 = slides[i]
         slides[i] = Arcslide(cur_pmc, b1, c1)
-        cur_pmc = slides[i].end_pmc        
+        cur_pmc = slides[i].end_pmc
     if not is_dual:
         slides = [slide.inverse() for slide in slides]
     slides_dd = [slide.getDDStructure() for slide in slides]
-    return composeDD(start, slides_dd, is_dual) 
+    return composeDD(start, slides_dd, is_dual)
 
-class BraidCap():
+class BraidCap:
     """Represents a capping of a braid."""
     def __init__(self, matching):
         """Specifies the matching of strands."""
@@ -135,14 +135,14 @@ class BraidCap():
              (8,3,2,7,6,5,4,1),(8,3,2,5,4,7,6,1),(6,5,4,3,2,1,8,7),
              (6,3,2,5,4,1,8,7),(4,3,2,1,8,7,6,5),(4,3,2,1,6,5,8,7),
              (2,1,8,7,6,5,4,3),(2,1,8,5,4,7,6,3),(2,1,6,5,4,3,8,7),
-             (2,1,4,3,8,7,6,5),(2,1,4,3,6,5,8,7)]             
+             (2,1,4,3,8,7,6,5),(2,1,4,3,6,5,8,7)]
     ends3_fix = [[3,4],[],[1,2,3,4,2,3],[1,2],[1,2,3,4]]
     ends4_fix = [[3,4,5,4,3,2],[3,4,5,6],[3,4],[5,6],[],
                  [1,2,3,4,5,6,2,3,4,5,3,4],[1,2,3,4,5,6,2,3,4,5],[1,2,3,4,2,3],
                  [1,2,3,4,5,6,2,3],[1,2,5,6],[1,2],[1,2,3,4,5,6,4,5],[1,2,3,4],
-                 [1,2,3,4,5,6]]    
+                 [1,2,3,4,5,6]]
 
-class BridgePresentation():
+class BridgePresentation:
     """Represents a bridge presentation of a knot. Computes HF of branched
     double cover from bridge presentation.
 

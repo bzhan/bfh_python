@@ -475,7 +475,7 @@ def infTypeD(genus, is_dual = False, abs_gr_info = None):
     geny = SimpleDGenerator(dstr, idem, "y")
     dstr.addGenerator(geny)
     for i in range(genus):
-        sd = StrandDiagram(algebra, idem, [(4*i+1,4*i+3)])
+        sd = StrandDiagram(algebra, idem, [(4*i+1, 4*i+3)])
         dstr.addDelta(geny, geny, sd, 1)
     if abs_gr_info is None:
         geny_gr = None
@@ -502,7 +502,7 @@ def platTypeD(genus):
     idem = pmc.idem([4*i+1 for i in range(genus-1)]+[4*genus-3])
     genx = SimpleDGenerator(dstr, idem, "x")
     dstr.addGenerator(genx)
-    strands = [(4*i+1,4*i+4) for i in range(genus-1)]+[(4*genus-3,4*genus-1)]
+    strands = [(4*i+1,4*i+4) for i in range(genus-1)]+[(4*genus-3, 4*genus-1)]
     for st in strands:
         sd = StrandDiagram(algebra, idem, [st])
         dstr.addDelta(genx, genx, sd, 1)
