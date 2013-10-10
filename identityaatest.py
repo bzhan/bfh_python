@@ -2,6 +2,7 @@
 
 from identityaa import *
 from identityaa import _getIntervalOrdering
+from pmc import antipodalPMC, linearPMC, splitPMC
 import unittest
 
 class HomotopyAATest(unittest.TestCase):

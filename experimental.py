@@ -5,6 +5,12 @@ included in testmod.
 
 from braid import *
 from dehntwist import *
+from digraph import computeDATensorDD
+from dstructure import SimpleDStructure, SimpleDGenerator
+from dstructure import zeroTypeD
+from ddstructure import DDStrFromDStr
+from dastructure import DAStrFromChords
+from utility import DEFAULT_GRADING, F2, SMALL_GRADING
 import unittest
 
 class ExperimentalTest(unittest.TestCase):
@@ -207,10 +213,7 @@ class ExperimentalTest(unittest.TestCase):
                 print gen, d_mid.grading[gen].simplifiedElt()
 
     def testTrefoilSurgery(self):
-        """Computes HF for +1 and -1 surgery on left-handed trefoil. Currently
-        DOES NOT APPEAR TO BE CORRECT.
-
-        """
+        """Computes HF for +1 and -1 surgery on left-handed trefoil. """
         # Everything is over the PMC of genus 1
         pmc = splitPMC(1)
         algebra = pmc.getAlgebra()
@@ -232,7 +235,7 @@ class ExperimentalTest(unittest.TestCase):
         d_p1.addDelta(a, b, rho2, 1)
         d_p1.addDelta(b, a, rho123, 1)
         print "CFD(H_+1): ", d_p1
-        # CFD(H_-1)
+        # and CFD(H_-1)
         d_p2 = SimpleDStructure(F2, algebra)
         a = SimpleDGenerator(d_p2, i1, "a")
         b = SimpleDGenerator(d_p2, i0, "b")
@@ -301,10 +304,10 @@ class ExperimentalTest(unittest.TestCase):
         twist_slides[-2] = [slide.inverse()
                             for slide in reversed(twist_slides[2])]
 
-        seq = [-2, -2, 1, 2]
+        # seq = [-2, -2, 1, 2]
         # seq = [2, 1, -2, -2]
         # seq = [-2]
-        # seq = [1]
+        seq = [1]
         slides_total = []
         for twist in seq:
             slides_total.extend(twist_slides[twist])

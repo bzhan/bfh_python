@@ -1,9 +1,14 @@
 """Pointed matched circle and its algebras."""
 
-from algebra import *
-from grading import *
-from fractions import Fraction
 import itertools
+from algebra import E0
+from fractions import Fraction
+from algebra import DGAlgebra, Element, Generator, Tensor, TensorGenerator
+from grading import BigGradingElement, BigGradingGroup, SmallGradingElement, \
+    SmallGradingGroup
+from grading import DEFAULT_REFINEMENT
+from utility import memorize, memorizeHash
+from utility import BIG_GRADING, DEFAULT_GRADING, F2, MULT_ONE
 
 class PMC:
     """Represents a pointed matched circle."""

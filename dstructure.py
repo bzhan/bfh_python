@@ -1,6 +1,17 @@
 """Defines type D structures."""
 
-from hdiagram import *
+from fractions import Fraction
+from algebra import DGAlgebra, FreeModule, Generator, SimpleChainComplex, \
+    Tensor, TensorGenerator
+from algebra import simplifyComplex
+from algebra import E0
+from grading import GeneralGradingSet, GeneralGradingSetElement
+from hdiagram import getZeroFrameDiagram, getInfFrameDiagram, getPlatDiagram
+from pmc import Idempotent, Strands, StrandDiagram
+from pmc import connectSumPMC, splitPMC, linearPMC
+from utility import MorObject, NamedObject
+from utility import memorize
+from utility import ACTION_LEFT, DEFAULT_GRADING, F2, SMALL_GRADING
 
 class DGenerator(Generator):
     """Represents a generator of type D structure. Distinguished by (python)

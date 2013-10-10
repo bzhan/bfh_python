@@ -1,6 +1,7 @@
 """Unit test for localpmc.py"""
 
 from localpmc import *
+from pmc import splitPMC
 import unittest
 
 class LocalPMCTest(unittest.TestCase):

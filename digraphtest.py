@@ -1,9 +1,12 @@
 """Unit test for digraph.py"""
 
 from digraph import *
-from dastructure import *
-from arcslide import *
-from braid import *
+from arcslide import Arcslide
+from dstructure import infTypeD, platTypeD, zeroTypeD, zeroTypeDAdm
+from ddstructure import identityDD
+from pmc import PMC
+from pmc import splitPMC
+from utility import DEFAULT_GRADING, SMALL_GRADING
 import unittest
 
 class TypeDGraphTest(unittest.TestCase):

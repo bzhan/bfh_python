@@ -1,7 +1,10 @@
 """Handles grading groups and grading sets."""
 
-from fractions import Fraction
-from linalg import *
+from fractions import Fraction, gcd
+from numbers import Number
+from linalg import RowSystem
+from utility import flatten, grTypeStr, memorize, oppSide, sideStr, tolist
+from utility import ACTION_LEFT, ACTION_RIGHT, BIG_GRADING, SMALL_GRADING
 
 class Group:
     """Represents a general group."""

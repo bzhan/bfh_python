@@ -1,6 +1,7 @@
 """Linear algebra, including integral linear algebra."""
 
-from utility import *
+from fractions import Fraction
+from utility import fracToInt, memorize
 
 class RowSystem:
     """Manage a list of row vectors of integers. Find both integer and rational

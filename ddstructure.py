@@ -1,6 +1,18 @@
 """Defines type DD structures."""
 
-from dstructure import *
+from algebra import DGAlgebra, FreeModule, Generator, Tensor, TensorDGAlgebra, \
+    TensorIdempotent, TensorGenerator
+from algebra import expandTensor, simplifyComplex
+from algebra import E0
+from dstructure import DGenerator, SimpleDGenerator, SimpleDStructure
+from grading import GeneralGradingSet, GeneralGradingSetElement, \
+    SimpleDbGradingSet, SimpleDbGradingSetElement
+from hdiagram import getIdentityDiagram
+from pmc import Idempotent, Strands, StrandDiagram
+from pmc import unconnectSumPMC, unconnectSumStrandDiagram
+from utility import MorObject, NamedObject
+from utility import memorize
+from utility import ACTION_LEFT, ACTION_RIGHT, ASSERT_LEVEL, F2
 
 class DDGenerator(Generator):
     """Represents a generator of type DD structure. Distinguished by (python)

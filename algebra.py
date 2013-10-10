@@ -7,7 +7,11 @@ the possibility of ``a.diff()`` where ``a`` is a Generator.
 
 """
 
-from utility import *
+import heapq
+from numbers import Number
+from utility import NamedObject, SummableDict
+from utility import fracToInt, memorizeHash, safeMultiply
+from utility import F2
 
 class FreeModule:
     """Represents a free module over some ring."""

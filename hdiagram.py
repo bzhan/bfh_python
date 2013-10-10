@@ -1,6 +1,15 @@
 """Code for handling Heegaard diagrams."""
 
-from pmc import *
+from fractions import Fraction
+from grading import BigGradingGroup, SimpleDbGradingSet, \
+    SimpleDbGradingSetElement, SimpleGradingSet, SimpleGradingSetElement, \
+    SmallGradingGroup
+from grading import DEFAULT_REFINEMENT
+from linalg import RowSystem
+from pmc import Idempotent, PMC
+from utility import SummableDict
+from utility import tolist
+from utility import ACTION_LEFT, BIG_GRADING, DEFAULT_GRADING, NEG, POS
 
 """Constants for each type of segment."""
 ALPHA, BETA, BORDER = range(3)

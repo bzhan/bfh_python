@@ -1,6 +1,10 @@
 """Dehn twists starting at linear PMC and their type DD structures."""
 
-from ddstructure import *
+from ddstructure import DDStrFromChords
+from pmc import Idempotent, Strands
+from pmc import linearPMC
+from utility import memorize
+from utility import NEG, POS
 
 class DehnTwist:
     """Represents a Dehn twist starting at linear PMC."""

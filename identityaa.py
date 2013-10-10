@@ -1,6 +1,10 @@
 """Description of type AA structure for identity cobordism."""
 
-from pmc import *
+from algebra import Generator, SimpleChainComplex, SimpleChainMorphism
+from algebra import E0
+from pmc import Strands, StrandDiagram
+from utility import find
+from utility import F2
 
 # Convenient values for specifying sides. Use only in the context of large
 # complex generators.

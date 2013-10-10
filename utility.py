@@ -1,10 +1,7 @@
 """Various utilities useful for the project."""
 
-from numbers import Number
 from fractions import gcd
-from fractions import Fraction
-import heapq
-import sys
+from numbers import Number
 
 def memorize(function):
     """Function decorator: memorize returned values of this function.

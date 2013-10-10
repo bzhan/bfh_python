@@ -1,7 +1,12 @@
 """Handles braids and their type DD structures."""
 
-from arcslide import *
-from digraph import *
+import sys
+from arcslide import Arcslide
+from digraph import computeATensorD, computeATensorDD, computeDATensorD
+from dstructure import infTypeD
+from pmc import linearPMC, splitPMC
+from utility import memorize
+from utility import PRINT_PROGRESS
 
 class Braid():
     """Represents a braid with a fix number of strands. Each braid generator is

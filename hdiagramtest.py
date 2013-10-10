@@ -3,7 +3,8 @@
 from hdiagram import *
 from hdiagram import _Point, _Segment, _OrientedSegment, _Path, _Cell, \
     _Domain, _OneChain
-from arcslide import *
+from arcslide import Arcslide
+from pmc import antipodalPMC, linearPMC, splitPMC
 import unittest
 
 class OrientedSegmentTest(unittest.TestCase):

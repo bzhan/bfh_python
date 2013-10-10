@@ -1,7 +1,10 @@
 """Unit test for ddstructure.py"""
 
 from ddstructure import *
-from hdiagram import *
+from dstructure import infTypeD, zeroTypeD
+from pmc import PMC
+from pmc import linearPMC, splitPMC
+from utility import DEFAULT_GRADING, SMALL_GRADING
 import unittest
 
 class DDStructureTest(unittest.TestCase):

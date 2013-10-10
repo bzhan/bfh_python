@@ -1,6 +1,7 @@
 """Unit test for dastructure.py"""
 
 from dastructure import *
+from pmc import splitPMC
 import unittest
 
 class DAStructureTest(unittest.TestCase):

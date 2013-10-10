@@ -1,7 +1,6 @@
 """Unit test for dstructure.py"""
 
 from dstructure import *
-from hdiagram import *
 import unittest
 
 class DStructureTest(unittest.TestCase):

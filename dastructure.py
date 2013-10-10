@@ -1,6 +1,13 @@
 """Defines type DA structures."""
 
-from ddstructure import *
+from algebra import CobarAlgebra, DGAlgebra, FreeModule, Generator, Tensor, \
+    TensorGenerator, TensorStarGenerator
+from algebra import E0
+from ddstructure import SimpleDDGenerator, SimpleDDStructure
+from pmc import StrandDiagram
+from utility import NamedObject
+from utility import sumColumns
+from utility import ACTION_LEFT, ACTION_RIGHT, F2
 
 class DAGenerator(Generator):
     """Represents a generator of type DA structure. Distinguished by (python)
@@ -74,7 +81,7 @@ class DAStructure(FreeModule):
         means forming the tensor.
 
         """
-        return 1*TensorGenerator((Agen, MGen), self.AtensorM)
+        return 1*TensorGenerator((AGen, MGen), self.AtensorM)
 
 class SimpleDAStructure(DAStructure):
     """Represents a type DA structure with a finite number of generators and a

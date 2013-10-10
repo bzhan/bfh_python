@@ -1,7 +1,15 @@
 """Handles things related to directed graphs."""
 
-from identityaa import *
-from dastructure import *
+from algebra import Generator, SimpleChainComplex
+from algebra import E0
+from dstructure import DGenerator, SimpleDStructure
+from ddstructure import DDGenerator, SimpleDDStructure
+from dastructure import SimpleDAGenerator, SimpleDAStructure
+from grading import GeneralGradingSet, GeneralGradingSetElement
+from identityaa import homotopyMap
+from pmc import Strands, StrandDiagram
+from utility import memorize
+from utility import F2
 
 class DiGraph:
     """Interface for a general directed graph."""

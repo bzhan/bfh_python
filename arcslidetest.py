@@ -1,6 +1,7 @@
 """Unit test for arcslide.py"""
 
 from arcslide import *
+from utility import DEFAULT_GRADING, SMALL_GRADING
 import unittest
 
 class ArcslideTest(unittest.TestCase):

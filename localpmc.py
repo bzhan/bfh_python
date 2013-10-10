@@ -4,7 +4,7 @@ local PMC's like this.
 
 """
 
-from pmc import *
+from pmc import StrandDiagram
 
 class LocalPMC:
     """Represents a pointed matched circle with boundaries and unmatched

@@ -1,7 +1,7 @@
 """Unit test for algebra.py"""
 
 from algebra import *
-from pmc import *
+from pmc import splitPMC
 import unittest
 
 class ChainComplexTest(unittest.TestCase):
