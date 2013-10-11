@@ -90,7 +90,7 @@ class LocalStrandDiagramTest(unittest.TestCase):
             ([0], [(0, 3)], [], [(0, 2)], [(0, 4)]),
             ([0], [(0, 3),(4, 5)], [], [(0, 4)], [(0, 6)]),
             ([0], [(0, 3),(4, 6)], [], [(0, 4),(5, 6)], [(0, 7)]),
-            ([1], [(1, 3)], [], [(0, 3)], None),  # idempotent mismatch
+            ([1], [(1, 3)], [], [(0, 3)], [(1, 5)]),
             ([1], [(1, 3)], [0], [(0, 3)], [(1, 5)]),
             # Mismatch cases
             ([], [(4, 5)], [], [], None),
@@ -104,7 +104,7 @@ class LocalStrandDiagramTest(unittest.TestCase):
             ([2], [(4, 5),(5, 6)], [1, 2], [(3, 4),(5, 6)], [(5, 6),(6, 7)]),
             # Double horizontal
             ([0, 1, 2], [], [0, 1], [], [0, 1, 4]),
-            ([0, 1], [], [0, 1], [], None),
+            ([0, 1], [], [0, 1], [], [0, 1, 4]),
             # Strands starting and ending at paired points
             ([0], [(0, 1),(2, 3)], [], [(0, 2)], None),
             ([0, 1], [(0, 1),(1, 3)], [0], [(0, 1)], None)
@@ -153,6 +153,9 @@ class RestrictionsTest(unittest.TestCase):
         self.assertEqual(restrictStrandDiagram(pmc1, pmc1.sd([(2, 5)]),
                                                local_pmc1, mapping1),
                          LocalStrandDiagram(local_pmc1, [0], [(2, 3)]))
+        self.assertEqual(restrictStrandDiagram(pmc1, pmc1.sd([0, (1, 3)]),
+                                               local_pmc1, mapping1),
+                         LocalStrandDiagram(local_pmc1, [0, 1], [(1, 3)]))
 
         # Second test case: one local PMC's in the middle
         # local_pmc2 is 0*-1-2-3-4*, where no points are paired.
@@ -167,7 +170,10 @@ class RestrictionsTest(unittest.TestCase):
                          LocalStrandDiagram(local_pmc2, [], [(0, 4)]))
         self.assertEqual(restrictStrandDiagram(pmc1, pmc1.sd([(1, 6)]),
                                                local_pmc2, mapping2),
-                         LocalStrandDiagram(local_pmc2, [0], [(0, 4)]))
+                         LocalStrandDiagram(local_pmc2, [], [(0, 4)]))
+        self.assertEqual(restrictStrandDiagram(pmc1, pmc1.sd([1]),
+                                               local_pmc2, mapping2),
+                         LocalStrandDiagram(local_pmc2, [0], []))
         self.assertEqual(restrictStrandDiagram(pmc1, pmc1.sd([(0, 4)]),
                                                local_pmc2, mapping2),
                          LocalStrandDiagram(local_pmc2, [], [(0, 2)]))
@@ -193,7 +199,10 @@ class RestrictionsTest(unittest.TestCase):
                          LocalStrandDiagram(local_pmc3, [0], [(2, 3), (4, 5)]))
         self.assertEqual(restrictStrandDiagram(pmc1, pmc1.sd([(3, 6)]),
                                                local_pmc3, mapping3),
-                         LocalStrandDiagram(local_pmc3, [1], [(4, 5)]))
+                         LocalStrandDiagram(local_pmc3, [], [(4, 5)]))
+        self.assertEqual(restrictStrandDiagram(pmc1, pmc1.sd([0, 4]),
+                                               local_pmc3, mapping3),
+                         LocalStrandDiagram(local_pmc3, [0, 2], []))
 
 if __name__ == "__main__":
     unittest.main()

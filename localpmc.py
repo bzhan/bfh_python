@@ -174,6 +174,13 @@ class LocalStrandDiagram:
         self.right_idem = self.strands.propagateRight(self.left_idem)
         self.multiplicity = self.strands.multiplicity
 
+    def __str__(self):
+        return "Idem: %s, Strands: %s" % \
+            (str(self.left_idem), str(self.strands.data))
+
+    def __repr__(self):
+        return str(self)
+
     def __eq__(self, other):
         return self.left_idem == other.left_idem and \
             self.strands.data == other.strands.data
@@ -184,6 +191,20 @@ class LocalStrandDiagram:
     def __hash__(self):
         return hash((self.local_pmc, tuple(self.left_idem),
                      tuple(self.strands.data)))
+
+    def removeSingleHor(self):
+        """Return a local strand diagram that is just like this, except with
+        single horizontal lines removed.
+
+        """
+        new_left_idem = []
+        for idem in self.left_idem:
+            pair = self.local_pmc.pairs[idem]
+            if len(pair) == 1 and \
+               all([pair[0] != p for p, q in self.strands.data]):
+                continue
+            new_left_idem.append(idem)
+        return LocalStrandDiagram(self.local_pmc, new_left_idem, self.strands)
 
     def multiply(self, sd2):
         """Multiply two local strand diagrams. Returns None if the product is
@@ -259,9 +280,7 @@ class LocalStrandDiagram:
                 if q in mapping[i]:
                     has_idem_q = (local_pmc[i].pairid[mapping[i][q]]
                                   in local_left_idem[i])
-            if has_idem_p != has_idem_q:
-                return None
-            if has_idem_p:
+            if has_idem_p or has_idem_q:
                 left_idem.append(pairid)
 
         # Construct inverse mapping from points in local_pmc to points in pmc.
@@ -337,12 +356,16 @@ def restrictStrandDiagram(pmc, sd, local_pmc, mapping):
     """
     # First construct the left idempotent.
     local_left_idem = []
-    for pairid in sd.left_idem:
+    for (start, end) in sd.strands:
+        if start in mapping:
+            local_left_idem.append(local_pmc.pairid[mapping[start]])
+    for pairid in sd.double_hor:
         p, q = pmc.pairs[pairid]
         if p in mapping:
             local_left_idem.append(local_pmc.pairid[mapping[p]])
         elif q in mapping:
             local_left_idem.append(local_pmc.pairid[mapping[q]])
+    local_left_idem = sorted(local_left_idem)
 
     # Next, construct strands. For each strand in sd, construct zero or more
     # child strands.
