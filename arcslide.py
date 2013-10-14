@@ -81,8 +81,8 @@ class Arcslide:
             result = "Underslide of "
         else:
             result = "Overslide of "
-        result += "point %d over %d starting at %s\n" % \
-            (self.b1, self.c1, self.start_pmc)
+        result += "point %d over %d starting at %s" % \
+                  (self.b1, self.c1, self.start_pmc)
         return result
 
     def __repr__(self):

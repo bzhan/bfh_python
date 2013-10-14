@@ -55,6 +55,7 @@ class LocalStrandsTest(unittest.TestCase):
 
 class LocalStrandDiagramTest(unittest.TestCase):
     def testMultiply(self):
+        # 0*-1-2-3-4*, with 1 and 3 paired
         pmc1 = LocalPMC(5, [(1, 3),(2,)], [0, 4])
         sd1 = LocalStrandDiagram(pmc1, [], [(0, 1)])
         sd2 = LocalStrandDiagram(pmc1, [0], [(1, 2)])
@@ -63,11 +64,17 @@ class LocalStrandDiagramTest(unittest.TestCase):
         sd5 = LocalStrandDiagram(pmc1, [0], [(0, 1), (1, 2)])
         sd6 = LocalStrandDiagram(pmc1, [0], [(3, 4)])
         self.assertEqual(sd1.multiply(sd2), sd4)
-        self.assertEqual(sd2.multiply(sd1), None)
-        self.assertEqual(sd3.multiply(sd2), None)
+        self.assertEqual(sd2.multiply(sd1), sd5)
         self.assertEqual(sd2.multiply(sd3), sd5)
         self.assertEqual(sd3.multiply(sd4), None)
         self.assertEqual(sd1.multiply(sd6), None)
+
+        # 0-1-2-3*-4*-5-6-7, with 0 and 2, 5 and 7 paired.
+        pmc2 = LocalPMC(8, [(0, 2),(1,),(5, 7),(6,)], [3, 4])
+        sd1 = LocalStrandDiagram(pmc2, [0], [(0, 3)])
+        sd2 = LocalStrandDiagram(pmc2, [], [(4, 6)])
+        sd3 = LocalStrandDiagram(pmc2, [0], [(0, 3), (4, 6)])
+        self.assertEqual(sd1.multiply(sd2), sd3)
 
     def testJoin(self):
         pmc = splitPMC(2)

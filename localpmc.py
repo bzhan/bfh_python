@@ -4,7 +4,7 @@ local PMC's like this.
 
 """
 
-from pmc import StrandDiagram
+from pmc import Strands, StrandDiagram
 
 class LocalPMC:
     """Represents a pointed matched circle with boundaries and unmatched
@@ -215,9 +215,8 @@ class LocalStrandDiagram:
             return NotImplemented
         assert self.local_pmc == sd2.local_pmc, \
             "Local PMC must be the same for multiplication."
-        # Idempotent matches
-        if self.right_idem != sd2.left_idem:
-            return None
+        # Note we do not require idempotent to match here.
+
         # Multiplicity-one condition
         total_mult = [m1+m2 for m1, m2 in zip(self.multiplicity,
                                               sd2.multiplicity)]
@@ -231,6 +230,10 @@ class LocalStrandDiagram:
         strands_right = list(sd2.strands.data)
         for sd in self.strands.data:
             mid_idem = pmc.pairid[sd[1]]
+            if mid_idem == -1:
+                # Strands going to the boundary go to the product
+                new_strands.append((sd[0], sd[1]))
+                continue
             possible_match = [sd2 for sd2 in strands_right
                               if pmc.pairid[sd2[0]] == mid_idem]
             if len(possible_match) == 0:
@@ -247,7 +250,7 @@ class LocalStrandDiagram:
         # Since we are in the multiplicity-one case, no need to worry about
         # double-crossing. Can return now.
         return LocalStrandDiagram(self.local_pmc,
-                                     self.left_idem, new_strands)
+                                  self.left_idem, new_strands)
 
     def join(self, sd2, pmc, mapping1, mapping2):
         """Join with another local strand diagram. Returns None if these two
@@ -345,6 +348,8 @@ class LocalStrandDiagram:
             if pmc.otherp[pt] in end_pts:
                 return None
         strands = zip(start_pts, end_pts)
+        if not Strands(pmc, strands).leftCompatible(left_idem):
+            return None
         return StrandDiagram(pmc.getAlgebra(idem_size = len(left_idem),
                                             mult_one = True),
                              left_idem, strands)
