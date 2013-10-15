@@ -4,7 +4,11 @@ local PMC's like this.
 
 """
 
+from algebra import DGAlgebra, Element, Generator
+from algebra import E0
 from pmc import Strands, StrandDiagram
+from utility import memorize
+from utility import F2
 
 class LocalPMC:
     """Represents a pointed matched circle with boundaries and unmatched
@@ -63,6 +67,30 @@ class LocalPMC:
 
     def __hash__(self):
         return hash(tuple(self.otherp))
+
+    def sd(self, data):
+        """Simple way to obtain a local strand diagram for this local PMC. Each
+        element of data is either an integer or a pair. An integer specifies a
+        single or double horizontal at this position (and its paired position,
+        if any). A pair (p, q) specifies a strand from p to q.
+
+        """
+        parent = self.getAlgebra()
+        left_idem = []
+        strands = []
+        for d in data:
+            if isinstance(d, int):
+                assert self.pairid[d] != -1
+                left_idem.append(self.pairid[d])
+            else:
+                if self.pairid[d[0]] != -1:
+                    left_idem.append(self.pairid[d[0]])
+                strands.append(d)
+        return LocalStrandDiagram(parent, left_idem, strands)
+
+    def getAlgebra(self):
+        """Returns the local strand algebra for this local PMC."""
+        return LocalStrandAlgebra(F2, self)        
 
 def restrictPMC(pmc, intervals):
     """Given a normal PMC, and a list of intervals (specified by pairs), return
@@ -146,26 +174,28 @@ class LocalStrands:
         right_idem = [i for i in range(pmc.num_pair) if idem_count[i] == 1]
         return right_idem
 
-class LocalStrandDiagram:
-    """A strand diagram in an local PMC. Mainly has to handle multiplication
-    two such strand diagrams.
+class LocalStrandDiagram(Generator):
+    """A strand diagram in an local PMC.
 
     Multiplicity-one condition is hard-coded in. Dealing with multiplicity
     greater than one when there are strands going to the boundary can be more
     subtle.
 
     """
-    def __init__(self, local_pmc, left_idem, strands):
-        """Specifies the pmc, left idempotent, and strands.
+    def __init__(self, parent, left_idem, strands):
+        """Specifies the parent algebra (which contains the local PMC), left
+        idempotent, and strands.
 
         Input parameters:
-        - local_pmc: must be an object of LocalPMC.
+        - parent: must be an object of LocalStrandAlgebra.
         - left_idem: tuple containing IDs of occupied pairs.
         - strands: tuple of pairs specifying strands.
 
         """
-        self.local_pmc = local_pmc
-        self.left_idem = left_idem
+        Generator.__init__(self, parent)
+        self.parent = parent
+        self.local_pmc = parent.local_pmc
+        self.left_idem = sorted(left_idem)
         if not isinstance(strands, LocalStrands):
             strands = LocalStrands(self.local_pmc, strands)
         self.strands = strands
@@ -182,14 +212,15 @@ class LocalStrandDiagram:
         return str(self)
 
     def __eq__(self, other):
-        return self.left_idem == other.left_idem and \
+        return self.parent == other.parent and \
+            self.left_idem == other.left_idem and \
             self.strands.data == other.strands.data
 
     def __ne__(self, other):
         return not (self == other)
 
     def __hash__(self):
-        return hash((self.local_pmc, tuple(self.left_idem),
+        return hash((self.parent, tuple(self.left_idem),
                      tuple(self.strands.data)))
 
     def removeSingleHor(self):
@@ -204,53 +235,7 @@ class LocalStrandDiagram:
                all([pair[0] != p for p, q in self.strands.data]):
                 continue
             new_left_idem.append(idem)
-        return LocalStrandDiagram(self.local_pmc, new_left_idem, self.strands)
-
-    def multiply(self, sd2):
-        """Multiply two local strand diagrams. Returns None if the product is
-        zero. Otherwise return the product as an local strand diagram.
-
-        """
-        if not isinstance(sd2, LocalStrandDiagram):
-            return NotImplemented
-        assert self.local_pmc == sd2.local_pmc, \
-            "Local PMC must be the same for multiplication."
-        # Note we do not require idempotent to match here.
-
-        # Multiplicity-one condition
-        total_mult = [m1+m2 for m1, m2 in zip(self.multiplicity,
-                                              sd2.multiplicity)]
-        if not all([x <= 1 for x in total_mult]):
-            return None
-
-        pmc = self.local_pmc
-        new_strands = []
-
-        # Keep track of which strands at right are not yet used.
-        strands_right = list(sd2.strands.data)
-        for sd in self.strands.data:
-            mid_idem = pmc.pairid[sd[1]]
-            if mid_idem == -1:
-                # Strands going to the boundary go to the product
-                new_strands.append((sd[0], sd[1]))
-                continue
-            possible_match = [sd2 for sd2 in strands_right
-                              if pmc.pairid[sd2[0]] == mid_idem]
-            if len(possible_match) == 0:
-                new_strands.append(sd)
-            else: # len(possible_match) == 1
-                sd2 = possible_match[0]
-                if sd2[0] != sd[1]:
-                    return None
-                else:
-                    new_strands.append((sd[0], sd2[1]))
-                    strands_right.remove(sd2)
-
-        new_strands.extend(strands_right)
-        # Since we are in the multiplicity-one case, no need to worry about
-        # double-crossing. Can return now.
-        return LocalStrandDiagram(self.local_pmc,
-                                  self.left_idem, new_strands)
+        return LocalStrandDiagram(self.parent, new_left_idem, self.strands)
 
     def join(self, sd2, pmc, mapping1, mapping2):
         """Join with another local strand diagram. Returns None if these two
@@ -354,6 +339,9 @@ class LocalStrandDiagram:
                                             mult_one = True),
                              left_idem, strands)
 
+# Don't need anything beyond Element at this time.
+LocalStrandDiagram.ELT_CLASS = Element
+
 def restrictStrandDiagram(pmc, sd, local_pmc, mapping):
     """Restrict the given strand diagram to the local_pmc, using mapping as the
     dictionary from points in pmc to points in local_pmc.
@@ -370,7 +358,6 @@ def restrictStrandDiagram(pmc, sd, local_pmc, mapping):
             local_left_idem.append(local_pmc.pairid[mapping[p]])
         elif q in mapping:
             local_left_idem.append(local_pmc.pairid[mapping[q]])
-    local_left_idem = sorted(local_left_idem)
 
     # Next, construct strands. For each strand in sd, construct zero or more
     # child strands.
@@ -404,4 +391,81 @@ def restrictStrandDiagram(pmc, sd, local_pmc, mapping):
             assert local_end - 1 in local_pmc.endpoints
             local_strands.append((local_end - 1, local_end))
 
-    return LocalStrandDiagram(local_pmc, local_left_idem, local_strands)
+    return LocalStrandDiagram(local_pmc.getAlgebra(),
+                              local_left_idem, local_strands)
+
+class LocalStrandAlgebra(DGAlgebra):
+    """Represents the strand algebra of a local PMC."""
+
+    def __init__(self, ring, local_pmc):
+        """Specifies the local PMC. Note that unlike StrandAlgebra, the size of
+        idempotent is variable, and we only implement the multiplicity one case.
+
+        """
+        DGAlgebra.__init__(self, ring)
+        self.local_pmc = local_pmc
+
+    def __str__(self):
+        return "Local strand algebra over %s" % str(self.local_pmc)
+
+    def __eq__(self, other):
+        return self.local_pmc == other.local_pmc
+
+    def __ne__(self, other):
+        return not (self == other)
+
+    def __hash__(self):
+        return hash(("LocalStrandAlgebra", self.local_pmc))
+
+    @memorize
+    def diff(self, gen):
+        pass
+
+    @memorize
+    def getGenerators(self):
+        pass
+
+    @memorize
+    def multiply(self, gen1, gen2):
+        if not isinstance(gen1, LocalStrandDiagram):
+            return NotImplemented
+        if not isinstance(gen2, LocalStrandDiagram):
+            return NotImplemented
+        assert gen1.parent == self and gen2.parent == self, \
+            "Algebra not compatible."
+
+        # Note we do not require idempotent to match here.
+
+        # Multiplicity-one condition
+        total_mult = [m1+m2 for m1, m2 in zip(gen1.multiplicity,
+                                              gen2.multiplicity)]
+        if not all([x <= 1 for x in total_mult]):
+            return E0
+
+        pmc = self.local_pmc
+        new_strands = []
+
+        # Keep track of which strands at right are not yet used.
+        strands_right = list(gen2.strands.data)
+        for sd in gen1.strands.data:
+            mid_idem = pmc.pairid[sd[1]]
+            if mid_idem == -1:
+                # Strands going to the boundary go to the product
+                new_strands.append((sd[0], sd[1]))
+                continue
+            possible_match = [sd2 for sd2 in strands_right
+                              if pmc.pairid[sd2[0]] == mid_idem]
+            if len(possible_match) == 0:
+                new_strands.append(sd)
+            else: # len(possible_match) == 1
+                sd2 = possible_match[0]
+                if sd2[0] != sd[1]:
+                    return E0
+                else:
+                    new_strands.append((sd[0], sd2[1]))
+                    strands_right.remove(sd2)
+
+        new_strands.extend(strands_right)
+        # Since we are in the multiplicity-one case, no need to worry about
+        # double-crossing. Can return now.
+        return LocalStrandDiagram(self, gen1.left_idem, new_strands).elt()
