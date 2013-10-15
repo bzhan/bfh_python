@@ -152,7 +152,7 @@ class SimpleDAStructure(DAStructure):
             dagen_to_ddgen_map[gen] = ddgen
             ddstr.addGenerator(ddgen)
         for (gen_from, coeffs_a), target in self.da_action.items():
-            for (coeffs_d, gen_to), ring_coeff in target.items():
+            for (coeff_d, gen_to), ring_coeff in target.items():
                 idem = None
                 if len(coeffs_a) == 0:
                     idem = gen_from.idem2
@@ -160,7 +160,7 @@ class SimpleDAStructure(DAStructure):
                 cobar_gen = TensorStarGenerator(coeffs_a, cobar2, idem)
                 ddstr.addDelta(dagen_to_ddgen_map[gen_from],
                                dagen_to_ddgen_map[gen_to],
-                               coeffs_d, cobar_gen, ring_coeff)
+                               coeff_d, cobar_gen, ring_coeff)
         return ddstr.testDelta()
 
     def __str__(self):
@@ -176,9 +176,35 @@ class SimpleDAStructure(DAStructure):
             total_mult = sumColumns([coeff.multiplicity for coeff in coeffs_a],
                                     len(mult_a))
             if mult_a == total_mult:
-            # if all([mult_a[i] >= total_mult[i] for i in range(len(mult_a))]):
                 result += "m(%s; %s) = %s\n" % (gen_from, coeffs_a, target)
         return result
+
+    def restrictToMultA(self, start, end):
+        """Restrict actions to those with multiplicity in the interval
+        (start, end). Here start and end specify points on the PMC. For example,
+        start, end = 0, pmc.n-1 will not change the action. Returns the new type
+        DA structure without changing the original structure.
+
+        """
+        translate_dict = dict()
+        dastr = SimpleDAStructure(F2, self.algebra1, self.algebra2,
+                                  self.side1, self.side2)
+        for gen in self.generators:
+            translate_dict[gen] = SimpleDAGenerator(
+                dastr, gen.idem1, gen.idem2, gen.name)
+            dastr.addGenerator(translate_dict[gen])
+
+        mult_len = self.algebra1.pmc.n - 1
+        for (gen_from, coeffs_a), target in self.da_action.items():
+            total_mult = sumColumns([coeff.multiplicity for coeff in coeffs_a],
+                                    mult_len)
+            if all([total_mult[i] <= 0
+                    for i in range(0, start) + range(end, mult_len)]):
+                for (coeff_d, gen_to), ring_coeff in target.items():
+                    dastr.addDelta(translate_dict[gen_from],
+                                   translate_dict[gen_to],
+                                   coeff_d, coeffs_a, ring_coeff)
+        return dastr
 
 def identityDA(pmc):
     """Returns the identity type DA structure for a given PMC."""

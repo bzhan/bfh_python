@@ -675,12 +675,13 @@ class StrandAlgebra(DGAlgebra):
 
         """
         factorMap = {}
-        for gen in self.getGenerators():
+        gen_list = self.getGenerators()
+        for gen in gen_list:
             factorMap[gen] = E0
         # Resulting element lies in the tensor product of A with itself
         parent = Tensor((self, self))
-        for gen1 in self.getGenerators():
-            for gen2 in self.getGenerators():
+        for gen1 in gen_list:
+            for gen2 in gen_list:
                 for prod, coeff in (gen1*gen2).items():
                     tensor_gen = TensorGenerator((gen1, gen2), parent)
                     factorMap[prod] += coeff * tensor_gen
