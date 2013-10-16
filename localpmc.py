@@ -198,6 +198,36 @@ def restrictPMC(pmc, intervals):
             matching.append((mapping[q],))
     return (LocalPMC(num_local_points, matching, endpoints), mapping)
 
+class LocalIdempotent(tuple):
+    """Represents a local idempotent in a certain local PMC. Stored as a tuple
+    of occupied pairs.
+
+    """
+    def __new__(cls, local_pmc, data):
+        return tuple.__new__(cls, tuple(sorted(data)))
+
+    def __init__(self, local_pmc, data):
+        self.local_pmc = local_pmc
+
+    def __eq__(self, other):
+        if isinstance(other, LocalIdempotent):
+            return self.local_pmc == other.local_pmc and \
+                tuple.__eq__(self, other)
+        else:
+            return False
+
+    def __ne__(self, other):
+        return not (self == other)
+
+    def __hash__(self):
+        return hash((self.local_pmc, tuple(self), "LocalIdempotent"))
+
+    def __str__(self):
+        return repr(self)
+
+    def __repr__(self):
+        return "(%s)" % ",".join(str(self.local_pmc.pairs[i]) for i in self)
+
 class LocalStrands(tuple):
     """Represents a fixed list of strands in a local PMC. Stored as a tuple of
     pairs.
@@ -237,7 +267,7 @@ class LocalStrands(tuple):
                 if idem_count[pmc.pairid[st[1]]] == 1: return None
                 idem_count[pmc.pairid[st[1]]] += 1
         right_idem = [i for i in range(pmc.num_pair) if idem_count[i] == 1]
-        return right_idem
+        return LocalIdempotent(pmc, right_idem)
 
 class LocalStrandDiagram(Generator):
     """A strand diagram in an local PMC.
@@ -260,7 +290,9 @@ class LocalStrandDiagram(Generator):
         Generator.__init__(self, parent)
         self.parent = parent
         self.local_pmc = parent.local_pmc
-        self.left_idem = sorted(left_idem)
+        self.left_idem = left_idem
+        if not isinstance(self.left_idem, LocalIdempotent):
+            self.left_idem = LocalIdempotent(self.local_pmc, self.left_idem)
         if not isinstance(strands, LocalStrands):
             strands = LocalStrands(self.local_pmc, strands)
         self.strands = strands

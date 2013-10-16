@@ -37,5 +37,13 @@ class ArcslideDATest(unittest.TestCase):
             local_dastr = ArcslideDA(slide).getLocalDAStructure()
             self.assertTrue(local_dastr.testDelta())
 
+    def testLength3Arcslide(self):
+        slides_to_test = [
+            # Arcslide(PMC([(0, 3), (1, 6), (2, 4), (5, 7)]), 2, 3),
+        ]
+        for slide in slides_to_test:
+            local_dastr = ArcslideDA(slide).getLocalDAStructure()
+            self.assertTrue(local_dastr.testDelta())
+
 if __name__ == "__main__":
     unittest.main()

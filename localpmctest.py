@@ -48,20 +48,29 @@ class LocalStrandsTest(unittest.TestCase):
 
     def testPropagateRight(self):
         strands1 = LocalStrands(self.pmc1, [(0, 1)])
-        # Introduce pair (1, 3)
-        self.assertEqual(strands1.propagateRight([]), [0])
-        # Does not interfere with the single point (2,) that already exists
-        self.assertEqual(strands1.propagateRight([1]), [0, 1])
-        # However, returns None (not compatible) if pair (1, 3) already exists
-        self.assertEqual(strands1.propagateRight([0]), None)
-
         strands2 = LocalStrands(self.pmc1, [(2, 4)])
-        # Removes single point (2,)
-        self.assertEqual(strands2.propagateRight([1]), [])
-        # Does not interfere with pair (1, 3)
-        self.assertEqual(strands2.propagateRight([0, 1]), [0])
-        # Returns none if single point (2,) does not appear in left_idem
-        self.assertEqual(strands2.propagateRight([0]), None)
+        test_cases = [
+            # Introduce pair (1, 3).
+            (strands1, [], [0]),
+            # Does not interfere with the single point (2,) that already exists.
+            (strands1, [1], [0, 1]),
+            # However, returns None (not compatible) if pair (1, 3) already
+            # exists.
+            (strands1, [0], None),
+
+            # Removes single point (2,)
+            (strands2, [1], []),
+            # Does not interfere with pair (1, 3)
+            (strands2, [0, 1], [0]),
+            # Returns none if single point (2,) does not appear in left_idem
+            (strands2, [0], None),
+        ]
+        for strand, left_idem, right_idem in test_cases:
+            if right_idem is None:
+                self.assertEqual(strand.propagateRight(left_idem), None)
+            else:
+                self.assertEqual(strand.propagateRight(left_idem),
+                                 LocalIdempotent(self.pmc1, right_idem))
 
 class LocalStrandDiagramTest(unittest.TestCase):
     def testMultiply(self):

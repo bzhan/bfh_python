@@ -2,9 +2,10 @@
 
 from dastructure import SimpleDAGenerator, SimpleDAStructure
 from dastructure import AddChordToDA
-from localpmc import LocalStrandAlgebra, LocalStrandDiagram
+from localpmc import LocalIdempotent, LocalStrandAlgebra, LocalStrandDiagram
 from localpmc import restrictPMC, restrictStrandDiagram
 from pmc import Strands
+from utility import subset
 from utility import F2
 
 class ArcslideDA:
@@ -55,7 +56,8 @@ class ArcslideDA:
             short_chord_local_raw = [(1, 2)]
             patterns_raw = ArcslideDA._short_underslide_up_middle()
         else:
-            return NotImplemented
+            raise NotImplementedError(
+                "This slide pattern is not yet implemented.")
 
         self.local_pmc1, self.mapping1 = restrictPMC(pmc1, local_cut1)
         self.outer_pmc1, self.outer_mapping1 = restrictPMC(pmc1, outer_cut1)
@@ -162,17 +164,45 @@ class ArcslideDA:
         alg1 = LocalStrandAlgebra(F2, self.local_pmc1)
         alg2 = LocalStrandAlgebra(F2, self.local_pmc2)
         local_dastr = SimpleDAStructure(F2, alg1, alg2)
-        da_idems = [([], []), ([0], [0]), ([1], [1]), ([0, 1], [0, 1]),
-                    ([0], [1])]
+
+        # Mappings between local starting and ending PMC.
+        slide = self.slide
+        local_to_r = dict()
+        for i in range(slide.start_pmc.n):
+            if i in self.mapping1:
+                # to_r[i] must be in mapping2
+                local_to_r[self.mapping1[i]] = self.mapping2[slide.to_r[i]]
+        local_pair_to_r = dict()
+        for i in range(self.local_pmc1.n):
+            if i not in self.local_pmc1.endpoints:
+                local_pair_to_r[self.local_pmc1.pairid[i]] \
+                    = self.local_pmc2.pairid[local_to_r[i]]
+            
+        b1, c1 = self.slide.b1, self.slide.c1
+        local_b1, local_c1 = self.mapping1[b1], self.mapping1[c1]
+        b_pair1 = self.local_pmc1.pairid[local_b1]
+        c_pair1 = self.local_pmc1.pairid[local_c1]
+
+        da_idems = []
+        num_pair = self.local_pmc1.num_pair
+        for idem in subset(range(num_pair)):
+            da_idems.append((list(idem), [local_pair_to_r[p] for p in idem]))
+        for idem in subset([p for p in range(num_pair)
+                            if p != b_pair1 and p != c_pair1]):
+            da_idems.append((list(idem) + [c_pair1],
+                             [local_pair_to_r[p]
+                              for p in (list(idem) + [b_pair1])]))
         for i in range(len(da_idems)):
             l_idem, r_idem = da_idems[i]
-            local_dastr.addGenerator(
-                SimpleDAGenerator(local_dastr, l_idem, r_idem, "%d" % i))
+            local_dastr.addGenerator(SimpleDAGenerator(
+                local_dastr, LocalIdempotent(self.local_pmc1, l_idem),
+                LocalIdempotent(self.local_pmc2, r_idem), "%d" % i))
         mod_gens = local_dastr.getGenerators()
         for coeffs_a in self.arrow_patterns.keys():
             if coeffs_a[0].isIdempotent():
                 continue
             for coeff_d in self.arrow_patterns[coeffs_a]:
+                arrow_used = False
                 for x in mod_gens:
                     for y in mod_gens:
                         if x.idem1 == coeff_d.left_idem and \
@@ -180,6 +210,10 @@ class ArcslideDA:
                            y.idem1 == coeff_d.right_idem and \
                            y.idem2 == coeffs_a[-1].right_idem:
                             local_dastr.addDelta(x, y, coeff_d, coeffs_a, 1)
+                            arrow_used = True
+                if not arrow_used:
+                    # print "Warning: unused arrow: ", coeffs_a, coeff_d
+                    pass
         for x in mod_gens:
             for y in mod_gens:
                 if x.idem2 == y.idem2 and \
@@ -232,7 +266,6 @@ class ArcslideDA:
             # (1, 2)-(2, 3), (0, 1) -> (1, 2)-(2, 3)
             ([(1, 2),(2, 3)], [(0, 1)], [(1, 2),(2, 3)]),
             # (1, 3), (0, 1) -> (1, 3)
-            ([(1, 3)], [(0, 1)], [(1, 3)]),
             ([0, (1, 3)], [(0, 1)], [0, (1, 3)]),
             # *** Extensions of (1, 2), (0, 2) -> (1, 2) ***
             # (1, 2), (0, 3) -> (1, 3)
@@ -286,8 +319,6 @@ class ArcslideDA:
             # Combining (2, 3), (1, 2) -> (2, 3) with (0, 1) -> (0, 2)
             # (2, 3), (0, 1)-(1, 2) -> (0, 2)-(2, 3)
             ([(2, 3)], [(0, 1),(1, 2)], [(0, 2),(2, 3)]),
-            # (2, 3), (0, 2) -> (0, 3)
-            ([(2, 3)], [(0, 2)], [(0, 3)]),
         ]
         return patterns_raw
 
@@ -335,6 +366,7 @@ class ArcslideDA:
             # *** Both extensions ***
             # (0, 1)-(3, 4) -> (0, 1)-(3, 4) extension of null
             ([(0, 1),(3, 4)], [(0, 1),(3, 4)]),
+            ([2, (0, 1),(3, 4)], [2, (0, 1),(3, 4)]),
             # (0, 2)-(3, 4) -> (0, 3)-(3, 4) extension of (0, 2) -> (0, 3)
             ([(0, 2),(3, 4)], [(0, 3),(3, 4)]),
             # (0, 4) -> (0, 4) extension of (1, 3) -> (1, 3)
@@ -346,13 +378,16 @@ class ArcslideDA:
             # (0, 1)-(1, 4) -> (0, 1)-(1, 4) extension of (1, 3) -> (1, 3)
             ([(0, 1),(1, 4)], [(0, 1),(1, 4)]),
             ([2, (0, 1),(1, 4)], [2, (0, 1),(1, 4)]),
+            ([(0, 1),(1, 2),(2, 4)], [(0, 1),(1, 2),(2, 4)]),
             # (0, 3)-(3, 4) -> (0, 3)-(3, 4) extension of (1, 3) -> (1, 3)
             ([(0, 3),(3, 4)], [(0, 3),(3, 4)]),
             ([2, (0, 3),(3, 4)], [2, (0, 3),(3, 4)]),
+            ([(0, 2),(2, 3),(3, 4)], [(0, 2),(2, 3),(3, 4)]),
             # (0, 1)-(2, 4) -> (0, 1)-(3, 4) extension of (2, 4) -> (3, 4)
             ([(0, 1),(2, 4)], [(0, 1),(3, 4)]),
             # (0, 2)-(2, 4) -> (0, 3)-(3, 4) rather strange
             ([(0, 2),(2, 4)], [(0, 3),(3, 4)]),
+            ([1, (0, 2),(2, 4)], [1, (0, 2),(2, 4)]),
 
             #### Double or triple patterns
             # (2, 3), (1, 2) -> (2, 3)
@@ -364,14 +399,11 @@ class ArcslideDA:
             # Combining (2, 3), (1, 2) -> (2, 3) with (0, 1) -> (0, 2)
             # (2, 3), (0, 1)-(1, 2) -> (0, 2)-(2, 3)
             ([(2, 3)], [(0, 1),(1, 2)], [(0, 2),(2, 3)]),
-            # (2, 3), (0, 2) -> (0, 3)
-            ([(2, 3)], [(0, 2)], [(0, 3)]),
             # *** Upper extension ***
             # Extension of (2, 3), (1, 2) -> (2, 3)
             # (2, 3)-(3, 4), (1, 2) -> (2, 3)-(3, 4)
             ([(2, 3),(3, 4)], [(1, 2)], [(2, 3),(3, 4)]),
             # (2, 4), (1, 2) -> (2, 4)
-            ([(2, 4)], [(1, 2)], [(2, 4)]),
             ([1, (2, 4)], [(1, 2)], [1, (2, 4)]),
             # Extension of (2, 3), (0, 2) -> (2, 3)
             # (2, 3), (1, 4) -> (2, 4)
@@ -407,8 +439,8 @@ class ArcslideDA:
             ([1, (0, 2)], [2, (3, 4)], [1, (0, 4)]),
             ([(0, 1),(1, 2)], [2, (3, 4)], [(0, 1),(1, 4)]),
             # -- Input covers (0, 4)
-            ([(2, 4)], [(0, 1),(1, 2)], [(0, 2),(2, 4)]),
-            ([(2, 4)], [(0, 2)], [(0, 4)]),
+            ([1, (2, 4)], [(0, 1),(1, 2)], [1, (0, 2),(2, 4)]),
+            ([(2, 3),(3, 4)], [(0, 1),(1, 2)], [(0, 2),(2, 3),(3, 4)]),
             ([(0, 1),(1, 2)], [(2, 3),(3, 4)], [(0, 1),(1, 4)]),
             ([2, (0, 1)], [(1, 2),(2, 4)], [1, (0, 4)]),
             ([1, (0, 2)], [(2, 3),(3, 4)], [1, (0, 4)]),
@@ -420,13 +452,5 @@ class ArcslideDA:
             ([(0, 1),(2, 4)], [(1, 3)], [1, (0, 4)]),
             ([(0, 1),(2, 4)], [2, (1, 3)], [1, (0, 4)]),
             ([(0, 2),(2, 4)], [(2, 3)], [1, (0, 4)]),
-
-            # Added for genus greater than 3
-            ([(0, 1),(1, 2),(2, 4)], [(0, 1),(1, 2),(2, 4)]),
-            ([(0, 2),(2, 3),(3, 4)], [(0, 2),(2, 3),(3, 4)]),
-            ([1, (2, 4)], [(0, 1),(1, 2)], [1, (0, 2),(2, 4)]),
-            ([1, (0, 2),(2, 4)], [1, (0, 2),(2, 4)]),
-            ([2, (0, 1),(3, 4)], [2, (0, 1),(3, 4)]),
-            ([(2, 3),(3, 4)], [(0, 1),(1, 2)], [(0, 2),(2, 3),(3, 4)]),
         ]
         return patterns_raw
