@@ -24,8 +24,18 @@ class ArcslideDATest(unittest.TestCase):
         ]
         for slide in slides_to_test:
             print slide
-            dastr = ArcslideDA.getDAStructure(slide)
+            dastr = ArcslideDA(slide).getDAStructure()
             self.assertTrue(dastr.testDelta())
+
+    def testShortArcslideLocal(self):
+        slides_to_test = [
+            Arcslide(splitPMC(1), 1, 2),
+            Arcslide(splitPMC(1), 2, 3),
+            Arcslide(splitPMC(2), 2, 3),
+        ]
+        for slide in slides_to_test:
+            local_dastr = ArcslideDA(slide).getLocalDAStructure()
+            self.assertTrue(local_dastr.testDelta())
 
 if __name__ == "__main__":
     unittest.main()

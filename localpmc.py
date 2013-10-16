@@ -283,6 +283,18 @@ class LocalStrandDiagram(Generator):
         self.double_hor = [i for i in self.all_hor
                            if len(self.local_pmc.pairs[i]) == 2]
 
+    def isIdempotent(self):
+        """Tests whether this generator is an idempotent."""
+        return len(self.strands) == 0
+
+    def getLeftIdem(self):
+        """Return the left idempotent."""
+        return self.left_idem
+
+    def getRightIdem(self):
+        """Return the right idempotent."""
+        return self.right_idem
+
     def __str__(self):
         return "[%s]" % \
             ",".join([str(self.local_pmc.pairs[i]) for i in self.all_hor] +
@@ -516,7 +528,14 @@ class LocalStrandAlgebra(DGAlgebra):
         return self.local_pmc.getStrandDiagrams()
 
     @memorize
-    def multiply(self, gen1, gen2):
+    def multiplyGeneral(self, gen1, gen2, strict_idems):
+        """Implement a multiplication function taking an additional boolean
+        parameter strict_idems, that specifies whether to strictly enforce the
+        condition that the right idempotent of gen1 equals the left idempotent
+        of gen2. This condition should usually be enforced, except when
+        multiplying the outside strand diagrams when extending by identity.
+
+        """
         if not isinstance(gen1, LocalStrandDiagram):
             return NotImplemented
         if not isinstance(gen2, LocalStrandDiagram):
@@ -525,8 +544,13 @@ class LocalStrandAlgebra(DGAlgebra):
             "Algebra not compatible."
 
         pmc = self.local_pmc
-        # Note we do not require idempotent to match exactly, but only for
-        # moving strands and double horizontals
+
+        # If strict_idems is True, enforce this condition
+        if strict_idems and gen1.right_idem != gen2.left_idem:
+            return E0
+
+        # Otherwise we do not require idempotent to match exactly, but only for
+        # moving strands and double horizontals.
         for mid_idem in \
             [pmc.pairid[q] for p, q in gen1.strands] + gen1.double_hor:
             if mid_idem != -1 and mid_idem not in gen2.left_idem:
@@ -576,3 +600,6 @@ class LocalStrandAlgebra(DGAlgebra):
         # Since we are in the multiplicity-one case, no need to worry about
         # double-crossing. Can return now.
         return LocalStrandDiagram(self, left_idem, new_strands).elt()
+
+    def multiply(self, gen1, gen2):
+        return self.multiplyGeneral(gen1, gen2, True)  # strict_idems = True

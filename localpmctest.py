@@ -112,13 +112,13 @@ class LocalStrandDiagramTest(unittest.TestCase):
         # 0*-1-2-3-4*, with 1 and 3 paired
         pmc1 = LocalPMC(5, [(1, 3),(2,)], [0, 4])
 
-        # (0->2)*[2], {[], [2]}(0->1)*(1->2), {[], [2]}*(0->2)
+        # (0->2)*idem, (0->1)*(1->2), idem*(0->2)
         sd1 = pmc1.sd([(0, 2)])
-        self.assertEqual(len(sd1.factor()), 5)
+        self.assertEqual(len(sd1.factor()), 3)
 
-        # (1,0->2)*[1,2], {[1], [1,2]}*(1,0->2)
+        # (1,0->2)*idem, idem*(1,0->2)
         sd2 = pmc1.sd([1, (0, 2)])    
-        self.assertEqual(len(sd2.factor()), 3)
+        self.assertEqual(len(sd2.factor()), 2)
 
     def testJoin(self):
         pmc = splitPMC(2)
