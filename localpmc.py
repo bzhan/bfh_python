@@ -7,7 +7,7 @@ local PMC's like this.
 from algebra import DGAlgebra, Element, Generator
 from algebra import E0
 from pmc import Strands, StrandDiagram
-from utility import memorize
+from utility import memorize, subset
 from utility import F2
 
 class LocalPMC:
@@ -68,6 +68,12 @@ class LocalPMC:
     def __hash__(self):
         return hash(tuple(self.otherp))
 
+    def __str__(self):
+        return str(self.pairs)
+
+    def __repr__(self):
+        return "LocalPMC(%s)" % str(self)
+
     def sd(self, data):
         """Simple way to obtain a local strand diagram for this local PMC. Each
         element of data is either an integer or a pair. An integer specifies a
@@ -90,8 +96,62 @@ class LocalPMC:
 
     def getAlgebra(self):
         """Returns the local strand algebra for this local PMC."""
-        return LocalStrandAlgebra(F2, self)        
+        return LocalStrandAlgebra(F2, self)
 
+    def getStrandDiagrams(self):
+        """Returns the list of generators of the local strand algebra. Note we
+        automatically impose the multiplicity-one condition, and there are no
+        constraints on the size of idempotents.
+
+        """
+        algebra = self.getAlgebra()
+        result = []
+        def search(cur_strands):
+            """Search starting with the given list of strands. May only add
+            strands after the end position of the last strand.
+
+            """
+            # First, check if the current list of strands is valid.
+            left_occupied = [0] * self.num_pair
+            right_occupied = [0] * self.num_pair
+            for start, end in cur_strands:
+                start_id, end_id = self.pairid[start], self.pairid[end]
+                if start_id != -1:
+                    left_occupied[start_id] += 1
+                if end_id != -1:
+                    right_occupied[end_id] += 1
+            if any([n >= 2 for n in left_occupied + right_occupied]):
+                # There should not be two strands starting or ending at points
+                # in the same pair.
+                return
+
+            # Enumerate all possible ways of adding idempotents.
+            empty_idems = [i for i in range(self.num_pair)
+                           if left_occupied[i] == 0 and right_occupied[i] == 0]
+            left_idem = [i for i in range(self.num_pair)
+                         if left_occupied[i] > 0]
+            for idems_to_add in subset(empty_idems):
+                result.append(LocalStrandDiagram(
+                    algebra, left_idem + list(idems_to_add), cur_strands))
+
+            # Now enumerate all ways of adding more strands.
+            last_end = 0
+            if len(cur_strands) > 0:
+                last_end = cur_strands[-1][1]
+            for start in range(last_end, self.n):
+                for end in range(start + 1, self.n):
+                    if self.pairid[start] == -1 and self.pairid[end] == -1 and \
+                       end == start + 1:
+                        # Exclude cases where a strand goes from an
+                        # end-boundary-point to a start-boundary-point
+                        break
+                    search(cur_strands + [(start, end)])
+                    if self.pairid[end] == -1:
+                        # No strand should go beyond an end-boundary-point.
+                        break
+        search([])
+        return result
+                
 def restrictPMC(pmc, intervals):
     """Given a normal PMC, and a list of intervals (specified by pairs), return
     a pair (local_pmc, mapping) where
@@ -138,17 +198,22 @@ def restrictPMC(pmc, intervals):
             matching.append((mapping[q],))
     return (LocalPMC(num_local_points, matching, endpoints), mapping)
 
-class LocalStrands:
-    """Represents a fixed list of strands in an local PMC."""
+class LocalStrands(tuple):
+    """Represents a fixed list of strands in a local PMC. Stored as a tuple of
+    pairs.
+
+    """
+    def __new__(cls, local_pmc, data):
+        return tuple.__new__(cls, tuple(sorted(data)))
+
     def __init__(self, local_pmc, data):
         self.local_pmc = local_pmc
-        self.data = tuple(sorted(data))
         # Compute multiplicity. multiplicity[i] represents the multiplicity
         # on the interval (i, i+1). Intervals that are gaps between two
         # boundary points should never be occupied, but we do not check for it
         # here.
         self.multiplicity = [0] * (self.local_pmc.n - 1)
-        for st in data:
+        for st in self:
             assert len(st) == 2 and st[0] < st[1]
             for pos in range(st[0], st[1]):
                 self.multiplicity[pos] += 1
@@ -163,11 +228,11 @@ class LocalStrands:
         idem_count = [0] * pmc.num_pair
         for pair in left_idem:
             idem_count[pair] += 1
-        for st in self.data:
+        for st in self:
             if st[0] not in pmc.endpoints:
                 if idem_count[pmc.pairid[st[0]]] == 0: return None
                 idem_count[pmc.pairid[st[0]]] -= 1
-        for st in self.data:
+        for st in self:
             if st[1] not in pmc.endpoints:
                 if idem_count[pmc.pairid[st[1]]] == 1: return None
                 idem_count[pmc.pairid[st[1]]] += 1
@@ -204,9 +269,24 @@ class LocalStrandDiagram(Generator):
         self.right_idem = self.strands.propagateRight(self.left_idem)
         self.multiplicity = self.strands.multiplicity
 
+        # Enumerate single and double horizontals
+        self.all_hor = list(self.left_idem)
+        for st in self.strands:
+            start_idem = self.local_pmc.pairid[st[0]]
+            if start_idem != -1:
+                if start_idem not in self.all_hor:
+                    print left_idem, strands
+                self.all_hor.remove(start_idem)
+        self.all_hor = tuple(self.all_hor)
+        self.single_hor = [i for i in self.all_hor
+                           if len(self.local_pmc.pairs[i]) == 1]
+        self.double_hor = [i for i in self.all_hor
+                           if len(self.local_pmc.pairs[i]) == 2]
+
     def __str__(self):
-        return "Idem: %s, Strands: %s" % \
-            (str(self.left_idem), str(self.strands.data))
+        return "[%s]" % \
+            ",".join([str(self.local_pmc.pairs[i]) for i in self.all_hor] +
+                     ["%s->%s" % (p, q) for (p, q) in self.strands])
 
     def __repr__(self):
         return str(self)
@@ -214,27 +294,23 @@ class LocalStrandDiagram(Generator):
     def __eq__(self, other):
         return self.parent == other.parent and \
             self.left_idem == other.left_idem and \
-            self.strands.data == other.strands.data
+            self.strands == other.strands
 
     def __ne__(self, other):
         return not (self == other)
 
     def __hash__(self):
         return hash((self.parent, tuple(self.left_idem),
-                     tuple(self.strands.data)))
+                     tuple(self.strands)))
 
     def removeSingleHor(self):
         """Return a local strand diagram that is just like this, except with
         single horizontal lines removed.
 
         """
-        new_left_idem = []
-        for idem in self.left_idem:
-            pair = self.local_pmc.pairs[idem]
-            if len(pair) == 1 and \
-               all([pair[0] != p for p, q in self.strands.data]):
-                continue
-            new_left_idem.append(idem)
+        new_left_idem = list(self.left_idem)
+        for i in self.single_hor:
+            new_left_idem.remove(i)
         return LocalStrandDiagram(self.parent, new_left_idem, self.strands)
 
     def join(self, sd2, pmc, mapping1, mapping2):
@@ -280,7 +356,7 @@ class LocalStrandDiagram(Generator):
 
         # Create joined strands.
         # First create list of local strands in sorted order in original pmc.
-        local_strands = {1 : self.strands.data, 2 : sd2.strands.data}
+        local_strands = {1 : self.strands, 2 : sd2.strands}
         all_local_strands = []
         for i in (1, 2):
             for start, end in local_strands[i]:
@@ -419,11 +495,25 @@ class LocalStrandAlgebra(DGAlgebra):
 
     @memorize
     def diff(self, gen):
-        pass
+        cur_strands = gen.strands
+        result = E0
+        # In multiplicity one case, only need to worry about uncrossing a moving
+        # strand with a horizontal. Also, no need to worry about double
+        # crossing.
+        for st in cur_strands:
+            for i in gen.all_hor:
+                for p in gen.local_pmc.pairs[i]:
+                    if st[0] <= p and p <= st[1]:
+                        new_strands = list(cur_strands)
+                        new_strands.remove(st)
+                        new_strands.extend([(st[0], p), (p, st[1])])
+                        result += LocalStrandDiagram(
+                            self, gen.left_idem, new_strands).elt()
+        return result
 
     @memorize
     def getGenerators(self):
-        pass
+        return self.local_pmc.getStrandDiagrams()
 
     @memorize
     def multiply(self, gen1, gen2):
@@ -434,7 +524,17 @@ class LocalStrandAlgebra(DGAlgebra):
         assert gen1.parent == self and gen2.parent == self, \
             "Algebra not compatible."
 
-        # Note we do not require idempotent to match here.
+        pmc = self.local_pmc
+        # Note we do not require idempotent to match exactly, but only for
+        # moving strands and double horizontals
+        for mid_idem in \
+            [pmc.pairid[q] for p, q in gen1.strands] + gen1.double_hor:
+            if mid_idem != -1 and mid_idem not in gen2.left_idem:
+                return E0
+        for mid_idem in \
+            [pmc.pairid[p] for p, q in gen2.strands] + gen2.double_hor:
+            if mid_idem != -1 and mid_idem not in gen1.right_idem:
+                return E0
 
         # Multiplicity-one condition
         total_mult = [m1+m2 for m1, m2 in zip(gen1.multiplicity,
@@ -442,12 +542,11 @@ class LocalStrandAlgebra(DGAlgebra):
         if not all([x <= 1 for x in total_mult]):
             return E0
 
-        pmc = self.local_pmc
         new_strands = []
 
         # Keep track of which strands at right are not yet used.
-        strands_right = list(gen2.strands.data)
-        for sd in gen1.strands.data:
+        strands_right = list(gen2.strands)
+        for sd in gen1.strands:
             mid_idem = pmc.pairid[sd[1]]
             if mid_idem == -1:
                 # Strands going to the boundary go to the product
@@ -466,6 +565,14 @@ class LocalStrandAlgebra(DGAlgebra):
                     strands_right.remove(sd2)
 
         new_strands.extend(strands_right)
+        left_idem = list(gen1.left_idem)
+        # Remove single horizontal strands that is not matched at right, either
+        # by moving or horizontal strands
+        for i in gen1.single_hor:
+            if i not in gen2.single_hor and \
+               all([i != pmc.pairid[start] for start, end in new_strands]):
+                left_idem.remove(i)
+
         # Since we are in the multiplicity-one case, no need to worry about
         # double-crossing. Can return now.
-        return LocalStrandDiagram(self, gen1.left_idem, new_strands).elt()
+        return LocalStrandDiagram(self, left_idem, new_strands).elt()

@@ -12,6 +12,13 @@ class ToListTest(unittest.TestCase):
         self.assertEqual(tolist([]), [])
         self.assertEqual(tolist([3, 4]), [3, 4])
 
+class SubsetTest(unittest.TestCase):
+    def testSubset(self):
+        self.assertEqual(sorted(subset([])), [()])
+        self.assertEqual(sorted(subset([0])), [(), (0,)])
+        self.assertEqual(sorted(subset(['a', 'b'])),
+                         [(), ('a',), ('a', 'b'), ('b',)])
+
 class SummableDictTest(unittest.TestCase):
     def setUp(self):
         self.a = SummableDict({"a" : 5, "b" : 3, "d" : 3})

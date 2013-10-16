@@ -489,20 +489,6 @@ class StrandDiagram(Generator):
         """Return the right idempotent."""
         return self.right_idem
 
-    def antiDiff(self):
-        """Computes the dual of differential. See corresponding function in
-        parent for details.
-
-        """
-        return self.parent.antiDiff(self)
-
-    def factor(self):
-        """Find all ways to factor this generator into a product of two
-        generators. See corresponding function in parent for details.
-
-        """
-        return self.parent.factor(self)
-
 def unconnectSumStrandDiagram(sd, genus1):
     """Returns a pair of strand diagrams (sd1, sd2) in the algebra of
     (pmc1, pmc2), where (pmc1, pmc2) is the pair returned by
@@ -645,55 +631,6 @@ class StrandAlgebra(DGAlgebra):
             return mult_term.elt()
         else:
             return E0
-
-    @memorize
-    def _getAntiDiffMap(self):
-        """Helper function generating tables of dual of differential, for calls
-        to antiDiff.
-
-        """
-        antiDiffMap = {}
-        for gen in self.getGenerators():
-            antiDiffMap[gen] = E0
-        for gen in self.getGenerators():
-            for dgen, coeff in gen.diff().items():
-                antiDiffMap[dgen] += coeff * gen
-        return antiDiffMap
-
-    def antiDiff(self, gen):
-        """Returns the dual of the differential of gen, as an element of this
-        algebra. The element is a sum of all terms c*y, for which gen appears
-        in the dy with coefficient c.
-
-        """
-        return self._getAntiDiffMap()[gen]
-
-    @memorize
-    def _getFactorMap(self):
-        """Helper function generating tables for factoring generators, for
-        calls to factor.
-
-        """
-        factorMap = {}
-        gen_list = self.getGenerators()
-        for gen in gen_list:
-            factorMap[gen] = E0
-        # Resulting element lies in the tensor product of A with itself
-        parent = Tensor((self, self))
-        for gen1 in gen_list:
-            for gen2 in gen_list:
-                for prod, coeff in (gen1*gen2).items():
-                    tensor_gen = TensorGenerator((gen1, gen2), parent)
-                    factorMap[prod] += coeff * tensor_gen
-        return factorMap
-
-    def factor(self, gen):
-        """Returns an element of (A tensor A), where A is the present algebra.
-        The element is the sum of all terms c*(p tensor q), for which gen is a
-        term in p*q with coefficient c.
-
-        """
-        return self._getFactorMap()[gen]
 
 class StrandAlgebraElement(Element):
     """An element of strand algebra."""

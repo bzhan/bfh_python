@@ -80,6 +80,15 @@ def sumColumns(matrix, num_col):
             result[i] += row[i]
     return result
 
+def subset(elts):
+    """Returns the list of subsets of the given set (each element is a tuple).
+
+    """
+    if len(elts) == 0:
+        return [()]
+    all_but_zero = subset(elts[1:])
+    return all_but_zero + [(elts[0],) + s for s in all_but_zero]
+
 def _dictAddTo(dict1, dict2):
     """Add dict2 onto dict1 in place. If dict2 is a list, add each element of
     dict2 in place.

@@ -25,6 +25,16 @@ class LocalPMCTest(unittest.TestCase):
         self.assertEqual(pmc3.pairid, [-1, 0, 1, -1, -1, 1, -1])
         self.assertEqual(pmc3.pairs, [(1,),(2, 5)])
 
+    def testGetLocalStrandDiagrams(self):
+        pmc1 = LocalPMC(4, [(0, 2),(1,)], [3])
+        self.assertEqual(len(pmc1.getStrandDiagrams()), 17)
+        pmc2 = LocalPMC(4, [(1, 3),(2,)], [0])
+        self.assertEqual(len(pmc2.getStrandDiagrams()), 17)
+        pmc3 = LocalPMC(5, [(1, 3),(2,)], [0, 4])
+        self.assertEqual(len(pmc3.getStrandDiagrams()), 41)
+        pmc4 = LocalPMC(7, [(1,),(2, 5)], [0, 3, 4, 6])
+        self.assertEqual(len(pmc4.getStrandDiagrams()), 78)
+
 class LocalStrandsTest(unittest.TestCase):
     def setUp(self):
         # One piece: (0*-1-2-3-4*), with 1 paired with 3
@@ -64,7 +74,7 @@ class LocalStrandDiagramTest(unittest.TestCase):
         sd5 = pmc1.sd([(0, 1),(1, 2)])
         sd6 = pmc1.sd([(3, 4)])
         self.assertEqual(sd1 * sd2, 1*sd4)
-        self.assertEqual(sd2 * sd1, 1*sd5)
+        self.assertEqual(sd2 * sd1, 0)
         self.assertEqual(sd2 * sd3, 1*sd5)
         self.assertEqual(sd3 * sd4, 0)
         self.assertEqual(sd1 * sd6, 0)
@@ -75,6 +85,40 @@ class LocalStrandDiagramTest(unittest.TestCase):
         sd2 = pmc2.sd([(4, 6)])
         sd3 = pmc2.sd([(0, 3),(4, 6)])
         self.assertEqual(sd1 * sd2, 1*sd3)
+
+    def testDiff(self):
+        # 0*-1-2-3-4*, with 1 and 3 paired
+        pmc1 = LocalPMC(5, [(1, 3),(2,)], [0, 4])
+        sd1 = pmc1.sd([(0, 4)])
+        sd2 = pmc1.sd([1, (0, 4)])
+        sd3 = pmc1.sd([2, (0, 4)])
+        sd4 = pmc1.sd([(0, 1),(1, 4)])
+        sd5 = pmc1.sd([(0, 2),(2, 4)])
+        sd6 = pmc1.sd([(0, 3),(3, 4)])
+        self.assertEqual(sd1.diff(), 0)
+        self.assertEqual(sd2.diff(), 1*sd4 + 1*sd6)
+        self.assertEqual(sd3.diff(), 1*sd5)
+
+    def testAntiDiff(self):
+        # 0*-1-2-3-4*, with 1 and 3 paired
+        pmc1 = LocalPMC(5, [(1, 3),(2,)], [0, 4])
+
+        sd1 = pmc1.sd([(0, 1),(1, 2)])
+        self.assertEqual(len(sd1.antiDiff()), 1)
+        sd2 = pmc1.sd([(0, 1),(1, 2),(2, 4)])
+        self.assertEqual(len(sd2.antiDiff()), 2)
+
+    def testFactor(self):
+        # 0*-1-2-3-4*, with 1 and 3 paired
+        pmc1 = LocalPMC(5, [(1, 3),(2,)], [0, 4])
+
+        # (0->2)*[2], {[], [2]}(0->1)*(1->2), {[], [2]}*(0->2)
+        sd1 = pmc1.sd([(0, 2)])
+        self.assertEqual(len(sd1.factor()), 5)
+
+        # (1,0->2)*[1,2], {[1], [1,2]}*(1,0->2)
+        sd2 = pmc1.sd([1, (0, 2)])    
+        self.assertEqual(len(sd2.factor()), 3)
 
     def testJoin(self):
         pmc = splitPMC(2)
