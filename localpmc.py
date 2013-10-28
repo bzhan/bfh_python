@@ -164,7 +164,7 @@ def restrictPMC(pmc, intervals):
     - pmc: must be an object of PMC.
     - intervals: must be ordered, disjoint intervals. Each interval is
     specified in the format (start, end), which represents the interval between
-    these two points.
+    these two points. Intervals with start > end are ignored.
 
     Example:
     restrictPMC(PMC([(0, 2),(1, 3)]), [(0, 2)])
@@ -177,6 +177,8 @@ def restrictPMC(pmc, intervals):
     endpoints = []
     mapping = {}
     for start, end in intervals:
+        if start > end:
+            continue
         length = end - start + 1
         if start != 0:
             endpoints.append(num_local_points)

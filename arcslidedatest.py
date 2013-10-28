@@ -4,7 +4,7 @@ from arcslideda import *
 from arcslide import Arcslide
 from latex import beginDoc, endDoc, showArrow
 from pmc import PMC
-from pmc import linearPMC, splitPMC
+from pmc import antipodalPMC, linearPMC, splitPMC
 import unittest
 
 class ArcslideDATest(unittest.TestCase):
@@ -38,104 +38,117 @@ class ArcslideDATest(unittest.TestCase):
             local_dastr = ArcslideDA(slide).getLocalDAStructure()
             self.assertTrue(local_dastr.testDelta())
 
-    def testLength3Arcslide(self):
+    def testGeneralUnderslide(self):
         slides_to_test = [
+            Arcslide(antipodalPMC(2), 1, 0),
+            Arcslide(antipodalPMC(2), 2, 1),
+            Arcslide(antipodalPMC(2), 3, 2),
+            Arcslide(antipodalPMC(2), 4, 3),
             Arcslide(PMC([(0, 3), (1, 6), (2, 4), (5, 7)]), 1, 0),
-            Arcslide(PMC([(0, 3), (1, 4), (2, 6), (5, 7)]), 1, 0),
+            Arcslide(PMC([(0, 5), (1, 3), (2, 6), (4, 7)]), 1, 0),
             Arcslide(PMC([(0, 3), (1, 5), (2, 7), (4, 6)]), 1, 0),
-            Arcslide(PMC([(0, 3), (1, 7), (2, 5), (4, 6)]), 1, 0),
             Arcslide(PMC([(0, 2), (1, 4), (3, 6), (5, 7)]), 2, 1),
             Arcslide(PMC([(0, 2), (1, 4), (3, 6), (5, 7)]), 4, 3),
+            Arcslide(PMC([(0, 3), (1, 6), (2, 4), (5, 7)]), 2, 1),
+            Arcslide(PMC([(0, 2), (1, 6), (3, 5), (4, 7)]), 2, 1),
+            Arcslide(PMC([(0, 3), (1, 5), (2, 7), (4, 6)]), 2, 1),
+            Arcslide(PMC([(0, 2), (1, 6), (3, 5), (4, 7)]), 5, 4),
+            Arcslide(PMC([(0, 3), (1, 5), (2, 7), (4, 6)]), 3, 2),
+            Arcslide(PMC([(0, 5), (1, 3), (2, 6), (4, 7)]), 5, 4),
         ]
         for slide in slides_to_test:
             print slide
             dastr = ArcslideDA(slide).getDAStructure()
             self.assertTrue(dastr.testDelta())
 
-    def testLength3ArcslideLocal(self):
+    def testGeneralUnderslideLocal(self):
         slides_to_test = [
             Arcslide(PMC([(0, 3), (1, 6), (2, 4), (5, 7)]), 1, 0),
+            Arcslide(PMC([(0, 3), (1, 6), (2, 4), (5, 7)]), 2, 1),
+            Arcslide(PMC([(0, 2), (1, 6), (3, 5), (4, 7)]), 5, 4),
         ]
         for slide in slides_to_test:
             local_dastr = ArcslideDA(slide).getLocalDAStructure()
             self.assertTrue(local_dastr.testDelta())
 
-    def testUnderslide(self):
+    def testGeneralOverslide(self):
         slides_to_test = [
-            Arcslide(PMC([(0, 3), (1, 6), (2, 4), (5, 7)]), 2, 1),
-            Arcslide(PMC([(0, 2), (1, 6), (3, 5), (4, 7)]), 2, 1),
-            Arcslide(PMC([(0, 3), (1, 5), (2, 7), (4, 6)]), 2, 1),
+            Arcslide(splitPMC(1), 3, 2),
+            Arcslide(splitPMC(2), 3, 2),
+            Arcslide(splitPMC(2), 4, 3),
+            Arcslide(splitPMC(2), 7, 6),
+            Arcslide(linearPMC(2), 3, 2),
+            Arcslide(linearPMC(2), 5, 4),
+            Arcslide(linearPMC(2), 7, 6),
+            Arcslide(antipodalPMC(2), 5, 4),
+            Arcslide(antipodalPMC(2), 6, 5),
+            Arcslide(antipodalPMC(2), 7, 6),
         ]
         for slide in slides_to_test:
             print slide
             dastr = ArcslideDA(slide).getDAStructure()
             self.assertTrue(dastr.testDelta())
 
-    def testUnderslideLocal(self):
+    def testGeneralOverslideLocal(self):
         slides_to_test = [
-            Arcslide(PMC([(0, 3), (1, 6), (2, 4), (5, 7)]), 2, 1),
+            Arcslide(splitPMC(1), 3, 2),
+            Arcslide(splitPMC(2), 3, 2),
+            Arcslide(splitPMC(2), 4, 3),
+            Arcslide(splitPMC(2), 7, 6),
         ]
         for slide in slides_to_test:
             local_dastr = ArcslideDA(slide).getLocalDAStructure()
-            self.assertTrue(local_dastr.testDelta())        
+            self.assertTrue(local_dastr.testDelta())
 
     def testAutoCompleteArcslide(self):
-        slide = Arcslide(PMC([(0, 3), (1, 6), (2, 4), (5, 7)]), 2, 1)
-        local_dastr = ArcslideDA(slide).getLocalDAStructure()
-        self.assertTrue(local_dastr.testDelta())
+        def run_test(slide, d_side_order, intervals, single_idems):
+            local_dastr = ArcslideDA(slide).getLocalDAStructure()
 
-        arrows = []
-        patterns = ArcslideDA(slide).arrow_patterns
-        for coeffs_a, lst_d in patterns.items():
-            for coeff_d in lst_d:
-                arrows.append((coeff_d, coeffs_a))
-        # Order is: 5 for top, 0 for bottom, 4 for upper middle, 2 for lower middle
-        arrows_base = [(coeff_d, coeffs_a) for coeff_d, coeffs_a in arrows
-                       if coeff_d.multiplicity[2] == 0]
-        arrows_new = [(coeff_d, coeffs_a) for coeff_d, coeffs_a in arrows
-                      if coeff_d.multiplicity[2] != 0]
-        add_strs = []
-        single_idems = [(1, 1)]
-        arrows_to_extend = ArcslideDA.autoCompleteByLinAlg(
-            arrows_base, arrows_new, single_idems,
-            local_dastr.getGenerators())
-        for coeff_d, coeffs_a in arrows_to_extend:
-            add_strs.append("(%s)," % ", ".join(coeff.inputForm() for coeff in
-                                                list(coeffs_a) + [coeff_d]))
-            arrows.append((coeff_d, coeffs_a))
+            # Recover list of arrows.
+            arrows = []
+            patterns = ArcslideDA(slide).arrow_patterns
+            for coeffs_a, lst_d in patterns.items():
+                for coeff_d in lst_d:
+                    arrows.append((coeff_d, coeffs_a))
 
-        while True:
-            result = ArcslideDA.autoCompleteArrows(
-                arrows, single_idems, local_dastr.getGenerators())
-            if result[0] is True:
-                print "Finished"
-                for add_str in add_strs:
-                    print add_str
-                break
-            elif result[0] is False:
-                print "Cannot continue"
-                for add_str in add_strs:
-                    print add_str
-                f = open("tocancel_arrows.txt", "w")
-                f.write(beginDoc())
-                for coeff_d, coeffs_a in result[1]:
-                    print "To cancel: ", coeff_d, coeffs_a
-                    f.write(showArrow(coeff_d, coeffs_a, [0,1,2,4,5], [0,2,3,4,5]))
-                f.write(endDoc())
-                f.close()
-                suggestions = []
-                for (coeff_d, coeffs_a), times in result[2].items():
-                    suggestions.append((times, coeff_d, coeffs_a))
-                for times, coeff_d, coeffs_a in reversed(sorted(suggestions)):
-                    print times, coeffs_a, coeff_d
-                break
-            else:
-                coeff_d, coeffs_a = result
-                add_str = "(%s)," % ", ".join(coeff.inputForm() for coeff in
-                                              list(coeffs_a) + [coeff_d])
-                print "To add:", add_str
-                add_strs.append(add_str)
-                arrows.append((coeff_d, coeffs_a))
+            # Auto-complete by linear algebra proceeds stages as specified by
+            # d_side_order.
+            for i in range(len(d_side_order)):
+                arrows_base, arrows_new, arrows_expected = [], [], []
+                int_d, int_a = intervals[i]
+                for coeff_d, coeffs_a in arrows:
+                    if all([coeff_d.multiplicity[p] == 0
+                            for p in d_side_order[i:]]):
+                        # already exists
+                        arrows_base.append((coeff_d, coeffs_a))
+                    elif coeff_d.strands == (int_d,) and \
+                         len(coeffs_a) == 1 and coeffs_a[0].strands == (int_a,):
+                        # seed for this round
+                        arrows_new.append((coeff_d, coeffs_a))
+                # Triggers assert failure if it does not succeed
+                arrows_to_extend = ArcslideDA.autoCompleteByLinAlg(
+                    arrows_base, arrows_new, single_idems,
+                    local_dastr.getGenerators())
+
+                # Uncomment the following to see the added arrows.
+                # print "Added at this stage:", len(arrows_to_extend)
+                # for coeff_d, coeffs_a in arrows_to_extend:
+                #     print "(%s)," % ", ".join(
+                #         coeff.inputForm()
+                #         for coeff in list(coeffs_a) + [coeff_d])
+
+        # Short underslide down
+        run_test(slide = Arcslide(PMC([(0, 2), (1, 3), (4, 6), (5, 7)]), 2, 1),
+                 d_side_order = (3, 0),
+                 intervals = [((3, 4), (3, 4)), ((0, 1), (0, 1))],
+                 single_idems = [(1, 1)])
+
+        # General underslide down
+        run_test(slide = Arcslide(PMC([(0, 3), (1, 6), (2, 4), (5, 7)]), 2, 1),
+                 d_side_order = (5, 0, 4, 2),
+                 intervals = [((5, 6), (5, 6)), ((0, 1), (0, 1)),
+                              ((4, 5), (3, 4)), ((2, 3), (1, 2))],
+                 single_idems = [(1, 1)])
 
 if __name__ == "__main__":
     unittest.main()
