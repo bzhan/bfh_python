@@ -310,10 +310,10 @@ class LocalStrandDiagram(Generator):
                     print left_idem, strands
                 self.all_hor.remove(start_idem)
         self.all_hor = tuple(self.all_hor)
-        self.single_hor = [i for i in self.all_hor
-                           if len(self.local_pmc.pairs[i]) == 1]
-        self.double_hor = [i for i in self.all_hor
-                           if len(self.local_pmc.pairs[i]) == 2]
+        self.single_hor = tuple([i for i in self.all_hor
+                                 if len(self.local_pmc.pairs[i]) == 1])
+        self.double_hor = tuple([i for i in self.all_hor
+                                 if len(self.local_pmc.pairs[i]) == 2])
 
     def isIdempotent(self):
         """Tests whether this generator is an idempotent."""
@@ -334,6 +334,12 @@ class LocalStrandDiagram(Generator):
 
     def __repr__(self):
         return str(self)
+
+    def inputForm(self):
+        """Output in the form used for sd."""
+        return "[%s]" % \
+            ", ".join([str(self.local_pmc.pairs[i][0]) for i in self.all_hor] +
+                      ["(%s, %s)" % (p, q) for (p, q) in self.strands])
 
     def __eq__(self, other):
         return self.parent == other.parent and \
@@ -584,11 +590,11 @@ class LocalStrandAlgebra(DGAlgebra):
         # Otherwise we do not require idempotent to match exactly, but only for
         # moving strands and double horizontals.
         for mid_idem in \
-            [pmc.pairid[q] for p, q in gen1.strands] + gen1.double_hor:
+            [pmc.pairid[q] for p, q in gen1.strands] + list(gen1.double_hor):
             if mid_idem != -1 and mid_idem not in gen2.left_idem:
                 return E0
         for mid_idem in \
-            [pmc.pairid[p] for p, q in gen2.strands] + gen2.double_hor:
+            [pmc.pairid[p] for p, q in gen2.strands] + list(gen2.double_hor):
             if mid_idem != -1 and mid_idem not in gen1.right_idem:
                 return E0
 

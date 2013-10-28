@@ -1,6 +1,7 @@
 """Unit test for linalg.py."""
 
 from linalg import *
+from utility import F2
 import unittest
 
 class RowSystemTest(unittest.TestCase):
@@ -21,6 +22,18 @@ class RowSystemTest(unittest.TestCase):
         self.assertTrue(sys2.getZeroComb() in ([[1,1,-2]],[[-1,-1,2]]))
         self.assertEqual(sys2.vecReduce([1,0,0])[1], [0,1,1]) # reduced form
         self.assertEqual(sys2.reduceProfile(), [1, 2, 0])
+
+class F2RowSystemTest(unittest.TestCase):
+    def testF2RowSystem(self):
+        rows1 = [[1,1,0,0,0],
+                 [0,0,1,1,0],
+                 [0,0,0,0,1],
+                 [0,0,1,0,0]]
+        sys1 = F2RowSystem(rows1)
+        self.assertEqual(sys1.getComb([1,1,1,1,1]), [1,1,1,0])
+        self.assertEqual(sys1.getComb([1,1,0,0,1]), [1,0,1,0])
+        self.assertEqual(sys1.getComb([1,1,1,0,1]), [1,0,1,1])
+        self.assertEqual(sys1.getComb([1,1,0,1,1]), [1,1,1,1])
 
 if __name__ == "__main__":
     unittest.main()

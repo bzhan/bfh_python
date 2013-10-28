@@ -140,10 +140,11 @@ class SimpleDAStructure(DAStructure):
             if target == 0:
                 del self.da_action[source]
 
-    def testDelta(self):
-        """Verify the type DA structure equations."""
-        # Convert this to a type DD structure over algebra1 and cobar of
-        # algebra2
+    def toDDStructure(self):
+        """ Convert this to a type DD structure over algebra1 and cobar of
+        algebra2.
+
+        """
         cobar2 = CobarAlgebra(self.algebra2)
         ddstr = SimpleDDStructure(self.ring, self.algebra1, cobar2)
         dagen_to_ddgen_map = dict()
@@ -161,7 +162,11 @@ class SimpleDAStructure(DAStructure):
                 ddstr.addDelta(dagen_to_ddgen_map[gen_from],
                                dagen_to_ddgen_map[gen_to],
                                coeff_d, cobar_gen, ring_coeff)
-        return ddstr.testDelta()
+        return ddstr
+
+    def testDelta(self):
+        """Verify the type DA structure equations."""
+        return self.toDDStructure().testDelta()
 
     def __str__(self):
         result = "Type DA Structure.\n"

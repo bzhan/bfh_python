@@ -200,3 +200,128 @@ class RowSystem:
             return comb
         else:
             return None
+
+class F2RowSystem:
+    """Linear algebra over field F2. Currently using just 0 and 1's (so the F2
+    from utility.py is not involved.
+
+    """
+    def __init__(self, vecs):
+        """Initialize with vecs, a matrix with 0/1 values."""
+        assert len(vecs) > 0
+        self.ori_vecs = [list(vec) for vec in vecs]
+        self.num_row = len(self.ori_vecs)
+        self.num_col = len(self.ori_vecs[0])
+        self._rowReduce()
+        self.num_reduced_row = len(self.reduced_vecs)
+        assert self.num_reduced_row == len(self.pivot)
+
+    def __str__(self):
+        result = "Row system with rows:"
+        for vec in self.ori_vecs:
+            result += "\n"+"\t".join(["%d" % n for n in vec])
+        return result
+
+    def __repr__(self):
+        return str(self)
+
+    def _rowReduce(self):
+        """Performs row reduction. Similar to the function of the same name in
+        RowSystem.
+
+        """
+        reduced_vecs = [list(vec) for vec in self.ori_vecs]
+        combs = [[0]*self.num_row for i in range(self.num_row)]
+        for i in range(self.num_row):
+            combs[i][i] = 1
+
+        def swap_row(a, b):
+            """Swaps row #a and #b of reduced_vecs."""
+            for i in range(self.num_col):
+                reduced_vecs[a][i], reduced_vecs[b][i] = \
+                    reduced_vecs[b][i], reduced_vecs[a][i]
+            for i in range(self.num_row):
+                combs[a][i], combs[b][i] = combs[b][i], combs[a][i]
+
+        def add_multiple(add_from, add_to):
+            """Add row #add_from onto row #add_to."""
+            for i in range(self.num_col):
+                reduced_vecs[add_to][i] += reduced_vecs[add_from][i]
+                reduced_vecs[add_to][i] %= 2
+            for i in range(self.num_row):
+                combs[add_to][i] += combs[add_from][i]
+                combs[add_to][i] %= 2
+
+        cur_row, cur_col = 0, 0
+        self.pivot = []
+        while cur_row < self.num_row and cur_col < self.num_col:
+            # Find an entry with non-zero absolute value in this column, at or
+            # below cur_row
+            pivot_row = -1
+            for row in range(cur_row, self.num_row):
+                if reduced_vecs[row][cur_col] == 1:
+                    pivot_row = row
+                    break
+            # If all entries in this column at or below cur_row are zero, move
+            # to next column
+            if pivot_row == -1:
+                cur_col += 1
+                continue
+            # Otherwise, swap pivot row onto cur_row
+            swap_row(cur_row, pivot_row)
+            # Reduce the remaining rows
+            for row in range(cur_row+1, self.num_row):
+                if reduced_vecs[row][cur_col] == 1:
+                    add_multiple(cur_row, row)
+            self.pivot.append(cur_col)
+            cur_row += 1
+            cur_col += 1
+
+        # At this point, all rows of self.reduced_vecs at or below cur_row
+        # should be zero.
+        self.reduced_vecs = reduced_vecs[0:cur_row]
+        self.reduced_comb = combs[0:cur_row]
+        self.zero_comb = combs[cur_row:]
+
+    def getZeroComb(self):
+        """Returns a list of linear relations between the original vectors."""
+        return self.zero_comb
+
+    def vecReduce(self, vec):
+        """Reduce the given vector to a standard form.
+
+        Returns a tuple (comb, reduced_vec), where comb is a vector of length
+        num_row, specifying the linear combination of original vectors that,
+        when subtracted, will yield the standard form reduced_vec.
+
+        """
+        comb = [0] * self.num_row
+        cur_row = 0
+        for col in range(self.num_col):
+            if vec[col] == 0:
+                continue
+            while cur_row < self.num_reduced_row and self.pivot[cur_row] < col:
+                cur_row += 1
+            if cur_row >= self.num_reduced_row or self.pivot[cur_row] != col:
+                continue
+            pivot_val = self.reduced_vecs[cur_row][col]
+            assert pivot_val == 1
+            for i in range(self.num_col):
+                vec[i] += self.reduced_vecs[cur_row][i]
+                vec[i] %= 2
+            for i in range(self.num_row):
+                comb[i] += self.reduced_comb[cur_row][i]
+                comb[i] %= 2
+        return (comb, vec)
+
+    def getComb(self, vec):
+        """Write the given vec as a linear combination of the original vectors.
+        Note the answer is not necessarily uniquely specified. Return None if
+        this is impossible.
+
+        """
+        comb, reduced_vec = self.vecReduce(vec)
+        if all([n == 0 for n in reduced_vec]):
+            return comb
+        else:
+            return None
