@@ -8,7 +8,7 @@ from pmc import antipodalPMC, linearPMC, splitPMC
 import unittest
 
 class ArcslideDATest(unittest.TestCase):
-    def testShortArcslide(self):
+    def testShortUnderslideDown(self):
         slides_to_test = [
             Arcslide(splitPMC(1), 1, 0),
             Arcslide(splitPMC(1), 2, 1),
@@ -28,7 +28,7 @@ class ArcslideDATest(unittest.TestCase):
             dastr = ArcslideDA(slide).getDAStructure()
             self.assertTrue(dastr.testDelta())
 
-    def testShortArcslideLocal(self):
+    def testShortUnderslideDownLocal(self):
         slides_to_test = [
             Arcslide(splitPMC(1), 1, 0),
             Arcslide(splitPMC(1), 2, 1),
@@ -38,7 +38,7 @@ class ArcslideDATest(unittest.TestCase):
             local_dastr = ArcslideDA(slide).getLocalDAStructure()
             self.assertTrue(local_dastr.testDelta())
 
-    def testGeneralUnderslide(self):
+    def testGeneralUnderslideDown(self):
         slides_to_test = [
             Arcslide(antipodalPMC(2), 1, 0),
             Arcslide(antipodalPMC(2), 2, 1),
@@ -61,7 +61,7 @@ class ArcslideDATest(unittest.TestCase):
             dastr = ArcslideDA(slide).getDAStructure()
             self.assertTrue(dastr.testDelta())
 
-    def testGeneralUnderslideLocal(self):
+    def testGeneralUnderslideDownLocal(self):
         slides_to_test = [
             Arcslide(PMC([(0, 3), (1, 6), (2, 4), (5, 7)]), 1, 0),
             Arcslide(PMC([(0, 3), (1, 6), (2, 4), (5, 7)]), 2, 1),
@@ -71,7 +71,7 @@ class ArcslideDATest(unittest.TestCase):
             local_dastr = ArcslideDA(slide).getLocalDAStructure()
             self.assertTrue(local_dastr.testDelta())
 
-    def testGeneralOverslide(self):
+    def testGeneralOverslideDown(self):
         slides_to_test = [
             Arcslide(splitPMC(1), 3, 2),
             Arcslide(splitPMC(2), 3, 2),
@@ -89,12 +89,104 @@ class ArcslideDATest(unittest.TestCase):
             dastr = ArcslideDA(slide).getDAStructure()
             self.assertTrue(dastr.testDelta())
 
-    def testGeneralOverslideLocal(self):
+    def testGeneralOverslideDownLocal(self):
         slides_to_test = [
             Arcslide(splitPMC(1), 3, 2),
             Arcslide(splitPMC(2), 3, 2),
             Arcslide(splitPMC(2), 4, 3),
             Arcslide(splitPMC(2), 7, 6),
+        ]
+        for slide in slides_to_test:
+            local_dastr = ArcslideDA(slide).getLocalDAStructure()
+            self.assertTrue(local_dastr.testDelta())
+
+    def testShortUnderslideUp(self):
+        slides_to_test = [
+            Arcslide(splitPMC(1), 1, 2),
+            Arcslide(splitPMC(1), 2, 3),
+            Arcslide(splitPMC(2), 1, 2),
+            Arcslide(splitPMC(2), 6, 7),
+            Arcslide(linearPMC(2), 1, 2),
+            Arcslide(linearPMC(2), 6, 7),
+            Arcslide(PMC([(0, 2), (1, 6), (3, 5), (4, 7)]), 1, 2),
+            Arcslide(PMC([(0, 3), (1, 6), (2, 4), (5, 7)]), 6, 7),
+            Arcslide(splitPMC(2), 2, 3),
+            Arcslide(splitPMC(2), 5, 6),
+            Arcslide(PMC([(0, 2), (1, 6), (3, 5), (4, 7)]), 4, 5),
+            Arcslide(PMC([(0, 3), (1, 6), (2, 4), (5, 7)]), 3, 4),
+        ]
+        for slide in slides_to_test:
+            print slide
+            dastr = ArcslideDA(slide).getDAStructure()
+            self.assertTrue(dastr.testDelta())
+
+    def testShortUnderslideUpLocal(self):
+        slides_to_test = [
+            Arcslide(splitPMC(1), 1, 2),
+            Arcslide(splitPMC(1), 2, 3),
+            Arcslide(splitPMC(2), 2, 3),
+        ]
+        for slide in slides_to_test:
+            local_dastr = ArcslideDA(slide).getLocalDAStructure()
+            self.assertTrue(local_dastr.testDelta())
+
+    def testGeneralUnderslideUp(self):
+        slides_to_test = [
+            Arcslide(antipodalPMC(2), 3, 4),
+            Arcslide(antipodalPMC(2), 4, 5),
+            Arcslide(antipodalPMC(2), 5, 6),
+            Arcslide(antipodalPMC(2), 6, 7),
+            Arcslide(PMC([(0, 3), (1, 6), (2, 4), (5, 7)]), 2, 3),
+            Arcslide(PMC([(0, 5), (1, 3), (2, 6), (4, 7)]), 4, 5),
+            Arcslide(PMC([(0, 3), (1, 5), (2, 7), (4, 6)]), 2, 3),
+            Arcslide(PMC([(0, 2), (1, 4), (3, 6), (5, 7)]), 3, 4),
+            Arcslide(PMC([(0, 2), (1, 4), (3, 6), (5, 7)]), 5, 6),
+            Arcslide(PMC([(0, 3), (1, 6), (2, 4), (5, 7)]), 5, 6),
+            Arcslide(PMC([(0, 2), (1, 6), (3, 5), (4, 7)]), 5, 6),
+            Arcslide(PMC([(0, 3), (1, 5), (2, 7), (4, 6)]), 4, 5),
+            Arcslide(PMC([(0, 2), (1, 6), (3, 5), (4, 7)]), 6, 7),
+            Arcslide(PMC([(0, 3), (1, 5), (2, 7), (4, 6)]), 6, 7),
+            Arcslide(PMC([(0, 5), (1, 3), (2, 6), (4, 7)]), 6, 7),
+        ]
+        for slide in slides_to_test:
+            print slide
+            dastr = ArcslideDA(slide).getDAStructure()
+            self.assertTrue(dastr.testDelta())
+
+    def testGeneralUnderslideUpLocal(self):
+        slides_to_test = [
+            Arcslide(PMC([(0, 3), (1, 6), (2, 4), (5, 7)]), 2, 3),
+            Arcslide(PMC([(0, 3), (1, 6), (2, 4), (5, 7)]), 5, 6),
+            Arcslide(PMC([(0, 2), (1, 6), (3, 5), (4, 7)]), 6, 7),
+        ]
+        for slide in slides_to_test:
+            local_dastr = ArcslideDA(slide).getLocalDAStructure()
+            self.assertTrue(local_dastr.testDelta())
+
+    def testGeneralOverslideUp(self):
+        slides_to_test = [
+            Arcslide(splitPMC(1), 0, 1),
+            Arcslide(splitPMC(2), 0, 1),
+            Arcslide(splitPMC(2), 3, 4),
+            Arcslide(splitPMC(2), 4, 5),
+            Arcslide(linearPMC(2), 0, 1),
+            Arcslide(linearPMC(2), 2, 3),
+            Arcslide(linearPMC(2), 4, 5),
+            Arcslide(antipodalPMC(2), 0, 1),
+            Arcslide(antipodalPMC(2), 1, 2),
+            Arcslide(antipodalPMC(2), 2, 3),
+        ]
+        for slide in slides_to_test:
+            print slide
+            dastr = ArcslideDA(slide).getDAStructure()
+            self.assertTrue(dastr.testDelta())
+
+    def testGeneralOverslideUpLocal(self):
+        slides_to_test = [
+            Arcslide(splitPMC(1), 0, 1),
+            Arcslide(splitPMC(2), 0, 1),
+            Arcslide(splitPMC(2), 3, 4),
+            Arcslide(splitPMC(2), 4, 5),
         ]
         for slide in slides_to_test:
             local_dastr = ArcslideDA(slide).getLocalDAStructure()
@@ -138,7 +230,7 @@ class ArcslideDATest(unittest.TestCase):
                 #         for coeff in list(coeffs_a) + [coeff_d])
 
         # Short underslide down
-        run_test(slide = Arcslide(PMC([(0, 2), (1, 3), (4, 6), (5, 7)]), 2, 1),
+        run_test(slide = Arcslide(splitPMC(2), 2, 1),
                  d_side_order = (3, 0),
                  intervals = [((3, 4), (3, 4)), ((0, 1), (0, 1))],
                  single_idems = [(1, 1)])
@@ -148,6 +240,19 @@ class ArcslideDATest(unittest.TestCase):
                  d_side_order = (5, 0, 4, 2),
                  intervals = [((5, 6), (5, 6)), ((0, 1), (0, 1)),
                               ((4, 5), (3, 4)), ((2, 3), (1, 2))],
+                 single_idems = [(1, 1)])
+
+        # Short underslide up
+        run_test(slide = Arcslide(splitPMC(2), 2, 3),
+                 d_side_order = (3, 0),
+                 intervals = [((3, 4), (3, 4)), ((0, 1), (0, 1))],
+                 single_idems = [(1, 1)])
+
+        # General underslide up
+        run_test(slide = Arcslide(PMC([(0, 3), (1, 6), (2, 4), (5, 7)]), 5, 6),
+                 d_side_order = (5, 0, 3, 1),
+                 intervals = [((5, 6), (5, 6)), ((0, 1), (0, 1)),
+                              ((3, 4), (4, 5)), ((1, 2), (2, 3))],
                  single_idems = [(1, 1)])
 
 if __name__ == "__main__":
