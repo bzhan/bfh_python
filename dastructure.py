@@ -3,6 +3,7 @@
 from algebra import CobarAlgebra, DGAlgebra, FreeModule, Generator, Tensor, \
     TensorGenerator, TensorStarGenerator
 from algebra import E0
+from dstructure import DGenerator, SimpleDStructure
 from ddstructure import SimpleDDGenerator, SimpleDDStructure
 from pmc import StrandDiagram
 from utility import NamedObject
@@ -34,6 +35,28 @@ class SimpleDAGenerator(DAGenerator, NamedObject):
 
     def __repr__(self):
         return str(self)
+
+class DATensorDGenerator(DGenerator, tuple):
+    """Generator of a type D structure formed by tensoring a type DA structure
+    and a type D structure. Also serves as the generator of the type D structure
+    formed by tensoring DD * CFAA(Id) * D, with the generator of CFAA(Id)
+    implicit from the idempotents.
+
+    gen_left is a generator of either a type DA structure (DA * D
+    interpretation) or a type DD structure (DD * CFAA(Id) * D interpretation).
+
+    gen_right is a generator of a type D structure.
+
+    """
+    def __new__(cls, parent, gen_left, gen_right):
+        return tuple.__new__(cls, (gen_left, gen_right))
+
+    def __init__(self, parent, gen_left, gen_right):
+        """Specify generators on two sides of the tensor (DD and D generators).
+
+        """
+        # Note tuple initialization is automatic
+        DGenerator.__init__(self, parent, gen_left.idem1)
 
 class DAStructure(FreeModule):
     """Represents a type DA structure. delta() takes a generator and a sequence
@@ -76,6 +99,15 @@ class DAStructure(FreeModule):
         """
         raise NotImplementedError("Differential not implemented.")
 
+    def deltaPrefix(self, MGen, algGens):
+        """algGens = (a_1, ..., a_n) is an element of TensorAlgebra. Returns a
+        boolean value indicating whether there exists an arrow in the type DA
+        action with starting generator MGen, and whose list of algebra
+        generators has a_1, ..., a_n as a *strict* prefix.
+
+        """
+        raise NotImplementedError("Prefix differential not implemented.")
+
     def rmultiply(self, MGen, AGen):
         """Multiply a generator of type DAStructure with an algebra generator
         means forming the tensor.
@@ -83,6 +115,44 @@ class DAStructure(FreeModule):
         """
         return 1*TensorGenerator((AGen, MGen), self.AtensorM)
 
+    def tensorD(self, dstr):
+        """Compute the box tensor product DA * D of this bimodule with the given
+        type D structure. Returns the resulting type D structure. Uses delta()
+        and deltaPrefix() functions of this type DA structure.
+
+        """
+        dstr_result = SimpleDStructure(F2, self.algebra1)
+        # Compute list of generators in the box tensor product
+        for gen_left in self.getGenerators():
+            for gen_right in dstr.getGenerators():
+                if gen_left.idem2 == gen_right.idem:
+                    dstr_result.addGenerator(DATensorDGenerator(
+                        dstr_result, gen_left, gen_right))
+
+        def search(start_gen, cur_dgen, cur_coeffs_a):
+            """Searching for an arrow in the box tensor product.
+            - start_gen: starting generator in the box tensor product. The
+              resulting arrow will start from here.
+            - cur_dgen: current location in the type D structure.
+            - cur_coeffs_a: current list of A-side inputs to the type DA
+              structure (or alternatively, list of algebra outputs produced by
+              the existing path through the type D structure).
+
+            """
+            start_dagen, start_dgen = start_gen
+            cur_delta = self.delta(start_dagen, cur_coeffs_a)
+            for (coeff_d, gen_to), ring_coeff in cur_delta.items():
+                dstr_result.addDelta(start_gen, DATensorDGenerator(
+                    dstr_result, gen_to, cur_dgen), coeff_d, 1)
+            if self.deltaPrefix(start_dagen, cur_coeffs_a):
+                for (coeff_out, dgen_to), ring_coeff in \
+                    dstr.delta(cur_dgen).items():
+                    search(start_gen, dgen_to, cur_coeffs_a + (coeff_out,))
+
+        for x in dstr_result.getGenerators():
+            search(x, x[1], ())  # x[1] retrieves generator at right.
+        return dstr_result
+                
 class SimpleDAStructure(DAStructure):
     """Represents a type DA structure with a finite number of generators and a
     finite number of type DA operations.
@@ -139,6 +209,20 @@ class SimpleDAStructure(DAStructure):
         for source, target in self.da_action.items():
             if target == 0:
                 del self.da_action[source]
+
+    def delta(self, MGen, algGens):
+        if (MGen, algGens) not in self.da_action:
+            return E0
+        else:
+            return self.da_action[(MGen, algGens)]
+
+    def deltaPrefix(self, MGen, algGens):
+        # Very inefficient implementation.
+        for (gen_from, coeffs_a), target in self.da_action.items():
+            if MGen == gen_from and len(algGens) < len(coeffs_a) and \
+               algGens == coeffs_a[:len(algGens)]:
+                return True
+        return False
 
     def toDDStructure(self):
         """ Convert this to a type DD structure over algebra1 and cobar of

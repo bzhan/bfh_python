@@ -2,6 +2,7 @@
 
 from arcslideda import *
 from arcslide import Arcslide
+from dstructure import zeroTypeD
 from latex import beginDoc, endDoc, showArrow
 from pmc import PMC
 from pmc import antipodalPMC, linearPMC, splitPMC
@@ -192,6 +193,29 @@ class ArcslideDATest(unittest.TestCase):
             local_dastr = ArcslideDA(slide).getLocalDAStructure()
             self.assertTrue(local_dastr.testDelta())
 
+    def testDeltaAndPrefix(self):
+        # Rough test for the correctness of delta() and deltaPrefix().
+        slides_to_test = [
+            Arcslide(splitPMC(2), 1, 0),
+            Arcslide(antipodalPMC(2), 1, 0),
+            Arcslide(splitPMC(2), 3, 2),
+            Arcslide(splitPMC(2), 1, 2),
+            Arcslide(antipodalPMC(2), 3, 4),
+            Arcslide(splitPMC(2), 3, 4),
+        ]
+        for slide in slides_to_test:
+            slide_da = ArcslideDA(slide)
+            dastr = slide_da.getDAStructure()
+            for (gen_from, coeffs_a), target in dastr.da_action.items():
+                # Find generator in slide_da matching that of dastr
+                ori_gen = None
+                for gen in slide_da.getGenerators():
+                    if gen.idem1 == gen_from.idem1 and gen.idem2 == gen_from.idem2:
+                        ori_gen = gen
+                assert slide_da.delta(ori_gen, coeffs_a) != E0
+                for i in range(len(coeffs_a)):
+                    assert slide_da.deltaPrefix(ori_gen, coeffs_a[:i])
+
     def testAutoCompleteArcslide(self):
         def run_test(slide, d_side_order, intervals, single_idems):
             local_dastr = ArcslideDA(slide).getLocalDAStructure()
@@ -254,6 +278,17 @@ class ArcslideDATest(unittest.TestCase):
                  intervals = [((5, 6), (5, 6)), ((0, 1), (0, 1)),
                               ((3, 4), (4, 5)), ((1, 2), (2, 3))],
                  single_idems = [(1, 1)])
+
+class TensorTest(unittest.TestCase):
+    def testDATensorD(self):
+        # So far mostly checking that it will run in a reasonable amount of
+        # time.
+        slide = Arcslide(splitPMC(5), 2, 1)  # will change zeroTypeD
+        dastr = ArcslideDA(slide)
+        dstr = zeroTypeD(5)
+        dstr_result = dastr.tensorD(dstr)
+        dstr_result.reindex()
+        self.assertEqual(len(dstr_result), 2)
 
 if __name__ == "__main__":
     unittest.main()

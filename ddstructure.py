@@ -198,7 +198,7 @@ class SimpleDDStructure(DDStructure):
                 print gen, "==>"
                 for k, v in gen.delta().diff().items():
                     print v, "*", k
-                # return False
+                return False
         return True
 
     def __str__(self):

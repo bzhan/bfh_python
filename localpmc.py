@@ -355,14 +355,18 @@ class LocalStrandDiagram(Generator):
         return hash((self.parent, tuple(self.left_idem),
                      tuple(self.strands)))
 
-    def removeSingleHor(self):
+    def removeSingleHor(self, idems = None):
         """Return a local strand diagram that is just like this, except with
-        single horizontal lines removed.
+        some single horizontal lines removed.
+
+        If idems is None (default case): all single idempotents will be removed.
+        Otherwise, idems must be a list containing single idems to be removed.
 
         """
         new_left_idem = list(self.left_idem)
         for i in self.single_hor:
-            new_left_idem.remove(i)
+            if idems is None or i in idems:
+                new_left_idem.remove(i)
         return LocalStrandDiagram(self.parent, new_left_idem, self.strands)
 
     def join(self, sd2, pmc, mapping1, mapping2):

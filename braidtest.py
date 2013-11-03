@@ -13,10 +13,20 @@ class BraidTest(unittest.TestCase):
         self.assertTrue(len(br2.getArcslides(range(1, 6))), sum(pos_size))
 
 class BraidCapTest(unittest.TestCase):
-    def testBraidCap(self):
+    def testBraidCap3(self):
         dcap_len = [len(BraidCap(end3).getHandlebody())
                     for end3 in BraidCap.ends3]
-        self.assertEqual(dcap_len, [2,1,2,1,1])
+        self.assertEqual(dcap_len, [2, 1, 2, 1, 1])
+
+    def testBraidCap3LocalDA(self):
+        dcap_len = [len(BraidCap(end3).getHandlebodyByLocalDA())
+                    for end3 in BraidCap.ends3]
+        self.assertEqual(dcap_len, [2, 1, 2, 1, 1])
+
+    def testBraidCap4LocalDA(self):
+        dcap_len = [len(BraidCap(end4).getHandlebodyByLocalDA())
+                    for end4 in BraidCap.ends4]
+        self.assertEqual(dcap_len, [4, 3, 2, 2, 1, 4, 3, 2, 2, 2, 1, 2, 1, 1])
 
     def testPlatTypeD2(self):
         self.assertEqual(len(platTypeD2(3, True)), 1)
@@ -40,14 +50,16 @@ class HFTest(unittest.TestCase):
         std_cap = [6,3,2,5,4,1]
         br = BridgePresentation("pretzel_-2_3_5",
                                  std_cap, 5*[1]+3*[3]+2*[-5], std_cap)
+        # Test both methods of finding HF
         self.assertEqual(len(br.getHF()), 1)
+        self.assertEqual(len(br.getHFByLocalDA()), 1)
 
     def testHFFromFile(self):
         to_test = ["3_1", "4_1",
-                   # "12n_0210", # 1*[3 2 2 2 2 2]
-                   # "12n_0292", # 1*[1 0 2 2 0 0 2 2]
+                   "12n_0210", # 1*[3 2 2 2 2 2]
+                   "12n_0292", # 1*[1 0 2 2 0 0 2 2]
                    "11n_6", "11n_9", "11n_24", # 3-bridge
-                   # "11a_14", "12n_0055", "12n_0056", # 4-bridge
+                   "11a_14", "12n_0055", "12n_0056", # 4-bridge
                    ]
         with open('data/input_12_FL.txt', 'r') as input_file:
             with open('data/output_12.txt', 'r') as check_file:
@@ -58,9 +70,14 @@ class HFTest(unittest.TestCase):
                     expected_hf = int(check_file.readline().split()[1])
                     cur_br = readBridgePresentation(line)
                     if cur_br.name in to_test:
-                        cx = cur_br.getHF()
+                        # TODO: add grading info so cx.getGradingInfo() will
+                        # work
+                        print "Testing:", cur_br.name
+                        cx = cur_br.getHFByLocalDA()
                         self.assertEqual(len(cx), expected_hf)
-                        print cur_br.name, cx.getGradingInfo()
 
 if __name__ == "__main__":
+    # Can use this when running profiler.
+    # suite = unittest.TestLoader().loadTestsFromTestCase(HFTest)
+    # unittest.TextTestRunner(verbosity=2).run(suite)    
     unittest.main()

@@ -2,8 +2,9 @@
 
 import sys
 from arcslide import Arcslide
+from arcslideda import ArcslideDA
 from digraph import computeATensorD, computeATensorDD, computeDATensorD
-from dstructure import infTypeD
+from dstructure import infTypeD, platTypeD
 from pmc import linearPMC, splitPMC
 from utility import memorize
 from utility import PRINT_PROGRESS
@@ -134,6 +135,23 @@ class BraidCap:
         dstr.checkGrading()
         return dstr
 
+    @memorize
+    def getHandlebodyByLocalDA(self):
+        """Returns the handlebody corresponding to this matching. Use local type
+        DA structures associated to arcslides. Note this corresponds to
+        dual = False case of getHandlebody().
+
+        """
+        slides = Braid(self.num_strands).getArcslides(self.fix)
+        slides = [slide.inverse() for slide in slides]
+        dstr = platTypeD(self.genus)
+        for slide in slides:
+            dstr = ArcslideDA(slide).tensorD(dstr)
+            dstr.reindex()
+            dstr.simplify()
+        assert dstr.testDelta()
+        return dstr
+
     ends3 = [(6,5,4,3,2,1),(6,3,2,5,4,1),(4,3,2,1,6,5),(2,1,6,5,4,3),
              (2,1,4,3,6,5)]
     ends4 = [(8,7,6,5,4,3,2,1),(8,7,4,3,6,5,2,1),(8,5,4,3,2,7,6,1),
@@ -174,6 +192,26 @@ class BridgePresentation:
         cx = computeATensorD(end_d, start_d)
         cx.simplify()
         cx.reindex()
+        return cx
+
+    def getHFByLocalDA(self):
+        """Compute HF of branched double cover, using local type DA structures
+        for arcslides.
+
+        """
+        start_d = BraidCap(self.start).getHandlebodyByLocalDA()
+        slides = Braid(self.num_strands).getArcslides(self.braid_word)
+        slides = [slide.inverse() for slide in slides]
+        for slide in slides:
+            start_d = ArcslideDA(slide).tensorD(start_d)
+            start_d.reindex()
+            assert start_d.testDelta()  # remove this when more confident
+            start_d.simplify()
+        end_d = BraidCap(self.end).getHandlebodyByLocalDA().dual()
+        cx = computeATensorD(end_d, start_d)
+        cx.reindex()
+        cx.checkDifferential()
+        cx.simplify()
         return cx
 
     def __str__(self):

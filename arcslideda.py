@@ -1,18 +1,18 @@
 """Producing type DA structures for arcslides, using local actions."""
 
-from algebra import E0
-from dastructure import SimpleDAGenerator, SimpleDAStructure
+from algebra import E0, TensorGenerator
+from dastructure import DAStructure, SimpleDAGenerator, SimpleDAStructure
 from dastructure import AddChordToDA
 from linalg import F2RowSystem
 from localpmc import LocalIdempotent, LocalStrandAlgebra, LocalStrandDiagram
 from localpmc import restrictPMC, restrictStrandDiagram
 from pmc import Strands, StrandDiagram
-from utility import subset
-from utility import F2
+from utility import memorize, subset
+from utility import ACTION_LEFT, ACTION_RIGHT, F2
 import itertools
 from Queue import Queue
 
-class ArcslideDA:
+class ArcslideDA(DAStructure):
     """Responsible for producing a type DA structure for an arcslide, using
     local actions.
 
@@ -30,9 +30,14 @@ class ArcslideDA:
 
         """
         self.slide = slide
+        self.pmc1, self.pmc2 = slide.start_pmc, slide.end_pmc
 
-        pmc1, pmc2 = slide.start_pmc, slide.end_pmc
-        n = pmc1.n
+        # Initiate with usual attributes of a DAStructure
+        DAStructure.__init__(self, F2, algebra1 = self.pmc1.getAlgebra(),
+                             algebra2 = self.pmc2.getAlgebra(),
+                             side1 = ACTION_LEFT, side2 = ACTION_RIGHT)
+
+        n = self.pmc1.n
         b1, c1, c2 = slide.b1, slide.c1, slide.c2
         b1p, c1p, c2p = [slide.to_r[p] for p in b1, c1, c2]
 
@@ -137,14 +142,17 @@ class ArcslideDA:
             patterns_raw = ArcslideDA._restrict_local_arrows(
                 patterns_base, translator[0], translator[1])
 
-        self.local_pmc1, self.mapping1 = restrictPMC(pmc1, local_cut1)
-        self.outer_pmc1, self.outer_mapping1 = restrictPMC(pmc1, outer_cut1)
-        self.local_pmc2, self.mapping2 = restrictPMC(pmc2, local_cut2)
-        self.outer_pmc2, self.outer_mapping2 = restrictPMC(pmc2, outer_cut2)
+        self.local_pmc1, self.mapping1 = restrictPMC(self.pmc1, local_cut1)
+        self.outer_pmc1, self.outer_mapping1 = restrictPMC(
+            self.pmc1, outer_cut1)
+        self.local_pmc2, self.mapping2 = restrictPMC(self.pmc2, local_cut2)
+        self.outer_pmc2, self.outer_mapping2 = restrictPMC(
+            self.pmc2, outer_cut2)
 
         # Required so the left to right transition on the outside can proceed.
         assert self.outer_pmc1 == self.outer_pmc2
 
+        # Compute the set of arrow patterns
         self.arrow_patterns = {}
         for pattern in patterns_raw:
             key = []
@@ -154,6 +162,24 @@ class ArcslideDA:
             if key not in self.arrow_patterns:
                 self.arrow_patterns[key] = []
             self.arrow_patterns[key].append(self.local_pmc1.sd(pattern[-1]))
+
+        # Produce the set of possible strict prefixes
+        self.strict_prefix_set = set()
+        for pattern in self.arrow_patterns:
+            for prefix_len in range(len(pattern)):  # excludes full pattern
+                self.strict_prefix_set.add(
+                    tuple([coeff.removeSingleHor()
+                           for coeff in pattern[:prefix_len]]))
+
+        # Compute the set of generators, and add to itself
+        dd_idems = self.slide.getIdems()
+        da_idems = [(l_idem, r_idem.opp().comp())
+                    for l_idem, r_idem in dd_idems]
+        self.generators = set()
+        for i in range(len(da_idems)):
+            l_idem, r_idem = da_idems[i]
+            self.generators.add(
+                SimpleDAGenerator(self, l_idem, r_idem, "%d" % i))
 
     @staticmethod
     def idemMatchDA(x, y, coeff_d, coeffs_a):
@@ -169,75 +195,48 @@ class ArcslideDA:
             return x.idem2 == coeffs_a[0].left_idem and \
                 y.idem2 == coeffs_a[-1].right_idem
 
-    def getDAStructure(self):
-        """Returns the type DA structure corresponding to slide."""
-        dd_idems = self.slide.getIdems()
-        da_idems = [(l_idem, r_idem.opp().comp())
-                    for l_idem, r_idem in dd_idems]
-        pmc1, pmc2 = self.slide.start_pmc, self.slide.end_pmc
-        n = pmc1.n
-        alg1, alg2 = pmc1.getAlgebra(), pmc2.getAlgebra()
-        dastr = SimpleDAStructure(F2, alg1, alg2)
-        for i in range(len(da_idems)):
-            l_idem, r_idem = da_idems[i]
-            dastr.addGenerator(
-                SimpleDAGenerator(dastr, l_idem, r_idem, "%d" % i))
+    @staticmethod
+    def adjustSingleHors(coeffs_a):
+        """Given a tuple of A-side inputs, delete single idempotents from inputs
+        in a best effort to make the idempotents match.
 
-        alg1_gens, alg2_gens = alg1.getGenerators(), alg2.getGenerators()
-        mod_gens = dastr.getGenerators()
-
-        # Add action with zero algebra input
-        short_chord = [tuple(sorted([self.slide.b1, self.slide.c1]))]
-        AddChordToDA(dastr, Strands(pmc1, short_chord), [])
-
-        def softMatch(coeffs_a, coeffs_a_ref, prefix = False):
-            """Returns True if and only if coeffs_a and coeffs_a_ref differ only
-            in single idempotents, with coeffs_a having more single idempotents,
-            and at least one coeffs_a agrees with the corresponding
-            coeffs_a_ref.
-
-            If prefix is True, then no need for at least one coeffs_a to agree
-            with the corresponding coeffs_a_ref (used for prefix matching).
-
-            """
-            if len(coeffs_a) != len(coeffs_a_ref):
-                return False
-            for i in range(len(coeffs_a)):
-                if (coeffs_a[i].strands != coeffs_a_ref[i].strands or \
-                    coeffs_a[i].double_hor != coeffs_a_ref[i].double_hor or \
-                    not all([idem in coeffs_a[i].single_hor for idem in
-                             coeffs_a_ref[i].single_hor])):
-                    return False
-
-            return prefix or any([coeffs_a[i] == coeffs_a_ref[i]
-                                  for i in range(len(coeffs_a))])
-
-        def adjustSingleHors(coeffs_a):
-            """Given a tuple of A-side inputs, add or delete inputs in a best
-            effort to make the idempotents match.
-
-            """
-            coeffs_a = list(coeffs_a)
-            # Two cases: delete single-hor in coeffs_a[i] (preferred) or add
-            # single-hor to coeffs_a[i+1].
+        """
+        coeffs_a = list(coeffs_a)
+        # Remove single horizontals that cause mismatch between adjacent
+        # idempotents.
+        while not all([coeffs_a[i].right_idem == coeffs_a[i+1].left_idem
+                       for i in range(len(coeffs_a)-1)]):
+            changed = False  # Must modify something on each run through
             for i in range(len(coeffs_a)-1):
                 if coeffs_a[i].right_idem == coeffs_a[i+1].left_idem:
                     continue
                 for idem in coeffs_a[i].right_idem:
                     if idem not in coeffs_a[i+1].left_idem and \
                        idem in coeffs_a[i].single_hor:
-                        coeffs_a[i] = LocalStrandDiagram(
-                            coeffs_a[i].parent,
-                            [j for j in coeffs_a[i].left_idem if j != idem],
-                            coeffs_a[i].strands)
+                        coeffs_a[i] = coeffs_a[i].removeSingleHor([idem])
+                        changed = True
                 for idem in coeffs_a[i+1].left_idem:
                     if idem not in coeffs_a[i].right_idem and \
                        idem in coeffs_a[i+1].single_hor:
-                        coeffs_a[i+1] = LocalStrandDiagram(
-                            coeffs_a[i+1].parent,
-                            [j for j in coeffs_a[i+1].left_idem if j != idem],
-                            coeffs_a[i+1].strands)
-            return tuple(coeffs_a)
+                        coeffs_a[i+1] = coeffs_a[i+1].removeSingleHor([idem])
+                        changed = True
+            assert changed
+        return tuple(coeffs_a)
+
+    def getDAStructure(self):
+        """Returns the type DA structure corresponding to slide."""
+        dastr = SimpleDAStructure(F2, self.algebra1, self.algebra2)
+        for gen in self.getGenerators():
+            dastr.addGenerator(SimpleDAGenerator(
+                dastr, gen.idem1, gen.idem2, gen.name))
+
+        alg1_gens = self.algebra1.getGenerators()
+        alg2_gens = self.algebra2.getGenerators()
+        mod_gens = dastr.getGenerators()
+
+        # Add action with zero algebra input
+        short_chord = [tuple(sorted([self.slide.b1, self.slide.c1]))]
+        AddChordToDA(dastr, Strands(self.pmc1, short_chord), [])
 
         def search(cur_list, cur_list_local, cur_prod_d):
             """Find arrows matching one of the local actions by recursively
@@ -261,9 +260,9 @@ class ArcslideDA:
                     continue
                 new_list = cur_list + (cur_a,)
                 new_list_local = cur_list_local + (restrictStrandDiagram(
-                    pmc2, cur_a, self.local_pmc2, self.mapping2),)
+                    self.pmc2, cur_a, self.local_pmc2, self.mapping2),)
                 outer_a = restrictStrandDiagram(
-                    pmc2, cur_a, self.outer_pmc2, self.outer_mapping2)
+                    self.pmc2, cur_a, self.outer_pmc2, self.outer_mapping2)
                 # Compute product on the outside
                 if cur_prod_d is None:
                     new_prod_d = 1 * outer_a
@@ -274,26 +273,96 @@ class ArcslideDA:
                     continue
                 new_prod_d = new_prod_d.getElt()
                 # Local patterns match exactly one of the arrows
-                for pattern in self.arrow_patterns:
-                    if not softMatch(adjustSingleHors(new_list_local), pattern):
-                        continue
+                pattern = ArcslideDA.adjustSingleHors(new_list_local)
+                if pattern in self.arrow_patterns:
                     for local_d in self.arrow_patterns[pattern]:
-                        alg_d = local_d.join(new_prod_d.removeSingleHor(), pmc1,
-                                             self.mapping1, self.outer_mapping1)
+                        alg_d = local_d.join(
+                            new_prod_d.removeSingleHor(), self.pmc1,
+                            self.mapping1, self.outer_mapping1)
                         if alg_d is None:
                             continue
                         for x, y in itertools.product(mod_gens, mod_gens):
                             if ArcslideDA.idemMatchDA(x, y, alg_d, new_list):
                                 dastr.addDelta(x, y, alg_d, new_list, 1)
                 # Local patterns match the prefix of one of the arrows
-                if any([softMatch(new_list_local, pattern[0:len(new_list)],
-                                  prefix = True)
-                        for pattern in self.arrow_patterns
-                        if len(pattern) > len(new_list)]):
+                if tuple([coeff.removeSingleHor() for coeff in new_list_local
+                      ]) in self.strict_prefix_set:
                     search(new_list, new_list_local, new_prod_d)
 
         search((), (), None)
         return dastr
+
+    def getGenerators(self):
+        return list(self.generators)
+
+    def delta(self, MGen, algGens):
+        # Idempotent must match
+        if any([algGens[i].right_idem != algGens[i+1].left_idem
+                for i in range(len(algGens)-1)]):
+            return E0
+        if any([alg.isIdempotent() for alg in algGens]):
+            return E0
+
+        result = E0
+        mod_gens = self.getGenerators()
+        # Take care of case with zero algebra inputs
+        if len(algGens) == 0:
+            short_chord = [tuple(sorted([self.slide.b1, self.slide.c1]))]
+            st = Strands(self.pmc1, short_chord)
+            if st.leftCompatible(MGen.idem1):
+                alg_d = StrandDiagram(self.algebra1, MGen.idem1, st)
+                for y in mod_gens:
+                    if ArcslideDA.idemMatchDA(MGen, y, alg_d, []):
+                        result += 1 * TensorGenerator((alg_d, y), self.AtensorM)
+            return result
+
+        # Take care of remaining case
+        if MGen.idem2 != algGens[0].left_idem:
+            return E0
+        # - Make sure the outside multiplies correctly
+        prod_d = restrictStrandDiagram(self.pmc2, algGens[0],
+                                       self.outer_pmc2, self.outer_mapping2)
+        has_product = True
+        for alg in algGens[1:]:
+            prod_d = prod_d.parent.multiplyGeneral(
+                prod_d, restrictStrandDiagram(
+                    self.pmc2, alg, self.outer_pmc2, self.outer_mapping2),
+                False)  # strict_idems = False
+            if prod_d == 0:
+                has_product = False
+                break
+            else:
+                prod_d = prod_d.getElt()
+        if not has_product:
+            return E0
+
+        # - Now check the inside
+        alg_local = tuple([restrictStrandDiagram(
+            self.pmc2, alg, self.local_pmc2, self.mapping2) for alg in algGens])
+        pattern = ArcslideDA.adjustSingleHors(alg_local)
+        if pattern not in self.arrow_patterns:
+            return E0
+        for local_d in self.arrow_patterns[pattern]:
+            alg_d = local_d.join(prod_d.removeSingleHor(), self.pmc1,
+                                 self.mapping1, self.outer_mapping1)
+            if alg_d is None:
+                continue
+            for y in mod_gens:
+                if ArcslideDA.idemMatchDA(MGen, y, alg_d, algGens):
+                    result += 1 * TensorGenerator((alg_d, y), self.AtensorM)
+        return result
+
+    def deltaPrefix(self, MGen, algGens):
+        if len(algGens) == 0:
+            return True
+        if MGen.idem2 != algGens[0].left_idem:
+            return False
+        # Note: Testing shows probably not worth it to multipliy outside.
+        # Test inside.
+        alg_local = [restrictStrandDiagram(
+            self.pmc2, alg, self.local_pmc2, self.mapping2) for alg in algGens]
+        alg_local = tuple([alg.removeSingleHor() for alg in alg_local])
+        return alg_local in self.strict_prefix_set
 
     def getLocalDAStructure(self):
         """Returns the local type DA structure associated to slide. Mainly for
@@ -342,14 +411,10 @@ class ArcslideDA:
                 continue
             for coeff_d in self.arrow_patterns[coeffs_a]:
                 arrow_used = False
-                for x in mod_gens:
-                    for y in mod_gens:
-                        if x.idem1 == coeff_d.left_idem and \
-                           x.idem2 == coeffs_a[0].left_idem and \
-                           y.idem1 == coeff_d.right_idem and \
-                           y.idem2 == coeffs_a[-1].right_idem:
-                            local_dastr.addDelta(x, y, coeff_d, coeffs_a, 1)
-                            arrow_used = True
+                for x, y in itertools.product(mod_gens, mod_gens):
+                    if ArcslideDA.idemMatchDA(x, y, coeff_d, coeffs_a):
+                        local_dastr.addDelta(x, y, coeff_d, coeffs_a, 1)
+                        arrow_used = True
                 if not arrow_used:
                     print "Warning: unused arrow: ", coeffs_a, coeff_d
                     pass
@@ -365,12 +430,9 @@ class ArcslideDA:
                 start_pair = b_pair1
             alg_d = LocalStrandDiagram(alg1, [start_pair] + list(idems_to_add),
                                        local_short_chord)
-            for x in mod_gens:
-                for y in mod_gens:
-                    if x.idem2 == y.idem2 and \
-                       x.idem1 == alg_d.left_idem and \
-                       y.idem1 == alg_d.right_idem:
-                        local_dastr.addDelta(x, y, alg_d, [], 1)
+            for x, y in itertools.product(mod_gens, mod_gens):
+                if ArcslideDA.idemMatchDA(x, y, alg_d, []):
+                    local_dastr.addDelta(x, y, alg_d, [], 1)
         return local_dastr
 
     @staticmethod
@@ -427,7 +489,7 @@ class ArcslideDA:
         patterns_raw = [
             #### Initial patterns
             ([(1, 2)],),
-            ([], []), ([1], [1]), ([2], [2]), ([2], [1]),
+            ([], []), ([1], [1]), ([2], [2]), ([2], [1]), ([1, 2], [1, 2]),
             ([(2, 3)], [1]),
             ([(1, 2)], [(1, 3)]),
             ([(1, 3)], [(1, 3)]),
@@ -752,7 +814,7 @@ class ArcslideDA:
         patterns_raw = [
             #### Initial patterns
             ([(2, 3)],),
-            ([], []), ([1], [1]), ([2], [2]), ([2], [1]),
+            ([], []), ([1], [1]), ([2], [2]), ([2], [1]), ([1, 2], [1, 2]),
             ([(1, 2)], [1]),
             ([(2, 3)], [(1, 3)]),
             ([(1, 3)], [(1, 3)]),

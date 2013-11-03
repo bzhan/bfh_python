@@ -4,7 +4,7 @@ from algebra import Generator, SimpleChainComplex
 from algebra import E0
 from dstructure import DGenerator, SimpleDStructure
 from ddstructure import DDGenerator, SimpleDDStructure
-from dastructure import SimpleDAGenerator, SimpleDAStructure
+from dastructure import DATensorDGenerator, SimpleDAGenerator, SimpleDAStructure
 from grading import GeneralGradingSet, GeneralGradingSetElement
 from identityaa import homotopyMap
 from pmc import Strands, StrandDiagram
@@ -327,22 +327,6 @@ class ATensorDGenerator(Generator, tuple):
         """
         # Note tuple initialization is automatic
         Generator.__init__(self, parent)
-
-class DATensorDGenerator(DGenerator, tuple):
-    """Generator of a type D structure formed by tensoring a type DA structure
-    and a type D structure (actually, the result of tensoring
-    DD * CFAA(Id) * D).
-
-    """
-    def __new__(cls, parent, gen_left, gen_right):
-        return tuple.__new__(cls, (gen_left, gen_right))
-
-    def __init__(self, parent, gen_left, gen_right):
-        """Specify generators on two sides of the tensor (DD and D generators).
-
-        """
-        # Note tuple initialization is automatic
-        DGenerator.__init__(self, parent, gen_left.idem1)
 
 class ATensorDDGenerator(DGenerator, tuple):
     """Generator of a type D structure formed by tensoring a type A structure
