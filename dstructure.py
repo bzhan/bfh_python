@@ -172,6 +172,10 @@ class SimpleDStructure(DStructure):
         """Verify d^2 = 0 for this structure."""
         for gen in self.generators:
             if gen.delta().diff() != 0:
+                # Print the offending terms in d^2 for one generator.
+                print gen, "==>"
+                for k, v in gen.delta().diff().items():
+                    print v, "*", k
                 return False
         return True
 

@@ -576,9 +576,9 @@ class StrandAlgebra(DGAlgebra):
     @memorize
     def getGenerators(self):
         if not self.mult_one:
-            return self.pmc.getStrandDiagrams()
+            return self.pmc.getStrandDiagrams(self.idem_size)
         else:
-            return self.pmc.getMultOneStrandDiagrams()
+            return self.pmc.getMultOneStrandDiagrams(self.idem_size)
 
     @memorize
     def getIdempotents(self):

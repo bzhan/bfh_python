@@ -207,8 +207,12 @@ class BridgePresentation:
             start_d.reindex()
             assert start_d.testDelta()  # remove this when more confident
             start_d.simplify()
-        end_d = BraidCap(self.end).getHandlebodyByLocalDA().dual()
-        cx = computeATensorD(end_d, start_d)
+        end_d = BraidCap(self.end).getHandlebodyByLocalDA()
+        cx = start_d.morToD(end_d)  # Now still limited by genus
+        # Investigate what's wrong with this. Runs into infinite recursion on
+        # T(4,n).
+        # end_d = BraidCap(self.end).getHandlebodyByLocalDA().dual()
+        # cx = computeATensorD(end_d, start_d)
         cx.reindex()
         cx.checkDifferential()
         cx.simplify()

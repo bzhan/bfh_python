@@ -150,7 +150,15 @@ class DAStructure(FreeModule):
                     search(start_gen, dgen_to, cur_coeffs_a + (coeff_out,))
 
         for x in dstr_result.getGenerators():
-            search(x, x[1], ())  # x[1] retrieves generator at right.
+            dagen, dgen = x
+            search(x, dgen, ())
+            # Add arrows coming from idempotent output on the D-side
+            for (coeff_out, dgen_to), ring_coeff in dstr.delta(dgen).items():
+                if coeff_out.isIdempotent():
+                    dstr_result.addDelta(
+                        x, DATensorDGenerator(dstr_result, dagen, dgen_to),
+                        dagen.idem1.toAlgElt(self.algebra1), 1)
+
         return dstr_result
                 
 class SimpleDAStructure(DAStructure):
