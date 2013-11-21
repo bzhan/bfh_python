@@ -8,6 +8,7 @@ from dehntwist import *
 from digraph import computeDATensorDD
 from dstructure import SimpleDStructure, SimpleDGenerator
 from dstructure import zeroTypeD
+from ddstructure import SimpleDDGenerator, SimpleDDStructure
 from ddstructure import DDStrFromDStr
 from dastructure import DAStrFromChords
 from utility import DEFAULT_GRADING, F2, SMALL_GRADING
@@ -352,6 +353,65 @@ class ExperimentalTest(unittest.TestCase):
             knot = BridgePresentation("T4_%d" % n, (8,7,6,5,4,3,2,1),
                                       [1,2,3]*n, (8,7,6,5,4,3,2,1))
             print knot.name, len(knot.getHFByLocalDA())
+
+    def testDDStructureDelta(self):
+        # Construct type DD structures, and test whether d^2 = 0 holds.
+
+        # PMC on both sides are genus 1 split PMC.
+        pmc = splitPMC(1)
+        # Strand algebra corresponding to pmc.
+        alg = pmc.getAlgebra()
+        # Initialize type DD structure over field F_2, with (left-left) action
+        # by the genus 1 strand algebra. Intend to make this type DD bimodule
+        # for identity.
+        ddstr1 = SimpleDDStructure(F2, alg, alg)
+        # Initialize the list of generators to add to ddstr1.
+        # The generators have "complementary" idempotents. However, since the
+        # PMCs are in opposite direction on both sides, the vector specifying
+        # idempotents are the same.
+        idems = {"x" : ([0], [0]),
+                 "y" : ([1], [1])}
+        gens = {}
+        for name, (idem1, idem2) in idems.items():
+            gens[name] = SimpleDDGenerator(
+                ddstr1, Idempotent(pmc, idem1), Idempotent(pmc, idem2), name)
+        for name, gen in gens.items():
+            ddstr1.addGenerator(gen)
+        # Now add delta
+        ddstr1.addDelta(gens["x"], gens["y"],
+                        pmc.sd([(0, 1)]), pmc.sd([(2, 3)]), 1)
+        ddstr1.addDelta(gens["y"], gens["x"],
+                        pmc.sd([(1, 2)]), pmc.sd([(1, 2)]), 1)
+        ddstr1.addDelta(gens["x"], gens["y"],
+                        pmc.sd([(2, 3)]), pmc.sd([(0, 1)]), 1)
+        # This already satisfies d^2 = 0
+        self.assertTrue(ddstr1.testDelta())
+        # However, one more arrow to finish the bimodule
+        ddstr1.addDelta(gens["x"], gens["y"],
+                        pmc.sd([(0, 3)]), pmc.sd([(0, 3)]), 1)
+        # This is now the identity bimodule, of course satisfying d^2 = 0.
+        self.assertTrue(ddstr1.testDelta())
+
+        # Second example, showing failure of testDelta()
+        ddstr2 = SimpleDDStructure(F2, alg, alg)
+        # Add the same generators as before
+        gens = {}
+        for name, (idem1, idem2) in idems.items():
+            gens[name] = SimpleDDGenerator(
+                ddstr2, Idempotent(pmc, idem1), Idempotent(pmc, idem2), name)
+        for name, gen in gens.items():
+            ddstr2.addGenerator(gen)
+        # Now add delta
+        ddstr2.addDelta(gens["x"], gens["y"],
+                        pmc.sd([(0, 1)]), pmc.sd([(0, 1)]), 1)
+        ddstr2.addDelta(gens["y"], gens["x"],
+                        pmc.sd([(1, 2)]), pmc.sd([(1, 2)]), 1)
+        # Prints the type DD structure. Note the code already checks that
+        # idempotent matches in all added arrows (throws an error if they don't
+        # match).
+        print ddstr2
+        # However, testDelta() fails. Prints a term in d^2(x).
+        self.assertFalse(ddstr2.testDelta())
 
 if __name__ == "__main__":
     unittest.main()
