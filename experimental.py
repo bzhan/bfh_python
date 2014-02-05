@@ -375,8 +375,7 @@ class ExperimentalTest(unittest.TestCase):
         for name, (idem1, idem2) in idems.items():
             gens[name] = SimpleDDGenerator(
                 ddstr1, Idempotent(pmc, idem1), Idempotent(pmc, idem2), name)
-        for name, gen in gens.items():
-            ddstr1.addGenerator(gen)
+            ddstr1.addGenerator(gens[name])
         # Now add delta
         ddstr1.addDelta(gens["x"], gens["y"],
                         pmc.sd([(0, 1)]), pmc.sd([(2, 3)]), 1)
@@ -399,8 +398,7 @@ class ExperimentalTest(unittest.TestCase):
         for name, (idem1, idem2) in idems.items():
             gens[name] = SimpleDDGenerator(
                 ddstr2, Idempotent(pmc, idem1), Idempotent(pmc, idem2), name)
-        for name, gen in gens.items():
-            ddstr2.addGenerator(gen)
+            ddstr2.addGenerator(gens[name])
         # Now add delta
         ddstr2.addDelta(gens["x"], gens["y"],
                         pmc.sd([(0, 1)]), pmc.sd([(0, 1)]), 1)
