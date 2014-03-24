@@ -1,7 +1,7 @@
 """Defines type DD structures."""
 
 from algebra import DGAlgebra, FreeModule, Generator, Tensor, TensorDGAlgebra, \
-    TensorIdempotent, TensorGenerator
+    TensorIdempotent, TensorGenerator, SimpleChainComplex
 from algebra import expandTensor, simplifyComplex
 from algebra import E0
 from dstructure import DGenerator, SimpleDGenerator, SimpleDStructure
@@ -67,6 +67,16 @@ class MorDDtoDGenerator(DGenerator, MorObject):
     def __init__(self, parent, source, coeff, target):
         """Specifies the morphism source -> coeff * target."""
         DGenerator.__init__(self, parent, source.idem2.opp())
+        MorObject.__init__(self, source, coeff, target)
+
+class MorDDtoDDGenerator(Generator, MorObject):
+    """Represents a generator of the type D structure of morphisms from a type
+    DD structure to a type D structure.
+
+    """
+    def __init__(self, parent, source, coeff, target):
+        """Specifies the morphism source -> coeff * target."""
+        Generator.__init__(self, parent)
         MorObject.__init__(self, source, coeff, target)
 
 class DDStructure(FreeModule):
@@ -282,6 +292,67 @@ class SimpleDDStructure(DDStructure):
                 dstr.grading[gen] = morGrading(
                     dstr.gr_set, gen.source, gen.coeff, gen.target)
         return dstr
+
+    def morToDD(self, other):
+        """Compute the chain complex of type DD structure morphisms from self to other. Note
+        ``other`` must be a type DD structure over the same two PMC's in the same order.
+
+        Currently does not keep track of gradings.
+        """
+        assert self.algebra1 == other.algebra1
+        assert self.algebra2 == other.algebra2
+        alg1_gens = self.algebra1.getGenerators()
+        alg2_gens = self.algebra2.getGenerators()
+        tensalg = TensorDGAlgebra((self.algebra1,self.algebra2))
+        xlist = self.getGenerators()
+        ylist = other.getGenerators()
+        gens = list()
+        cx = SimpleChainComplex(F2)
+        genType = MorDDtoDDGenerator
+        # Prepare rev_delta for the last step in computing differentials
+        rev_delta = dict()
+        for x in xlist:
+            rev_delta[x] = []
+        for p in xlist:
+            for (b1, b2, q), coeff in p.delta().items():
+                rev_delta[q].append(((b1, b2, p), coeff))
+
+        # Get the list of generators
+        for x in xlist:
+            for a1 in alg1_gens:
+                for a2 in alg2_gens:
+                    for y in ylist:
+                        if x.idem1 == a1.getLeftIdem() and \
+                           y.idem1 == a1.getRightIdem() and \
+                           x.idem2 == a2.getLeftIdem() and \
+                           y.idem2 == a2.getRightIdem():
+                            a = TensorGenerator((a1,a2),tensalg)
+                            gens.append(genType(cx, x, a, y))
+        for gen in gens:
+            cx.addGenerator(gen)
+
+        # Get the differentials of type DD structure maps
+        for gen in gens:
+            # Differential of y in (x -> ay)
+            x, a, y = gen.source, gen.coeff, gen.target
+            ady = a * y.delta()
+            for (b1,b2, q), coeff in ady.items():
+                cx.addDifferential(gen, genType(cx, x, TensorGenerator((b1,b2),tensalg), q), 1)
+#                cx.addDifferential(gen, genType(cx, x, TensorGenerator((b1,b2),tensalg), q), coeff)
+            # Differential of a
+            for da_gen, coeff in a.diff().items():
+                cx.addDifferential(gen, genType(cx, x, da_gen, y), 1)
+#                cx.addDifferential(gen, genType(cx, x, da_gen, y), coeff)
+            #Precompose by the differential... Not sure if this is coded right.
+            for (b1, b2, p), coeff1 in rev_delta[x]:
+                for b1a_gen, coeff2 in (TensorGenerator((b1,b2),tensalg)*a).items():
+                    cx.addDifferential(gen, genType(cx, p, b1a_gen, y), 1)
+ #                   cx.addDifferential(gen, genType(cx, p, b1a_gen, y), coeff1*coeff2)
+        return cx
+
+    def hochschildCochains(self):
+        "Returns the Hochschild cochain complex of self, i.e., the morphisms from the DD identity to self."
+        return identityDD(self.algebra1.pmc).morToDD(self)
 
     def simplify(self):
         """Simplify a type DD structure using cancellation lemma."""
