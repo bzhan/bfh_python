@@ -705,9 +705,11 @@ class HeegaardDiagram:
         big_gr = self.getBigGradingD(domain, x, y)
         small_gr = []
         for i in range(len(big_gr)):
+            if len(x.getIdem())==2: #In 2 boundary component case, find idem_size
+                idem_size = len(x.getIdem()[1-i]) #This 1-i seems a bit odd, but also seems to work.
             cur_big_gr = big_gr[i]
             cur_pmc_opp = self.pmc_list[i].opp()
-            refine_data = DEFAULT_REFINEMENT(cur_pmc_opp)
+            refine_data = DEFAULT_REFINEMENT(cur_pmc_opp,idem_size)
             phix, phiy = [refine_data[p.getDIdem()[i]] for p in (x, y)]
             small_gr.append(
                 (phiy * cur_big_gr * phix.inverse()).toSmallGrading())
@@ -770,6 +772,7 @@ class HeegaardDiagram:
         assert len(self.pmc_list) == 2
         pmc1, pmc2 = self.pmc_list
         pmc1_opp, pmc2_opp = pmc1.opp(), pmc2.opp()
+        idem_size = len(base_gen.getIdem()[0])
         if base_gr is None:
             base_gr = [gr_group_cls(pmc1_opp).zero(),
                        gr_group_cls(pmc2_opp).zero()]
@@ -785,7 +788,7 @@ class HeegaardDiagram:
         # Now compute grading of each generator by finding domains connecting
         # it to the base generator.
         result = dict()
-        for gen in self.getHFGenerators():
+        for gen in self.getHFGenerators(idem_size):
             conn_domain = self.getConnectingDomain(base_gen, gen)
             domain_gr0, domain_gr1 = gr_fun(conn_domain, base_gen, gen)
             domain_gr = [domain_gr0 * base_gr[0], domain_gr1 * base_gr[1]]

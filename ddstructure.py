@@ -352,7 +352,7 @@ class SimpleDDStructure(DDStructure):
 
     def hochschildCochains(self):
         "Returns the Hochschild cochain complex of self, i.e., the morphisms from the DD identity to self."
-        return identityDD(self.algebra1.pmc).morToDD(self)
+        return identityDD(self.algebra1.pmc, self.algebra1.idem_size).morToDD(self)
 
     def simplify(self):
         """Simplify a type DD structure using cancellation lemma."""
@@ -425,7 +425,8 @@ class SimpleDDStructure(DDStructure):
         assert hd_pmc2.opp() == dds_pmc2
         # Now attempt to match generators
         self.hdiagram_gen_map = dict()
-        gens, dgens = self.generators, diagram.getHFGenerators()
+        idem_size = len(base_gen.idem2)
+        gens, dgens = self.generators, diagram.getHFGenerators(idem_size = idem_size)
         for gen in gens:
             for dgen in dgens:
                 dgen_idem1, dgen_idem2 = dgen.getDIdem()
@@ -525,14 +526,18 @@ def DDStrFromChords(alg1, alg2, idem_pairs, chord_pairs):
                                    StrandDiagram(alg2, x.idem2, r_chord), 1)
     return ddstr
 
-def identityDD(pmc):
+def identityDD(pmc, idem_size=None):
     """Returns the identity type DD structure for a given PMC."""
+    if idem_size == None:
+        i_s = pmc.genus
+    else:
+        i_s = idem_size
     n = pmc.n
     pmcopp = pmc.opp()
-    alg1 = pmc.getAlgebra()
-    alg2 = pmcopp.getAlgebra()
+    alg1 = pmc.getAlgebra(i_s)
+    alg2 = pmcopp.getAlgebra(2*pmc.genus-i_s)
     ddstr = SimpleDDStructure(F2, alg1, alg2)
-    idems = pmc.getIdempotents()
+    idems = pmc.getIdempotents(i_s)
     idem_pairs = [(idem, idem.opp().comp()) for idem in idems]
     chord_pairs = [(Strands(pmc, [(i, j)]), Strands(pmcopp, [(n-1-j, n-1-i)]))
                    for i in range(n) for j in range(i+1, n)]
@@ -541,6 +546,7 @@ def identityDD(pmc):
     for gen in ddstr.getGenerators():
         base_gen = gen
         break
+        #    if i_s == pmc.genus: #Only works in middle spin-c structure, at present.
     ddstr.registerHDiagram(getIdentityDiagram(pmc), base_gen)
     return ddstr
 
