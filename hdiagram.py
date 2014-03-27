@@ -707,6 +707,8 @@ class HeegaardDiagram:
         for i in range(len(big_gr)):
             if len(x.getIdem())==2: #In 2 boundary component case, find idem_size
                 idem_size = len(x.getIdem()[1-i]) #This 1-i seems a bit odd, but also seems to work.
+            else:
+                idem_size = None
             cur_big_gr = big_gr[i]
             cur_pmc_opp = self.pmc_list[i].opp()
             refine_data = DEFAULT_REFINEMENT(cur_pmc_opp,idem_size)

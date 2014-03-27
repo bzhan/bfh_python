@@ -53,5 +53,36 @@ class DDStructureTest(unittest.TestCase):
         self.assertEqual(ddstr_dual.algebra1, pmc.getAlgebra())
         self.assertEqual(ddstr_dual.algebra2, pmc.opp().getAlgebra())
 
+    def testHochschildCoho(self):
+        #Check HH^*(A)
+        #Rank 4 is right for HH^* of A in genus 1 case
+        pmc = splitPMC(1)
+        ddstr = identityDD(pmc)
+        cx = ddstr.hochschildCochains()
+        cx.simplify()
+        self.assertEqual(len(cx.generators),4)
+        #Rank 1 in the extremal strands grading
+        pmc = splitPMC(2)
+        ddstr = identityDD(pmc,0)
+        cx = ddstr.hochschildCochains()
+        cx.simplify()
+        self.assertEqual(len(cx.generators),1)
+        #Rank should be indepdendent of PMC
+        pmc1 = splitPMC(2)
+        pmc2 = linearPMC(2)
+        pmc3 = PMC([(0,2),(1,6),(3,5),(4,7)])
+        ddstr1 = identityDD(pmc1)
+        ddstr2 = identityDD(pmc2)
+        ddstr3 = identityDD(pmc3)
+        cx1 = ddstr1.hochschildCochains()
+        cx1.simplify()
+        cx2 = ddstr2.hochschildCochains()
+        cx2.simplify()
+        cx3 = ddstr3.hochschildCochains()
+        cx3.simplify()
+        self.assertEqual(len(cx1.generators),len(cx2.generators))
+        self.assertEqual(len(cx1.generators),len(cx3.generators))
+        
+        
 if __name__ == "__main__":
     unittest.main()
