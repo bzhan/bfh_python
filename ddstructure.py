@@ -1,7 +1,7 @@
 """Defines type DD structures."""
 
-from algebra import DGAlgebra, FreeModule, Generator, Tensor, TensorDGAlgebra, \
-    TensorIdempotent, TensorGenerator, SimpleChainComplex
+from algebra import DGAlgebra, FreeModule, Generator, SimpleChainComplex, \
+    Tensor, TensorDGAlgebra, TensorIdempotent, TensorGenerator
 from algebra import expandTensor, simplifyComplex
 from algebra import E0
 from dstructure import DGenerator, SimpleDGenerator, SimpleDStructure
@@ -70,12 +70,15 @@ class MorDDtoDGenerator(DGenerator, MorObject):
         MorObject.__init__(self, source, coeff, target)
 
 class MorDDtoDDGenerator(Generator, MorObject):
-    """Represents a generator of the type D structure of morphisms from a type
-    DD structure to a type D structure.
+    """Represents a generator of the chain complex of morphisms from a type DD
+    structure to a type DD structure.
 
     """
     def __init__(self, parent, source, coeff, target):
-        """Specifies the morphism source -> coeff * target."""
+        """Specifies the morphism source -> coeff * target. Note coeff has type
+        TensorDGAlgebra of the two algebras that act on the DD structures.
+
+        """
         Generator.__init__(self, parent)
         MorObject.__init__(self, source, coeff, target)
 
@@ -211,6 +214,22 @@ class SimpleDDStructure(DDStructure):
                 return False
         return True
 
+    def getReverseDelta(self):
+        """Returns the reverse of delta map. Return value is a dictionary with
+        generators as keys, and list of ((a1, a2, gen), coeff) as values.
+
+        Every ((b1, b2, p), coeff) in the list for q means (b1*b2)*q occurs in
+        delta(p) with ring coefficient coeff.
+
+        """
+        rev_delta = dict()
+        for x in self.generators:
+            rev_delta[x] = []
+        for p in self.generators:
+            for (b1, b2, q), coeff in p.delta().items():
+                rev_delta[q].append(((b1, b2, p), coeff))
+        return rev_delta
+
     def __str__(self):
         result = "Type DD Structure.\n"
         for k, v in self.delta_map.items():
@@ -251,19 +270,14 @@ class SimpleDDStructure(DDStructure):
             return GeneralGradingSetElement(gr_set, gr)
 
         # Prepare rev_delta for the last step in computing differentials
-        rev_delta = dict()
-        for x in xlist:
-            rev_delta[x] = []
-        for p in xlist:
-            for (b1, b2, q), coeff in p.delta().items():
-                rev_delta[q].append(((b1, b2, p), coeff))
+        rev_delta = self.getReverseDelta()
 
         # Get the list of generators
         for x in xlist:
             for a in alg_gens:
                 for y in ylist:
                     if x.idem1 == a.getLeftIdem() and \
-                            y.idem == a.getRightIdem():
+                       y.idem == a.getRightIdem():
                         gens.append(genType(dstr, x, a, y))
         for gen in gens:
             dstr.addGenerator(gen)
@@ -294,28 +308,27 @@ class SimpleDDStructure(DDStructure):
         return dstr
 
     def morToDD(self, other):
-        """Compute the chain complex of type DD structure morphisms from self to other. Note
-        ``other`` must be a type DD structure over the same two PMC's in the same order.
+        """Compute the chain complex of type DD structure morphisms from self to
+        other. Note ``other`` must be a type DD structure over the same two
+        PMC's in the same order.
 
         Currently does not keep track of gradings.
+
         """
         assert self.algebra1 == other.algebra1
         assert self.algebra2 == other.algebra2
         alg1_gens = self.algebra1.getGenerators()
         alg2_gens = self.algebra2.getGenerators()
-        tensalg = TensorDGAlgebra((self.algebra1,self.algebra2))
+        # Type of coefficients of the morphism
+        tensor_alg = TensorDGAlgebra((self.algebra1, self.algebra2))
         xlist = self.getGenerators()
         ylist = other.getGenerators()
         gens = list()
         cx = SimpleChainComplex(F2)
         genType = MorDDtoDDGenerator
+
         # Prepare rev_delta for the last step in computing differentials
-        rev_delta = dict()
-        for x in xlist:
-            rev_delta[x] = []
-        for p in xlist:
-            for (b1, b2, q), coeff in p.delta().items():
-                rev_delta[q].append(((b1, b2, p), coeff))
+        rev_delta = self.getReverseDelta()
 
         # Get the list of generators
         for x in xlist:
@@ -326,7 +339,7 @@ class SimpleDDStructure(DDStructure):
                            y.idem1 == a1.getRightIdem() and \
                            x.idem2 == a2.getLeftIdem() and \
                            y.idem2 == a2.getRightIdem():
-                            a = TensorGenerator((a1,a2),tensalg)
+                            a = TensorGenerator((a1, a2), tensor_alg)
                             gens.append(genType(cx, x, a, y))
         for gen in gens:
             cx.addGenerator(gen)
@@ -336,23 +349,28 @@ class SimpleDDStructure(DDStructure):
             # Differential of y in (x -> ay)
             x, a, y = gen.source, gen.coeff, gen.target
             ady = a * y.delta()
-            for (b1,b2, q), coeff in ady.items():
-                cx.addDifferential(gen, genType(cx, x, TensorGenerator((b1,b2),tensalg), q), 1)
-#                cx.addDifferential(gen, genType(cx, x, TensorGenerator((b1,b2),tensalg), q), coeff)
+            for (b1, b2, q), coeff in ady.items():
+                b = TensorGenerator((b1, b2), tensor_alg)
+                cx.addDifferential(gen, genType(cx, x, b, q), coeff)
             # Differential of a
             for da_gen, coeff in a.diff().items():
-                cx.addDifferential(gen, genType(cx, x, da_gen, y), 1)
-#                cx.addDifferential(gen, genType(cx, x, da_gen, y), coeff)
-            #Precompose by the differential... Not sure if this is coded right.
+                cx.addDifferential(gen, genType(cx, x, da_gen, y), coeff)
+            # Precompose by the differential.
+            # For each p such that (b1,b2)*x is in dp, add p->((b1,b2)*a)y
             for (b1, b2, p), coeff1 in rev_delta[x]:
-                for b1a_gen, coeff2 in (TensorGenerator((b1,b2),tensalg)*a).items():
-                    cx.addDifferential(gen, genType(cx, p, b1a_gen, y), 1)
- #                   cx.addDifferential(gen, genType(cx, p, b1a_gen, y), coeff1*coeff2)
+                b = TensorGenerator((b1, b2), tensor_alg)
+                for ba_gen, coeff2 in (b*a).items():
+                    cx.addDifferential(
+                        gen, genType(cx, p, ba_gen, y), coeff1*coeff2)
         return cx
 
     def hochschildCochains(self):
-        "Returns the Hochschild cochain complex of self, i.e., the morphisms from the DD identity to self."
-        return identityDD(self.algebra1.pmc, self.algebra1.idem_size).morToDD(self)
+        """Returns the Hochschild cochain complex of self, i.e., the morphisms
+        from the DD identity to self.
+        
+        """
+        dd_id = identityDD(self.algebra1.pmc, self.algebra1.idem_size)
+        return dd_id.morToDD(self)
 
     def simplify(self):
         """Simplify a type DD structure using cancellation lemma."""
@@ -426,12 +444,13 @@ class SimpleDDStructure(DDStructure):
         # Now attempt to match generators
         self.hdiagram_gen_map = dict()
         idem_size = len(base_gen.idem2)
-        gens, dgens = self.generators, diagram.getHFGenerators(idem_size = idem_size)
+        gens = self.generators
+        hgens = diagram.getHFGenerators(idem_size = idem_size)
         for gen in gens:
-            for dgen in dgens:
-                dgen_idem1, dgen_idem2 = dgen.getDIdem()
-                if (gen.idem1, gen.idem2) == (dgen_idem1, dgen_idem2):
-                    self.hdiagram_gen_map[gen] = dgen
+            for hgen in hgens:
+                hgen_idem1, hgen_idem2 = hgen.getDIdem()
+                if (gen.idem1, gen.idem2) == (hgen_idem1, hgen_idem2):
+                    self.hdiagram_gen_map[gen] = hgen
                     break
             assert gen in self.hdiagram_gen_map
         # Compute grading and check consistency with algebra actions
@@ -526,18 +545,16 @@ def DDStrFromChords(alg1, alg2, idem_pairs, chord_pairs):
                                    StrandDiagram(alg2, x.idem2, r_chord), 1)
     return ddstr
 
-def identityDD(pmc, idem_size=None):
+def identityDD(pmc, idem_size = None):
     """Returns the identity type DD structure for a given PMC."""
-    if idem_size == None:
-        i_s = pmc.genus
-    else:
-        i_s = idem_size
+    if idem_size is None:
+        idem_size = pmc.genus
     n = pmc.n
     pmcopp = pmc.opp()
-    alg1 = pmc.getAlgebra(i_s)
-    alg2 = pmcopp.getAlgebra(2*pmc.genus-i_s)
+    alg1 = pmc.getAlgebra(idem_size)
+    alg2 = pmcopp.getAlgebra(2 * pmc.genus - idem_size)
     ddstr = SimpleDDStructure(F2, alg1, alg2)
-    idems = pmc.getIdempotents(i_s)
+    idems = pmc.getIdempotents(idem_size)
     idem_pairs = [(idem, idem.opp().comp()) for idem in idems]
     chord_pairs = [(Strands(pmc, [(i, j)]), Strands(pmcopp, [(n-1-j, n-1-i)]))
                    for i in range(n) for j in range(i+1, n)]
@@ -546,7 +563,6 @@ def identityDD(pmc, idem_size=None):
     for gen in ddstr.getGenerators():
         base_gen = gen
         break
-        #    if i_s == pmc.genus: #Only works in middle spin-c structure, at present.
     ddstr.registerHDiagram(getIdentityDiagram(pmc), base_gen)
     return ddstr
 

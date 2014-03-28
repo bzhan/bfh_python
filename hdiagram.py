@@ -253,6 +253,17 @@ class HFGenerator:
         """
         return self.parent.getGeneratorIdem(self)
 
+    def getIdemSize(self):
+        """Returns the size of the type A idempotent on the first PMC. In the
+        one border case this is always the genus. In the two border cases
+        generators are grouped by this size.
+
+        """
+        idems = self.getIdem()
+        if len(idems) == 0:
+            return 0  # closed diagram.
+        return len(idems[0])
+
     def getDIdem(self):
         """Returns the complement of the idempotent of this generator, in the
         opposite PMC. (used in type D and type DD structures)
@@ -405,12 +416,7 @@ class HeegaardDiagram:
                     self._generator_list.append(hf_gen)
                     return
                 else:
-                    # In the two border case, need to figure out idem_size
-                    idem_size = 0
-                    for pt in pts_chosen:
-                        if self.alpha[pt.alpha_info[0]].idem_info[0] == 0:
-                            idem_size += 1
-                    self._generator_list[idem_size].append(hf_gen)
+                    self._generator_list[hf_gen.getIdemSize()].append(hf_gen)
                     return
             # Need to add more points
             if pt_pos == len(self.points):
@@ -705,13 +711,15 @@ class HeegaardDiagram:
         big_gr = self.getBigGradingD(domain, x, y)
         small_gr = []
         for i in range(len(big_gr)):
-            if len(x.getIdem())==2: #In 2 boundary component case, find idem_size
-                idem_size = len(x.getIdem()[1-i]) #This 1-i seems a bit odd, but also seems to work.
+            if len(x.getIdem()) == 2:
+                # In 2 boundary component case, find size of the current
+                # (D-side) idempotent.
+                idem_size = len(x.getDIdem()[i])
             else:
                 idem_size = None
             cur_big_gr = big_gr[i]
             cur_pmc_opp = self.pmc_list[i].opp()
-            refine_data = DEFAULT_REFINEMENT(cur_pmc_opp,idem_size)
+            refine_data = DEFAULT_REFINEMENT(cur_pmc_opp, idem_size)
             phix, phiy = [refine_data[p.getDIdem()[i]] for p in (x, y)]
             small_gr.append(
                 (phiy * cur_big_gr * phix.inverse()).toSmallGrading())
@@ -774,7 +782,6 @@ class HeegaardDiagram:
         assert len(self.pmc_list) == 2
         pmc1, pmc2 = self.pmc_list
         pmc1_opp, pmc2_opp = pmc1.opp(), pmc2.opp()
-        idem_size = len(base_gen.getIdem()[0])
         if base_gr is None:
             base_gr = [gr_group_cls(pmc1_opp).zero(),
                        gr_group_cls(pmc2_opp).zero()]
@@ -790,7 +797,7 @@ class HeegaardDiagram:
         # Now compute grading of each generator by finding domains connecting
         # it to the base generator.
         result = dict()
-        for gen in self.getHFGenerators(idem_size):
+        for gen in self.getHFGenerators(base_gen.getIdemSize()):
             conn_domain = self.getConnectingDomain(base_gen, gen)
             domain_gr0, domain_gr1 = gr_fun(conn_domain, base_gen, gen)
             domain_gr = [domain_gr0 * base_gr[0], domain_gr1 * base_gr[1]]

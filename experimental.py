@@ -338,7 +338,8 @@ class ExperimentalTest(unittest.TestCase):
 
     def testTwoStrandGenus1(self):
         # Just code to print out differential and multiplication for an algebra.
-        gens = splitPMC(1).getAlgebra(idem_size = 2, mult_one = False).getGenerators()
+        gens = splitPMC(1).getAlgebra(
+            idem_size = 2, mult_one = False).getGenerators()
         for g in gens:
             print "d(%s) = %s" % (g, g.diff())
         for g1, g2 in itertools.product(gens, gens):
