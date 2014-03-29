@@ -70,14 +70,21 @@ class MorDDtoDGenerator(DGenerator, MorObject):
         MorObject.__init__(self, source, coeff, target)
 
 class MorDDtoDDGenerator(Generator, MorObject):
-    """Represents a generator of the type D structure of morphisms from a type
-    DD structure to a type D structure.
+    """Represents a generator of the chain complex of bimodule morphisms from a type
+    DD structure to a type DD structure.
 
+    Multiplication is composition, when defined. Multiplication does not generate its parent correctly.
     """
     def __init__(self, parent, source, coeff, target):
         """Specifies the morphism source -> coeff * target."""
         Generator.__init__(self, parent)
         MorObject.__init__(self, source, coeff, target)
+
+    def __mul__(self, other):
+#        assert self.target.parent == other.source.parent
+        if isinstance(other, MorDDtoDDGenerator):
+            return MorDDtoDDGenerator(None, self.source, self.coeff*other.coeff, other.target)
+        return NotImplemented
 
 class DDStructure(FreeModule):
     """Represents a type DD structure. Note delta() returns an element in the
