@@ -210,7 +210,8 @@ class ArcslideDATest(unittest.TestCase):
                 # Find generator in slide_da matching that of dastr
                 ori_gen = None
                 for gen in slide_da.getGenerators():
-                    if gen.idem1 == gen_from.idem1 and gen.idem2 == gen_from.idem2:
+                    if gen.idem1 == gen_from.idem1 and \
+                       gen.idem2 == gen_from.idem2:
                         ori_gen = gen
                 assert slide_da.delta(ori_gen, coeffs_a) != E0
                 for i in range(len(coeffs_a)):

@@ -74,7 +74,7 @@ def composeDD(dstr, ddstr_list, is_dual = False, method = "Tensor"):
         dstr.simplify()
         dstr.reindex()
     if PRINT_PROGRESS > 0:
-        print "\n",
+        print "%d\n" % len(dstr),
     return dstr
 
 @memorize
@@ -102,16 +102,10 @@ class BraidCap:
     """Represents a capping of a braid."""
     def __init__(self, matching):
         """Specifies the matching of strands."""
-        assert len(matching) in (6, 8)
         self.matching = tuple(matching)
         self.num_strands = len(self.matching)
         self.genus = (len(self.matching) - 2)/2
-        if len(matching) == 6:
-            self.index = self.ends3.index(self.matching)
-            self.fix = self.ends3_fix[self.index]
-        else: # len(matching) == 8:
-            self.index = self.ends4.index(self.matching)
-            self.fix = self.ends4_fix[self.index]
+        self.fix = self.ends[self.matching]
 
     def __eq__(self, other):
         return self.matching == other.matching
@@ -152,18 +146,72 @@ class BraidCap:
         assert dstr.testDelta()
         return dstr
 
-    ends3 = [(6,5,4,3,2,1),(6,3,2,5,4,1),(4,3,2,1,6,5),(2,1,6,5,4,3),
-             (2,1,4,3,6,5)]
-    ends4 = [(8,7,6,5,4,3,2,1),(8,7,4,3,6,5,2,1),(8,5,4,3,2,7,6,1),
-             (8,3,2,7,6,5,4,1),(8,3,2,5,4,7,6,1),(6,5,4,3,2,1,8,7),
-             (6,3,2,5,4,1,8,7),(4,3,2,1,8,7,6,5),(4,3,2,1,6,5,8,7),
-             (2,1,8,7,6,5,4,3),(2,1,8,5,4,7,6,3),(2,1,6,5,4,3,8,7),
-             (2,1,4,3,8,7,6,5),(2,1,4,3,6,5,8,7)]
-    ends3_fix = [[3,4],[],[1,2,3,4,2,3],[1,2],[1,2,3,4]]
-    ends4_fix = [[3,4,5,4,3,2],[3,4,5,6],[3,4],[5,6],[],
-                 [1,2,3,4,5,6,2,3,4,5,3,4],[1,2,3,4,5,6,2,3,4,5],[1,2,3,4,2,3],
-                 [1,2,3,4,5,6,2,3],[1,2,5,6],[1,2],[1,2,3,4,5,6,4,5],[1,2,3,4],
-                 [1,2,3,4,5,6]]
+    ends = {
+        # Genus 3
+        (6,5,4,3,2,1) : [3,4],
+        (6,3,2,5,4,1) : [],
+        (4,3,2,1,6,5) : [1,2,3,4,2,3],
+        (2,1,6,5,4,3) : [1,2],
+        (2,1,4,3,6,5) : [1,2,3,4],
+        # Genus 4
+        (8,7,6,5,4,3,2,1) : [3,4,5,4,3,2],
+        (8,7,4,3,6,5,2,1) : [3,4,5,6],
+        (8,5,4,3,2,7,6,1) : [3,4],
+        (8,3,2,7,6,5,4,1) : [5,6],
+        (8,3,2,5,4,7,6,1) : [],
+        (6,5,4,3,2,1,8,7) : [1,2,3,4,5,6,2,3,4,5,3,4],
+        (6,3,2,5,4,1,8,7) : [1,2,3,4,5,6,2,3,4,5],
+        (4,3,2,1,8,7,6,5) : [1,2,3,4,2,3],
+        (4,3,2,1,6,5,8,7) : [1,2,3,4,5,6,2,3],
+        (2,1,8,7,6,5,4,3) : [1,2,5,6],
+        (2,1,8,5,4,7,6,3) : [1,2],
+        (2,1,6,5,4,3,8,7) : [1,2,3,4,5,6,4,5],
+        (2,1,4,3,8,7,6,5) : [1,2,3,4],
+        (2,1,4,3,6,5,8,7) : [1,2,3,4,5,6],
+        # Genus 5 (incomplete)
+        (2,1,4,3,6,5,8,7,10,9) : [1,2,3,4,5,6,7,8],
+        (2,1,10,7,6,5,4,9,8,3) : [1,2,5,6],
+        (4,3,2,1,6,5,10,9,8,7) : [1,2,3,4,5,6,2,3],
+        (4,3,2,1,10,9,8,7,6,5) : [1,2,3,4,2,3,7,8],
+        (6,5,4,3,2,1,8,7,10,9) : [1,2,3,4,5,6,7,8,2,3,4,5,3,4],
+        (6,5,4,3,2,1,10,9,8,7) : [1,2,3,4,5,6,2,3,4,5,3,4],
+        (8,3,2,7,6,5,4,1,10,9) : [1,2,3,4,5,6,7,8,2,3,4,5,6,7,5,6],
+        (8,5,4,3,2,7,6,1,10,9) : [1,2,3,4,5,6,7,8,2,3,4,5,6,7,3,4],
+        (10,3,2,5,4,7,6,9,8,1) : [],
+        (10,3,2,7,6,5,4,9,8,1) : [5,6],
+        (10,9,8,7,6,5,4,3,2,1) : [3,4,5,6,7,8,4,5,6,7,5,6],
+        # Genus 6 (incomplete)
+        (12,3,2,5,4,7,6,9,8,11,10,1) : [],
+        (12,11,10,9,8,7,6,5,4,3,2,1) :
+            [3,4,5,6,7,8,9,10,4,5,6,7,8,9,5,6,7,8,6,7],
+        }
+
+    @staticmethod
+    def verifyEnds():
+        """Verify the corrections for ends below."""
+        for matching, fix in BraidCap.ends.items():
+            assert len(matching) % 2 == 0
+            num_bridge = len(matching) / 2
+            # Form starting matching
+            cur_match = [num_bridge*2]
+            for i in range(1, num_bridge):
+                cur_match += [2*i+1, 2*i]
+            cur_match += [1]
+            # Now perform exchange for each step
+            for i in range(len(fix)):
+                # Swaps points fix[i] and fix[i]+1, which are stored at IDs
+                # fix[i]-1 and fix[i] (a bit awkward).
+                id1, id2 = fix[i]-1, fix[i]
+                pt1, pt2 = fix[i], fix[i]+1
+                assert cur_match[id1] != pt2 and cur_match[id2] != pt1
+                cur_match[id1], cur_match[id2] = cur_match[id2], cur_match[id1]
+                for j in range(len(cur_match)):
+                    if cur_match[j] == pt1:
+                        cur_match[j] = pt2
+                    elif cur_match[j] == pt2:
+                        cur_match[j] = pt1
+            assert matching == tuple(cur_match)
+
 
 class BridgePresentation:
     """Represents a bridge presentation of a knot. Computes HF of branched
@@ -185,10 +233,11 @@ class BridgePresentation:
         """Computes HF of branched double cover."""
         start_d = BraidCap(self.start).getHandlebody(False)
         slides = Braid(self.num_strands).getArcslides(self.braid_word)
-        slides = [slide.inverse() for slide in slides]
+        # Use this line only for "Tensor"
+        # slides = [slide.inverse() for slide in slides]
         slides_dd = [slide.getDDStructure() for slide in slides]
         end_d = BraidCap(self.end).getHandlebody(True)
-        start_d = composeDD(start_d, slides_dd, is_dual = False)
+        start_d = composeDD(start_d, slides_dd, is_dual = False, method = "Mor")
         cx = computeATensorD(end_d, start_d)
         cx.simplify()
         cx.reindex()
@@ -203,16 +252,19 @@ class BridgePresentation:
         slides = Braid(self.num_strands).getArcslides(self.braid_word)
         slides = [slide.inverse() for slide in slides]
         for slide in slides:
+            print "%d" % len(start_d),
+            sys.stdout.flush(),
             start_d = ArcslideDA(slide).tensorD(start_d)
             start_d.reindex()
             assert start_d.testDelta()  # remove this when more confident
             start_d.simplify()
-        end_d = BraidCap(self.end).getHandlebodyByLocalDA()
-        cx = start_d.morToD(end_d)  # Now still limited by genus
-        # Investigate what's wrong with this. Runs into infinite recursion on
-        # T(4,n).
-        # end_d = BraidCap(self.end).getHandlebodyByLocalDA().dual()
-        # cx = computeATensorD(end_d, start_d)
+        # First way - limited by genus. No infinity issues.
+        # end_d = BraidCap(self.end).getHandlebodyByLocalDA()
+        # cx = start_d.morToD(end_d)
+        # Second way - has infinity issues when diagram is not admissible
+        end_d = BraidCap(self.end).getHandlebodyByLocalDA().dual()
+        print " -> %d, %d" % (len(start_d), len(end_d))
+        cx = computeATensorD(end_d, start_d)
         cx.reindex()
         cx.checkDifferential()
         cx.simplify()

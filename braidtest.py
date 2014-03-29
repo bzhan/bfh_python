@@ -1,7 +1,9 @@
 """Unit test for braid.py"""
 
+from fractions import gcd
 from braid import *
 import unittest
+import time  # benchmarking
 
 class BraidTest(unittest.TestCase):
     def testGetArcslide(self):
@@ -13,19 +15,27 @@ class BraidTest(unittest.TestCase):
         self.assertTrue(len(br2.getArcslides(range(1, 6))), sum(pos_size))
 
 class BraidCapTest(unittest.TestCase):
+    def testVerifyEnds(self):
+        BraidCap.verifyEnds()
+
     def testBraidCap3(self):
-        dcap_len = [len(BraidCap(end3).getHandlebody())
-                    for end3 in BraidCap.ends3]
+        ends3 = reversed(sorted(
+                [end for end in BraidCap.ends if len(end) == 6]))
+        dcap_len = [len(BraidCap(end).getHandlebody()) for end in ends3]
         self.assertEqual(dcap_len, [2, 1, 2, 1, 1])
 
     def testBraidCap3LocalDA(self):
-        dcap_len = [len(BraidCap(end3).getHandlebodyByLocalDA())
-                    for end3 in BraidCap.ends3]
+        ends3 = reversed(sorted(
+                [end for end in BraidCap.ends if len(end) == 6]))
+        dcap_len = [len(BraidCap(end).getHandlebodyByLocalDA())
+                    for end in ends3]
         self.assertEqual(dcap_len, [2, 1, 2, 1, 1])
 
     def testBraidCap4LocalDA(self):
-        dcap_len = [len(BraidCap(end4).getHandlebodyByLocalDA())
-                    for end4 in BraidCap.ends4]
+        ends4 = reversed(sorted(
+                [end for end in BraidCap.ends if len(end) == 8]))
+        dcap_len = [len(BraidCap(end).getHandlebodyByLocalDA())
+                    for end in ends4]
         self.assertEqual(dcap_len, [4, 3, 2, 2, 1, 4, 3, 2, 2, 2, 1, 2, 1, 1])
 
     def testPlatTypeD2(self):
@@ -33,8 +43,8 @@ class BraidCapTest(unittest.TestCase):
 
     def testGenus2Algebra(self):
         dstrs = dict()
-        for end3 in BraidCap.ends3:
-            dstrs[end3] = BraidCap(end3).getHandlebody()
+        for end3 in [end for end in BraidCap.ends if len(end) == 6]:
+            dstrs[end3] = BraidCap(end3).getHandlebodyByLocalDA()
         algs = dict()
         total_gen = 0
         for end3, dstr in dstrs.items():
@@ -72,9 +82,49 @@ class HFTest(unittest.TestCase):
                     if cur_br.name in to_test:
                         # TODO: add grading info so cx.getGradingInfo() will
                         # work
-                        print "Testing:", cur_br.name
+                        print "Testing: %s (genus %d)" % \
+                            (cur_br.name, cur_br.num_strands / 2 - 1)
+                        start_time = time.time()
                         cx = cur_br.getHFByLocalDA()
+                        # cx = cur_br.getHF()
+                        print len(cx)
                         self.assertEqual(len(cx), expected_hf)
+                        print "Time elapsed (s): ", time.time() - start_time
+
+    def testTorus(self):
+        def singleTest(m, n):
+            start_time = time.time()
+            cap = list(range(2*m, 0, -1))
+            half_twist = list(range(m-1, 0, -1))
+            br = BridgePresentation("T%d_%d" % (m, n), cap, n*half_twist, cap)
+            cx = br.getHFByLocalDA()
+            print br, len(cx)
+            print "Time elapsed (s): ", time.time() - start_time
+
+        for n in [1,2,4,5,7,8,10,20,50,100]:
+            singleTest(3, n)
+        for n in [1,3,5,7,9,11,13,15,17,19]:
+            singleTest(4, n)
+        for n in [1,2,3,4,6]:
+            singleTest(5, n)
+        for n in [1,5]:
+            singleTest(6, n)
+
+    def testGenus5FromFile(self):
+        # Empty means test all
+        to_test = ["14n_6302"]
+        with open('data/input_14_FL.txt', 'r') as input_file:
+            while True:
+                line = input_file.readline()
+                if len(line) == 0:
+                    break
+                cur_br = readBridgePresentation(line)
+                if len(to_test) == 0 or cur_br.name in to_test:
+                    print "Testing:", cur_br.name
+                    start_time = time.time()
+                    cx = cur_br.getHFByLocalDA()
+                    print len(cx)
+                    print "Time elapsed (s): ", time.time() - start_time
 
 if __name__ == "__main__":
     # Can use this when running profiler.
