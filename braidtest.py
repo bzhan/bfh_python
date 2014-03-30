@@ -80,14 +80,12 @@ class HFTest(unittest.TestCase):
                     expected_hf = int(check_file.readline().split()[1])
                     cur_br = readBridgePresentation(line)
                     if cur_br.name in to_test:
-                        # TODO: add grading info so cx.getGradingInfo() will
-                        # work
                         print "Testing: %s (genus %d)" % \
                             (cur_br.name, cur_br.num_strands / 2 - 1)
                         start_time = time.time()
                         cx = cur_br.getHFByLocalDA()
                         # cx = cur_br.getHF()
-                        print len(cx)
+                        print cx.getGradingInfo()
                         self.assertEqual(len(cx), expected_hf)
                         print "Time elapsed (s): ", time.time() - start_time
 

@@ -5,6 +5,9 @@ from algebra import CobarAlgebra, DGAlgebra, FreeModule, Generator, Tensor, \
 from algebra import E0
 from dstructure import DGenerator, SimpleDStructure
 from ddstructure import SimpleDDGenerator, SimpleDDStructure
+from grading import GeneralGradingSet, GeneralGradingSetElement, \
+    SimpleDbGradingSetElement
+from hdiagram import getIdentityDiagram
 from pmc import StrandDiagram
 from utility import NamedObject
 from utility import sumColumns
@@ -159,7 +162,72 @@ class DAStructure(FreeModule):
                         x, DATensorDGenerator(dstr_result, dagen, dgen_to),
                         dagen.idem1.toAlgElt(self.algebra1), 1)
 
+        # Find grading set if available on both components
+        def tensorGradingSet():
+            """Find the grading set of the new type D structure."""
+            return GeneralGradingSet([self.gr_set, dstr.gr_set])
+
+        def tensorGrading(gr_set, dagen, dgen):
+            """Find the grading of the generator (x, y) in the tensor type D
+            structure. The grading set need to be provided as gr_set.
+
+            """
+            return GeneralGradingSetElement(
+                gr_set, [self.grading[dagen], dstr.grading[dgen]])
+            
+        if hasattr(self, "gr_set") and hasattr(dstr, "gr_set"):
+            dstr_result.gr_set = tensorGradingSet()
+            dstr_result.grading = dict()
+            for x in dstr_result.getGenerators():
+                dagen, dgen = x
+                dstr_result.grading[x] = tensorGrading(
+                    dstr_result.gr_set, dagen, dgen)
+
         return dstr_result
+
+    def registerHDiagram(self, diagram, base_gen, base_gr = None):
+        """Associate the given diagram as the Heegaard diagram from which this
+        type DA structure can be derived. We will attempt to match generators
+        of the type DA structure to generators of the Heegaard diagram.
+        Currently this is possible only if no two generators have the same
+        idempotents (so the match can be made by comparing idempotents).
+
+        As a result, computes grading of each generator from the Heegaard
+        diagram and checks it against type DA operations. Attributes added are:
+        *. self.hdiagram - the Heegaard diagram.
+        *. self.hdiagram_gen_map - dictionary mapping generators in the type DA
+        structure to generators in Heegaard diagram.
+        *. self.gr_set - the grading set (of type SimpleDbGradingSet).
+        *. self.grading - dictionary mapping generators in the type DA
+        structure to their gradings.
+
+        Requires self.getGenerators() to be implemented.
+
+        """
+        self.hdiagram = diagram
+        # Get PMC's and check that they make sense
+        hd_pmc1, hd_pmc2 = self.hdiagram.pmc_list
+        das_pmc1, das_pmc2 = self.algebra1.pmc, self.algebra2.pmc
+        assert hd_pmc1.opp() == das_pmc1
+        assert hd_pmc2 == das_pmc2
+        # Now attempt to match generators
+        self.hdiagram_gen_map = dict()
+        idem_size = 2 * das_pmc1.genus - len(base_gen.idem1)
+        gens = self.getGenerators()
+        hgens = diagram.getHFGenerators(idem_size = idem_size)
+        for gen in gens:
+            for hgen in hgens:
+                hgen_idem1, hgen_idem2 = hgen.getDIdem()[0], hgen.getIdem()[1]
+                if (gen.idem1, gen.idem2) == (hgen_idem1, hgen_idem2):
+                    self.hdiagram_gen_map[gen] = hgen
+                    break
+            assert gen in self.hdiagram_gen_map
+        # Compute grading and check consistency with algebra actions
+        base_hgen = self.hdiagram_gen_map[base_gen]
+        self.gr_set, gr = self.hdiagram.computeDAGrading(base_hgen, base_gr)
+        self.grading = dict()
+        for gen in gens:
+            self.grading[gen] = gr[self.hdiagram_gen_map[gen]]
                 
 class SimpleDAStructure(DAStructure):
     """Represents a type DA structure with a finite number of generators and a
@@ -303,6 +371,20 @@ class SimpleDAStructure(DAStructure):
                                    coeff_d, coeffs_a, ring_coeff)
         return dastr
 
+    def checkGrading(self):
+        for (x, coeffs_a), target in self.da_action.items():
+            for (coeff_d, y), ring_coeff in target.items():
+                gr_x1, gr_x2 = self.grading[x].data
+                gr_y1, gr_y2 = self.grading[y].data
+                for coeff_a in coeffs_a:
+                    gr_x2 = gr_x2 * coeff_a.getGrading()
+                gr_y1 = coeff_d.getGrading() * gr_y1
+                new_gr_x = SimpleDbGradingSetElement(
+                    self.gr_set, [gr_x1, gr_x2])
+                new_gr_y = SimpleDbGradingSetElement(
+                    self.gr_set, [gr_y1, gr_y2])
+                assert new_gr_x - (1-len(coeffs_a)) == new_gr_y
+
 def identityDA(pmc):
     """Returns the identity type DA structure for a given PMC."""
     alg = pmc.getAlgebra()
@@ -319,6 +401,11 @@ def identityDA(pmc):
             gen_from = idem_to_gen_map[gen.getLeftIdem()]
             gen_to = idem_to_gen_map[gen.getRightIdem()]
             dastr.addDelta(gen_from, gen_to, gen, (gen,), 1)
+    # Now add grading. Any generator can serve as base_gen
+    for gen in dastr.getGenerators():
+        base_gen = gen
+        break
+    dastr.registerHDiagram(getIdentityDiagram(pmc), base_gen)
     return dastr
 
 def AddChordToDA(dastr, coeff_d, coeffs_a):

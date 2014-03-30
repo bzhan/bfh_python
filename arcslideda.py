@@ -3,6 +3,7 @@
 from algebra import E0, TensorGenerator
 from dastructure import DAStructure, SimpleDAGenerator, SimpleDAStructure
 from dastructure import AddChordToDA
+from hdiagram import getArcslideDiagram
 from linalg import F2RowSystem
 from localpmc import LocalIdempotent, LocalStrandAlgebra, LocalStrandDiagram
 from localpmc import restrictPMC, restrictStrandDiagram
@@ -180,6 +181,11 @@ class ArcslideDA(DAStructure):
             l_idem, r_idem = da_idems[i]
             self.generators.add(
                 SimpleDAGenerator(self, l_idem, r_idem, "%d" % i))
+        # With generators set, add grading. Any generator can serve as base_gen
+        for gen in self.generators:
+            base_gen = gen
+            break
+        self.registerHDiagram(getArcslideDiagram(self.slide), base_gen)
 
     @staticmethod
     def idemMatchDA(x, y, coeff_d, coeffs_a):
@@ -224,11 +230,17 @@ class ArcslideDA(DAStructure):
         return tuple(coeffs_a)
 
     def getDAStructure(self):
-        """Returns the type DA structure corresponding to slide."""
+        """Returns the simple type DA structure corresponding to slide."""
         dastr = SimpleDAStructure(F2, self.algebra1, self.algebra2)
         for gen in self.getGenerators():
             dastr.addGenerator(SimpleDAGenerator(
                 dastr, gen.idem1, gen.idem2, gen.name))
+
+        # Get gradings from Heegaard diagram
+        for gen in dastr.getGenerators():
+            base_gen = gen
+            break
+        dastr.registerHDiagram(getArcslideDiagram(self.slide), base_gen)
 
         alg1_gens = self.algebra1.getGenerators()
         alg2_gens = self.algebra2.getGenerators()

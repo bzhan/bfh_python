@@ -280,6 +280,16 @@ class ArcslideDATest(unittest.TestCase):
                               ((3, 4), (4, 5)), ((1, 2), (2, 3))],
                  single_idems = [(1, 1)])
 
+    def testGrading(self):
+        slides_to_test = [
+            Arcslide(splitPMC(1), 1, 0),
+            Arcslide(splitPMC(2), 4, 3),
+            Arcslide(linearPMC(2), 1, 0),
+        ]
+        for slide in slides_to_test:
+            dastr = ArcslideDA(slide)
+            dastr.getDAStructure().checkGrading()
+
 class TensorTest(unittest.TestCase):
     def testDATensorD(self):
         # So far mostly checking that it will run in a reasonable amount of

@@ -450,8 +450,8 @@ class SimpleDDStructure(DDStructure):
         assert hd_pmc2.opp() == dds_pmc2
         # Now attempt to match generators
         self.hdiagram_gen_map = dict()
-        idem_size = len(base_gen.idem2)
-        gens = self.generators
+        idem_size = 2 * dds_pmc1.genus - len(base_gen.idem1)
+        gens = self.getGenerators()
         hgens = diagram.getHFGenerators(idem_size = idem_size)
         for gen in gens:
             for hgen in hgens:

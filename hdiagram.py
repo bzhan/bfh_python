@@ -9,7 +9,8 @@ from linalg import RowSystem
 from pmc import Idempotent, PMC
 from utility import SummableDict
 from utility import tolist
-from utility import ACTION_LEFT, BIG_GRADING, DEFAULT_GRADING, NEG, POS
+from utility import ACTION_LEFT, ACTION_RIGHT, BIG_GRADING, DEFAULT_GRADING, \
+    NEG, POS
 
 """Constants for each type of segment."""
 ALPHA, BETA, BORDER = range(3)
@@ -802,6 +803,27 @@ class HeegaardDiagram:
             domain_gr0, domain_gr1 = gr_fun(conn_domain, base_gen, gen)
             domain_gr = [domain_gr0 * base_gr[0], domain_gr1 * base_gr[1]]
             result[gen] = SimpleDbGradingSetElement(gr_set, domain_gr)
+        return (gr_set, result)
+
+    def computeDAGrading(self, base_gen, base_gr = None):
+        """Compute type DA grading for each generator. The type DA grading is
+        related in a straightforward way to the type DD grading. So see the
+        function computeDDGrading for details.
+
+        """
+        if base_gr is not None:
+            return NotImplemented  # code the other case later
+
+        dd_gr_set, dd_result = self.computeDDGrading(base_gen, base_gr)
+        lr_domains = [(d1, d2.Ropp()) for d1, d2 in dd_gr_set.periodic_domains]
+        gr_set = SimpleDbGradingSet(
+            dd_gr_set.gr_group1, ACTION_LEFT,
+            dd_gr_set.gr_group2.opp(), ACTION_RIGHT, lr_domains)
+        result = dict()
+        for x, gr_x in dd_result.items():
+            gr_x1, gr_x2 = gr_x.data
+            gr_x_lr = SimpleDbGradingSetElement(gr_set, (gr_x1, gr_x2.Ropp()))
+            result[x] = gr_x_lr
         return (gr_set, result)
 
 def diagramFromCycleInfo(name, num_interior_point = 0, length_border = [],
