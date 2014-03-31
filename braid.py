@@ -143,7 +143,6 @@ class BraidCap:
             dstr = ArcslideDA(slide).tensorD(dstr)
             dstr.reindex()
             dstr.simplify()
-        assert dstr.testDelta()
         return dstr
 
     ends = {
@@ -256,7 +255,7 @@ class BridgePresentation:
             sys.stdout.flush(),
             start_d = ArcslideDA(slide).tensorD(start_d)
             start_d.reindex()
-            assert start_d.testDelta()  # remove this when more confident
+            # assert start_d.testDelta()  # remove this when more confident
             start_d.simplify()
         # First way - limited by genus. No infinity issues.
         # end_d = BraidCap(self.end).getHandlebodyByLocalDA()

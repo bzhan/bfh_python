@@ -193,7 +193,17 @@ class SmallGradingGroup(Group):
         if not isinstance(elt2, SmallGradingElement):
             return NotImplemented
         assert elt1.parent == self and elt2.parent == self
-        return (elt1.toBigGrading() * elt2.toBigGrading()).toSmallGrading()
+        m1 = elt1.spinc
+        m2 = elt2.spinc
+        new_spinc = [a+b for a, b in zip(m1, m2)]
+        new_maslov = elt1.maslov + elt2.maslov
+        # Note this relies on the ordering of the pairs and the points inside
+        # each pair.
+        for i in range(self.pmc.num_pair):
+            for j in range(i+1, self.pmc.num_pair):
+                if self.pmc.pairs[i][1] > self.pmc.pairs[j][0]:
+                    new_maslov += (m1[i] * m2[j] - m1[j] * m2[i])
+        return SmallGradingElement(self, new_maslov, new_spinc)
 
     def zero(self):
         """Returns the zero element of this grading group."""

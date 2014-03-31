@@ -110,7 +110,7 @@ class HFTest(unittest.TestCase):
 
     def testGenus5FromFile(self):
         # Empty means test all
-        to_test = ["14n_6302"]
+        to_test = []
         with open('data/input_14_FL.txt', 'r') as input_file:
             while True:
                 line = input_file.readline()
