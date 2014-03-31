@@ -201,7 +201,8 @@ class SmallGradingGroup(Group):
         # each pair.
         for i in range(self.pmc.num_pair):
             for j in range(i+1, self.pmc.num_pair):
-                if self.pmc.pairs[i][1] > self.pmc.pairs[j][0]:
+                if self.pmc.pairs[i][1] > self.pmc.pairs[j][0] and \
+                   self.pmc.pairs[i][1] < self.pmc.pairs[j][1]:
                     new_maslov += (m1[i] * m2[j] - m1[j] * m2[i])
         return SmallGradingElement(self, new_maslov, new_spinc)
 
