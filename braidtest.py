@@ -121,11 +121,8 @@ class HFTest(unittest.TestCase):
                     print "Testing:", cur_br.name
                     start_time = time.time()
                     cx = cur_br.getHFByLocalDA()
-                    print len(cx)
+                    print cx.getGradingInfo()
                     print "Time elapsed (s): ", time.time() - start_time
 
 if __name__ == "__main__":
-    # Can use this when running profiler.
-    # suite = unittest.TestLoader().loadTestsFromTestCase(HFTest)
-    # unittest.TextTestRunner(verbosity=2).run(suite)    
     unittest.main()

@@ -176,12 +176,16 @@ class DAStructure(FreeModule):
                 gr_set, [self.grading[dagen], dstr.grading[dgen]])
             
         if hasattr(self, "gr_set") and hasattr(dstr, "gr_set"):
-            dstr_result.gr_set = tensorGradingSet()
+            large_gr_set = tensorGradingSet()
+            gr_set = large_gr_set.simplifiedSet()
+            dstr_result.gr_set = gr_set
             dstr_result.grading = dict()
             for x in dstr_result.getGenerators():
                 dagen, dgen = x
-                dstr_result.grading[x] = tensorGrading(
-                    dstr_result.gr_set, dagen, dgen)
+                gr_x = tensorGrading(large_gr_set, dagen, dgen)
+                gr_x = large_gr_set.simplifiedElt(gr_x)
+                dstr_result.grading[x] = gr_x
+            dstr_result.checkGrading()
 
         return dstr_result
 

@@ -93,5 +93,50 @@ class TestGeneralGradingSet(unittest.TestCase):
         self.assertEqual(elt1, elt2)
         self.assertNotEqual(elt1, elt3)
 
+    def testSimplifiedGradingSet(self):
+        pmc = splitPMC(1)
+        periodic_domains1 = [(pmc.small_gr(0, [1,1]), pmc.small_gr(0, [1,0])),
+                             (pmc.small_gr(0, [2,3]), pmc.small_gr(0, [0,1]))]
+        gr_set1 = SimpleDbGradingSet(SmallGradingGroup(pmc), ACTION_LEFT,
+                                     SmallGradingGroup(pmc), ACTION_RIGHT,
+                                     periodic_domains1)
+        periodic_domains2 = [pmc.small_gr(0, [0,1])]
+        gr_set2 = SimpleGradingSet(SmallGradingGroup(pmc), ACTION_LEFT,
+                                   periodic_domains2)
+        gr_set = GeneralGradingSet([gr_set1, gr_set2])
+        gr_set_short = gr_set.simplifiedSet()
+
+        r1 = gr_set2.zero() * [pmc.small_gr(0, [1,-1])]
+        elt1 = GeneralGradingSetElement(gr_set, [gr_set1.zero(), r1])
+        elt1_short = gr_set.simplifiedElt(elt1)
+
+        # Actually simplified
+        self.assertTrue(isinstance(gr_set_short, SimpleGradingSet))
+        self.assertTrue(isinstance(elt1_short, SimpleGradingSetElement))
+
+        # elt1_short should be the 'same' element as before
+        l2 = gr_set1.zero() * [elt1_short.data, pmc.small_gr(0, [0,0])]
+        elt2 = GeneralGradingSetElement(gr_set, [l2, gr_set2.zero()])
+        self.assertEqual(elt1, elt2)
+
+    def testNoSimplification(self):
+        pmc = splitPMC(1)
+        # Does not form automorphism
+        periodic_domains1 = [(pmc.small_gr(0, [1,0]), pmc.small_gr(0, [0,0])),
+                             (pmc.small_gr(0, [0,0]), pmc.small_gr(0, [0,1]))]
+        gr_set1 = SimpleDbGradingSet(SmallGradingGroup(pmc), ACTION_LEFT,
+                                     SmallGradingGroup(pmc), ACTION_RIGHT,
+                                     periodic_domains1)
+        periodic_domains2 = [pmc.small_gr(0, [0,1])]
+        gr_set2 = SimpleGradingSet(SmallGradingGroup(pmc), ACTION_LEFT,
+                                   periodic_domains2)
+        gr_set = GeneralGradingSet([gr_set1, gr_set2])
+        gr_set_short = gr_set.simplifiedSet()
+        self.assertEqual(gr_set, gr_set_short)
+
+        elt1 = GeneralGradingSetElement(gr_set, [gr_set1.zero(), gr_set2.zero()])
+        elt1_short = gr_set.simplifiedElt(elt1)
+        self.assertEqual(elt1, elt1_short)
+
 if __name__ == "__main__":
     unittest.main()

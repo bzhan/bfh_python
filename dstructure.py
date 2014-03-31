@@ -271,6 +271,13 @@ class SimpleDStructure(DStructure):
             for y, coeff in arrows[x].items():
                 self.delta_map[x] += coeff * y
 
+        # This is a good place to simplify gradings
+        if hasattr(self, "gr_set"):
+            new_gr_set = self.gr_set.simplifiedSet()
+            for gen in self.generators:
+                self.grading[gen] = self.gr_set.simplifiedElt(self.grading[gen])
+            self.gr_set = new_gr_set
+
     def registerHDiagram(self, diagram, base_gen, base_gr = None):
         """Associate the given diagram as the Heegaard diagram from which this
         type D structure can be derived. Broadly similar (and somewhat simpler)

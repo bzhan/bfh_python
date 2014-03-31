@@ -551,6 +551,10 @@ class SimpleGradingSet(GradingSet):
         """Need a consistent interface with GeneralGradingSet."""
         return self
 
+    def simplifiedElt(self, elt):
+        """Need a consistent interface with GeneralGradingSet."""
+        return elt
+
     def __str__(self):
         gr_group, side = self.actions[0]
         result = "One-sided %s grading set with PMC %s on %s.\n" \
@@ -771,6 +775,9 @@ class SimpleDbGradingSet(GradingSet):
     def simplifiedSet(self):
         return self
 
+    def simplifiedElt(self, elt):
+        return elt
+
     def __repr__(self):
         return str(self)
 
@@ -903,7 +910,6 @@ class GeneralGradingSet(GradingSet):
         # multiplied. side is the side it is multiplied to.
 
         self.row_action = []
-        row_vecs = []
         # Add rows corresponding to periodic domains
         for i in range(self.num_comp):
             gr_set = self.comps[i]
@@ -916,7 +922,6 @@ class GeneralGradingSet(GradingSet):
                     cur_action = [(i, 0, domain[0], oppSide(gr_set.side1)),
                                   (i, 1, domain[1], oppSide(gr_set.side2))]
                 self.row_action.append(cur_action)
-                row_vecs.append(self._vecFromAction(cur_action))
         # Add rows corresponding to tensoring
         for comp_id in range(self.num_comp-1):
             if isinstance(self.comps[comp_id], SimpleGradingSet):
@@ -926,9 +931,17 @@ class GeneralGradingSet(GradingSet):
             for basis_id in range(spinc_len):
                 cur_action = self._getTensorAction(comp_id, basis_id)
                 self.row_action.append(cur_action)
-                row_vecs.append(self._vecFromAction(cur_action))
 
+        row_vecs = [self._vecFromAction(action) for action in self.row_action]
         self.row_sys = RowSystem(row_vecs)
+
+        # Row systems that exclude periodic domains on single grading sets.
+        # Useful for simplifying grading elements (see simplifiedElt())
+        self.row_action_db_only = [action for action in self.row_action
+                                   if len(action) == 2]
+        row_vecs_db_only = [self._vecFromAction(action)
+                            for action in self.row_action_db_only]
+        self.row_sys_db_only = RowSystem(row_vecs_db_only)
 
         # Find list of zero combinations of rows (these correspond to
         # provincial periodic domains, that may introduce ambiguity in the
@@ -1012,14 +1025,21 @@ class GeneralGradingSet(GradingSet):
             return GeneralGradingSet(self.comps[0:-1] + \
                                          [self.comps[-1].partialRopp(1)])
 
-    def _performActionListForm(self, elt_list, comb):
+    def _performActionListForm(self, elt_list, comb, db_only = False):
         """Perform the set of row actions given by comb on elt_list (list form
         given by elt.listForm(). Return the resulting list (original list may
         also be changed).
 
+        If db_only is set to True, use the db_only row system (exclude periodic
+        domains on single grading sets).
+
         """
-        for i in range(len(self.row_action)):
-            vec_action = self.row_action[i]
+        if db_only:
+            action_list = self.row_action_db_only
+        else:
+            action_list = self.row_action
+        for i in range(len(action_list)):
+            vec_action = action_list[i]
             for set_id, action_id, elt, side in vec_action:
                 to_mult = elt.power(comb[i])
                 if side == ACTION_LEFT:
@@ -1111,6 +1131,23 @@ class GeneralGradingSet(GradingSet):
         return GeneralGradingSetElement(self, zero_data)
 
     @memorize
+    def canSimplify(self):
+        """Returns whether the general grading set can be simplified down to one
+        SimpleGradingSet or SimpleDbGradingSet. If the grading set has one
+        action, all of its double components must be automorphisms. If the
+        grading set has two actions, all but the first component must be
+        automorphisms.
+
+        """
+        assert len(self.actions) > 0
+        if isinstance(self.comps[0], SimpleGradingSet):
+            return all([gr_set.isAutomorphism() for gr_set in self.comps[1:]])
+        elif isinstance(self.comps[-1], SimpleGradingSet):
+            return all([gr_set.isAutomorphism() for gr_set in self.comps[0:-1]])
+        else:
+            return all([gr_set.isAutomorphism() for gr_set in self.comps[1:]])
+        
+    @memorize
     def simplifiedSet(self):
         """Returns an equivalent SimpleGradingSet or SimpleDbGradingSet using
         the automorphism property of its double components.
@@ -1118,6 +1155,9 @@ class GeneralGradingSet(GradingSet):
         """
         assert len(self.actions) > 0
         new_pdomains = []
+        if not self.canSimplify():
+            return self
+
         if isinstance(self.comps[0], SimpleGradingSet):
             for p_domain in self.comps[0].periodic_domains:
                 elt = p_domain
@@ -1148,13 +1188,18 @@ class GeneralGradingSet(GradingSet):
     def simplifiedElt(self, elt):
         """Returns the version of elt in simplified form of this set."""
         assert len(self.actions) > 0
+        if not self.canSimplify():
+            return elt
+
         if isinstance(self.comps[-1], SimpleGradingSet):
             return self.inverse().simplifiedElt(elt.inverse()).inverse()
-        elt.clearFirst
+
         spinc = sum([comp.spinc for comp in flatten(elt.listForm())], [])
-        comb, reduced_vec = self.row_sys.vecReduce(spinc, use_rational = True)
+        comb, reduced_vec = self.row_sys_db_only.vecReduce(
+            spinc, use_rational = True)
         comb = [-n for n in comb]
-        elt_list = flatten(self._performActionListForm(elt.listForm(), comb))
+        elt_list = flatten(
+            self._performActionListForm(elt.listForm(), comb, db_only = True))
         prev_maslov_sum = 0
         for comp in elt_list[:-1]:
             assert all([n == 0 for n in comp.spinc])
