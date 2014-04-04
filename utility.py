@@ -9,19 +9,20 @@ def memorize(function):
 
     """
     memo = {}
-    def wrapper(*args):
+    def wrapper(*args, **kwargs):
+        key = args + tuple((k, v) for k, v in kwargs.items())
         # First see if args is hashable. If not, just run function
         try:
-            exists = memo.has_key(args)
+            exists = memo.has_key(key)
         except TypeError:
-            return function(*args)
+            return function(*args, **kwargs)
         # Now use memorization. Don't keep NotImplemented values
-        if args in memo:
-            return memo[args]
+        if key in memo:
+            return memo[key]
         else:
-            rv = function(*args)
+            rv = function(*args, **kwargs)
             if rv is not NotImplemented:
-                memo[args] = rv
+                memo[key] = rv
             return rv
     return wrapper
 

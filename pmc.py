@@ -413,19 +413,15 @@ class StrandDiagram(Generator):
         # Get multiplicity from strands
         self.multiplicity = self.strands.multiplicity
 
+    @memorize
     def getBigGrading(self):
-        if not hasattr(self, "big_gr"):
-            self.big_gr = self.pmc.big_gr(self.maslov(), self.multiplicity)
-        return self.big_gr
+        return self.pmc.big_gr(self.maslov(), self.multiplicity)
 
-    def getSmallGrading(self):
-        if not hasattr(self, "small_gr"):
-            refine_data = DEFAULT_REFINEMENT(self.pmc, len(self.left_idem))
-            p_l, p_r = [refine_data[i]
-                        for i in (self.left_idem, self.right_idem)]
-            self.small_gr = (p_l * self.getBigGrading() * p_r.inverse()). \
-                toSmallGrading()
-        return self.small_gr
+    @memorize
+    def getSmallGrading(self, refinement = DEFAULT_REFINEMENT):
+        refine_data = refinement(self.pmc, len(self.left_idem))
+        p_l, p_r = [refine_data[i] for i in (self.left_idem, self.right_idem)]
+        return (p_l * self.getBigGrading() * p_r.inverse()).toSmallGrading()
 
     def getGrading(self):
         if DEFAULT_GRADING == BIG_GRADING:

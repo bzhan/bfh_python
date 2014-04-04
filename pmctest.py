@@ -1,5 +1,6 @@
 """Unit test for pmc.py"""
 
+from grading import averageRefinement
 from pmc import *
 import unittest
 
@@ -246,13 +247,14 @@ class StrandDiagramTest(unittest.TestCase):
     def testStrandDiagramOppGrading(self):
         # Verify the relations gr'(a).opp() = gr'(a.opp()) and
         # gr(a).opp() = gr(a.opp()).
-        # This only works if DEFAULT_REFINEMENT is set to averageRefinement
         sd_to_test = [self.sd1, self.sd2, self.sd3, self.sd4]
         for sd in sd_to_test:
             self.assertEqual(sd.getBigGrading().opp(),
                              sd.opp().getBigGrading())
-            self.assertEqual(sd.getSmallGrading().opp(),
-                             sd.opp().getSmallGrading())
+            # This only works if DEFAULT_REFINEMENT is set to averageRefinement.
+            self.assertEqual(
+                sd.getSmallGrading(refinement = averageRefinement).opp(),
+                sd.opp().getSmallGrading(refinement = averageRefinement))
 
     def testUnconnectSumStrandDiagram(self):
         sd1 = self.pmc.sd([4,(0,3)], False)
