@@ -30,6 +30,11 @@ class SmallGradingTest(unittest.TestCase):
         self.assertEqual(elt2, elt2.toBigGrading().toSmallGrading())
 
 class TestCommonRefinement(unittest.TestCase):
+    def testStandardRefinement(self):
+        pmc_to_test = [splitPMC(1), splitPMC(2), antipodalPMC(2)]
+        for pmc in pmc_to_test:
+            refinement = standardRefinement(pmc)
+
     def testLowerRefinement(self):
         pmc_to_test = [splitPMC(1), splitPMC(2), antipodalPMC(2)]
         for pmc in pmc_to_test:
@@ -134,7 +139,8 @@ class TestGeneralGradingSet(unittest.TestCase):
         gr_set_short = gr_set.simplifiedSet()
         self.assertEqual(gr_set, gr_set_short)
 
-        elt1 = GeneralGradingSetElement(gr_set, [gr_set1.zero(), gr_set2.zero()])
+        elt1 = GeneralGradingSetElement(
+            gr_set, [gr_set1.zero(), gr_set2.zero()])
         elt1_short = gr_set.simplifiedElt(elt1)
         self.assertEqual(elt1, elt1_short)
 

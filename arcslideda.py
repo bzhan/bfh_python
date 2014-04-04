@@ -1300,9 +1300,9 @@ class ArcslideDA(DAStructure):
             coeff_d, coeffs_a = arrow
             valid = True
             for idem_d, idem_a in single_idems:
-                if not all(
-                        idem_d in coeff_a.single_hor for coeff_a in coeffs_a) \
-                    and idem_a in coeff_d.single_hor:
+                if idem_a in coeff_d.single_hor and \
+                   not all(
+                       idem_d in coeff_a.single_hor for coeff_a in coeffs_a):
                     valid = False
                     break
             if not valid:

@@ -346,6 +346,37 @@ class GradingRefinement(dict):
             assert idem_mult == expected_idem_mult
 
 @memorize
+def standardRefinement(pmc, idem_size = None):
+    """Returns the "standard" refinement of the given PMC. For this refinement,
+    add together the difference between the lower point for each pair and the
+    lower point for each of the idem_size pairs in the PMC.
+
+    """
+    # This should not be used as the default refinement, as it does not
+    # guarantee sd.small_gr.opp() == sd.opp().small_gr for a strand diagram sd.
+    data = dict()
+    gr_group = BigGradingGroup(pmc)
+    if idem_size is None:
+        idem_size = pmc.genus
+    for idem in pmc.getIdempotents(idem_size):
+        mult = [0] * (pmc.n - 1)
+        maslov = 0
+        for i in range(idem_size):
+            p, q = pmc.pairs[idem[i]]
+            p_s, q_s = pmc.pairs[i]
+            assert p < q and p_s < q_s
+            if p > p_s:
+                for pos in range(p_s, p):
+                    mult[pos] += 1
+            elif p < p_s:
+                for pos in range(p, p_s):
+                    mult[pos] -= 1
+            if idem[i] >= idem_size:
+                maslov += Fraction(1, 2)
+        data[idem] = BigGradingElement(gr_group, maslov, mult)
+    return GradingRefinement(pmc, idem_size, data)
+
+@memorize
 def lowerRefinement(pmc, idem_size = None):
     """Returns the "lower" refinement of the given PMC. For this refinement,
     add together the interval from bottom to the lower point for each pair in
