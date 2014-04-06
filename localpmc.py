@@ -290,7 +290,6 @@ class LocalStrandDiagram(Generator):
 
         """
         Generator.__init__(self, parent)
-        self.parent = parent
         self.local_pmc = parent.local_pmc
         self.left_idem = left_idem
         if not isinstance(self.left_idem, LocalIdempotent):
