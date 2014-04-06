@@ -181,6 +181,11 @@ class SummableDict(dict):
         return iter(self).next()
 
 class Ring:
+    def convert(self, data):
+        """Try to convert data to an element of this ring."""
+        raise NotImplementedError("convert function not specified for ring.")
+
+class RingElement(Number):
     pass
 
 class ModNRing(Ring):
@@ -218,9 +223,6 @@ class ModNRing(Ring):
         if isinstance(data, int):
             return ModNElement(self, data % self.n)
         return NotImplemented
-
-class RingElement(Number):
-    pass
 
 class ModNElement(RingElement):
     """An element in a ring Z/nZ."""
@@ -262,6 +264,21 @@ class ModNElement(RingElement):
         # Currently only implemented for n = 2
         assert self.parent.n == 2
         return self
+
+class Integer(Ring):
+    """The ring Z."""
+    def convert(self, data):
+        """Try to convert data to an element of this ring."""
+        assert isinstance(data, int)
+        return data
+
+class IntegerElement(RingElement, int):
+    """An element in a ring Z."""
+    def __new__(cls, parent, val):
+        return int.__new__(cls, val)
+
+    def __init__(self, parent, val):
+        self.parent = parent
 
 class NamedObject:
     """Provides functionality for an object to be described by name. If this is
@@ -334,8 +351,9 @@ def safeMultiply(a, b):
             prod = NotImplemented
     return prod
 
-# Most commonly used ring Z/2Z
+# Most commonly used rings: Z/2Z and Z
 F2 = ModNRing(2)
+ZZ = Integer()
 
 # Constants for positive and negative orientation
 POS, NEG = 1, -1

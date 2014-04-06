@@ -70,5 +70,15 @@ class FiniteRingTest(unittest.TestCase):
         self.assertTrue(F2.one != 0)
         self.assertEqual(F2.one + F2.one, 0)
 
+class IntegerRingTest(unittest.TestCase):
+    def testIntegerRing(self):
+        INT = Integer()
+        P1 = IntegerElement(INT, 1)
+        N1 = IntegerElement(INT, -1)
+        self.assertEquals(P1, 1)
+        self.assertEquals(N1, -1)
+        self.assertEquals(P1 + N1, 0)
+        self.assertTrue(P1 != 0)
+
 if __name__ == "__main__":
     unittest.main()
