@@ -64,24 +64,25 @@ class PMCTest(unittest.TestCase):
             self.assertEqual(idem.pmc, pmc)
 
     def testGetStrandDiagrams(self):
-        sds = splitPMC(1).getStrandDiagrams()
-        self.assertEqual(len(sds), 8)
-        pmc = splitPMC(2)
-        sds2 = pmc.getStrandDiagrams()
-        for sd in sds2:
-            self.assertTrue(isinstance(sd, StrandDiagram))
-            self.assertEqual(sd.pmc, pmc)
-            self.assertEqual(sd.mult_one, False)
+        pmc = splitPMC(1)
+        alg = pmc.getAlgebra(mult_one = False)
+        self.assertEqual(len(alg.getGenerators()), 8)
+        pmc2 = splitPMC(2)
+        alg2 = pmc2.getAlgebra(mult_one = False)
+        for sd2 in alg2.getGenerators():
+            self.assertTrue(isinstance(sd2, StrandDiagram))
+            self.assertEqual(sd2.pmc, pmc2)
+            self.assertEqual(sd2.mult_one, False)
 
     def testGetMultOneStrandDiagrams(self):
         pmc = splitPMC(1)
-        m1_sds = pmc.getMultOneStrandDiagrams(idem_size = 2)
-        for sd in m1_sds:
+        alg = pmc.getAlgebra(idem_size = 2, mult_one = True)
+        for sd in alg.getGenerators():
             self.assertTrue(isinstance(sd, StrandDiagram))
             self.assertEqual(sd.pmc, pmc)
             self.assertEqual(sd.mult_one, True)
-            self.assertTrue(all([x<=1 for x in sd.multiplicity]))
-        self.assertEqual(len(m1_sds), 5)
+            self.assertTrue(all([x <= 1 for x in sd.multiplicity]))
+        self.assertEqual(len(alg.getGenerators()), 5)
 
 class IdempotentTest(unittest.TestCase):
     def testIdempotent(self):

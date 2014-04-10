@@ -558,8 +558,8 @@ def identityDD(pmc, idem_size = None):
         idem_size = pmc.genus
     n = pmc.n
     pmcopp = pmc.opp()
-    alg1 = pmc.getAlgebra(idem_size)
-    alg2 = pmcopp.getAlgebra(2 * pmc.genus - idem_size)
+    alg1 = pmc.getAlgebra(idem_size = idem_size)
+    alg2 = pmcopp.getAlgebra(idem_size = 2*pmc.genus - idem_size)
     ddstr = SimpleDDStructure(F2, alg1, alg2)
     idems = pmc.getIdempotents(idem_size)
     idem_pairs = [(idem, idem.opp().comp()) for idem in idems]
@@ -589,8 +589,8 @@ def DDStrFromDStr(dstr, genus1):
     pmc1, pmc2 = unconnectSumPMC(pmc_all, genus1)
     mult_one = dstr.algebra.mult_one
 
-    ddstr = SimpleDDStructure(F2, pmc1.getAlgebra(None, mult_one),
-                              pmc2.getAlgebra(None, mult_one))
+    ddstr = SimpleDDStructure(F2, pmc1.getAlgebra(mult_one = mult_one),
+                              pmc2.getAlgebra(mult_one = mult_one))
     gen_map = {}
     for x in dstr.getGenerators():
         # Split idempotent of x into two parts

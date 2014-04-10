@@ -8,7 +8,7 @@ from grading import BigGradingElement, BigGradingGroup, SmallGradingElement, \
     SmallGradingGroup
 from grading import DEFAULT_REFINEMENT
 from utility import memorize, memorizeHash
-from utility import BIG_GRADING, DEFAULT_GRADING, F2, MULT_ONE
+from utility import BIG_GRADING, DEFAULT_GRADING, F2, MULT_ONE, ZZ
 
 class PMC:
     """Represents a pointed matched circle."""
@@ -101,13 +101,13 @@ class PMC:
         grading_group = SmallGradingGroup(self)
         return SmallGradingElement(grading_group, maslov, spinc)
 
-    def getAlgebra(self, idem_size = None, mult_one = MULT_ONE):
+    def getAlgebra(self, ring = F2, idem_size = None, mult_one = MULT_ONE):
         """Returns the algebra with a given size of idempotent (the default
         value, with size half the number of pairs, is most used).
 
         """
         if idem_size == None: idem_size = self.genus
-        return StrandAlgebra(F2, self, idem_size, mult_one)
+        return StrandAlgebra(ring, self, idem_size, mult_one)
 
     def getIdempotents(self, idem_size = None):
         """Get the list of all idempotents."""
@@ -115,11 +115,13 @@ class PMC:
         return [Idempotent(self, data) for data in
                 itertools.combinations(range(self.num_pair), idem_size)]
 
-    def getStrandDiagrams(self, idem_size = None):
-        """Get the list of generators of the (full) strand algebra."""
-        if idem_size == None: idem_size = self.genus
-        algebra = self.getAlgebra(idem_size, mult_one = False)
+    def getStrandDiagrams(self, algebra):
+        """Get the list of generators of the strand algebra. algebra should be
+        of type StrandAlgebra.
+
+        """
         result = []
+        idem_size = algebra.idem_size
         def helper(l_idem, r_idem, strands, pos):
             # Both l_idem and r_idem are lists of pair ID's. The first
             # 'pos' of them are already uesd to generate strands or double
@@ -140,21 +142,13 @@ class PMC:
         for l_idem in idems:
             for r_idem in idems:
                 helper(list(l_idem), list(r_idem), [], 0)
+
+        # If mult_one is True, filter the generators
+        if algebra.mult_one is True:
+            result = [sd for sd in result
+                      if all([x <= 1 for x in sd.multiplicity])]
+
         return result
-
-    def getMultOneStrandDiagrams(self, idem_size = None):
-        """Get the list of generators of the multiplicity one strand algebra
-        (exclude those with multiplicity greater than one at some position).
-
-        """
-        allSDs = self.getStrandDiagrams(idem_size)
-        multOneSDs = []
-        algebra = self.getAlgebra(idem_size, mult_one = True)
-        for sd in allSDs:
-            if all([x <= 1 for x in sd.multiplicity]):
-                multOneSDs.append(
-                    StrandDiagram(algebra, sd.left_idem, sd.strands))
-        return multOneSDs
 
 def splitPMC(genus):
     """Returns the split pmc with a given genus."""
@@ -502,7 +496,7 @@ def unconnectSumStrandDiagram(sd, genus1):
 class StrandAlgebra(DGAlgebra):
     """Represents the strand algebra of a PMC."""
 
-    def __init__(self, ring, pmc, idem_size, mult_one = False):
+    def __init__(self, ring, pmc, idem_size, mult_one = MULT_ONE):
         """Specifies the PMC, size of idempotent, and whether this is a
         multiplicity one algebra.
 
@@ -537,44 +531,68 @@ class StrandAlgebra(DGAlgebra):
                              self.mult_one)
 
     @memorize
-    def diff(self, gen):
+    def diffRaw(self, gen):
+        """Returns a list of elements of the form ((s1, s2), diff_term), where
+        s1 < s2 are starting points of strands in gen that crosses, and
+        diff_term is a generator in gen.diff() obtained by uncrossing these two
+        strands. Together they specify all terms in gen.diff().
+
+        """
         target_maslov = gen.maslov() - 1
         cur_strands = gen.strands
-        result = [E0]
-        def appendCandidate(new_strands):
+        result = []
+        def appendCandidate(new_strands, s1, s2):
             # Same info except strands, then check grading
-            diff_term = StrandDiagram(self, gen.left_idem, new_strands,
-                                      gen.right_idem)
+            assert s1 < s2
+            diff_term = StrandDiagram(
+                self, gen.left_idem, new_strands, gen.right_idem)
             if diff_term.maslov() == target_maslov:
-                result[0] += diff_term.elt()
+                result.append(((s1, s2), diff_term))
 
         # Uncross two moving strands
-        for st1 in cur_strands:
-            for st2 in cur_strands:
-                if st1[0] < st2[0] and st1[1] > st2[1]:
+        for s1, t1 in cur_strands:
+            for s2, t2 in cur_strands:
+                if s1 < s2 and t1 > t2:
                     new_strands = list(cur_strands)
-                    new_strands.remove(st1)
-                    new_strands.remove(st2)
-                    new_strands.extend([(st1[0], st2[1]), (st2[0], st1[1])])
-                    appendCandidate(new_strands)
+                    new_strands.remove((s1, t1))
+                    new_strands.remove((s2, t2))
+                    new_strands.extend([(s1, t2), (s2, t1)])
+                    appendCandidate(new_strands, s1, s2)
 
         # Uncross a moving strand with a double horizontal
-        for st in cur_strands:
+        for s, t in cur_strands:
             for i in gen.double_hor:
                 for p in gen.pmc.pairs[i]:
-                    if st[0] <= p and p <= st[1]:
+                    if s <= p and p <= t:
                         new_strands = list(cur_strands)
-                        new_strands.remove(st)
-                        new_strands.extend([(st[0], p), (p, st[1])])
-                        appendCandidate(new_strands)
-        return result[0]
+                        new_strands.remove((s, t))
+                        new_strands.extend([(s, p), (p, t)])
+                        appendCandidate(new_strands, s, p)
+        return result
+
+    @memorize
+    def diff(self, gen):
+        result = E0
+        if self.ring is F2:
+            for (s1, s2), dgen_term in self.diffRaw(gen):
+                result += dgen_term.elt()
+        else:
+            return NotImplemented
+        return result
 
     @memorize
     def getGenerators(self):
-        if not self.mult_one:
-            return self.pmc.getStrandDiagrams(self.idem_size)
-        else:
-            return self.pmc.getMultOneStrandDiagrams(self.idem_size)
+        return self.pmc.getStrandDiagrams(self)
+
+    @memorize
+    def getGeneratorsForIdem(self, left_idem = None, right_idem = None):
+        """Returns the list of generators with the specified left and right
+        idempotents. Giving None as input means no constraints there.
+
+        """
+        return [gen for gen in self.getGenerators() if
+                (left_idem is None or gen.left_idem == left_idem) and
+                (right_idem is None or gen.right_idem == right_idem)]
 
     @memorize
     def getIdempotents(self):
@@ -584,21 +602,19 @@ class StrandAlgebra(DGAlgebra):
         return self.pmc.getIdempotents()
 
     @memorize
-    def multiply(self, gen1, gen2):
-        if not isinstance(gen1, StrandDiagram):
-            return NotImplemented
-        if not isinstance(gen2, StrandDiagram):
-            return NotImplemented
-        assert gen1.parent == self and gen2.parent == self, \
-            "Algebra not compatible."
+    def multiplyRaw(self, gen1, gen2):
+        """If gen1 and gen2 can be multiplied, return the generator that is
+        their product. Otherwise, return None.
+
+        """
         if gen1.right_idem != gen2.left_idem:
-            return E0
+            return None
         if self.mult_one:
             # Enforce the multiplicity one condition
             total_mult = [m1+m2 for m1, m2 in zip(gen1.multiplicity,
                                                   gen2.multiplicity)]
             if not all([x <= 1 for x in total_mult]):
-                return E0
+                return None
 
         pmc = gen1.pmc
         new_strands = []
@@ -614,7 +630,7 @@ class StrandAlgebra(DGAlgebra):
             else: # len(possible_match) == 1
                 sd2 = possible_match[0]
                 if sd2[0] != sd[1]:
-                    return E0
+                    return None
                 else:
                     new_strands.append((sd[0], sd2[1]))
                     strands_right.remove(sd2)
@@ -624,9 +640,26 @@ class StrandAlgebra(DGAlgebra):
                                   gen2.right_idem)
         if mult_term.getBigGrading() == \
                 gen1.getBigGrading() * gen2.getBigGrading():
-            return mult_term.elt()
+            return mult_term
         else:
+            return None
+
+    def multiply(self, gen1, gen2):
+        if not isinstance(gen1, StrandDiagram):
+            return NotImplemented
+        if not isinstance(gen2, StrandDiagram):
+            return NotImplemented
+        assert gen1.parent == self and gen2.parent == self, \
+            "Algebra not compatible."
+
+        prod_raw = self.multiplyRaw(gen1, gen2)
+        if prod_raw is None:
             return E0
+
+        if self.ring is F2:
+            return prod_raw.elt()
+        else:
+            return NotImplemented
 
 class StrandAlgebraElement(Element):
     """An element of strand algebra."""
