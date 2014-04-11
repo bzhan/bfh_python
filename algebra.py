@@ -867,3 +867,21 @@ def simplifyComplex(arrows, default_coeff = 0, find_homology_basis = False):
             cancelEdge(x, y)
 
     return arrows
+
+def findRankOverF2(num_row, num_col, entries):
+    """Find rank of a matrix over F2 with the given number of rows and columns.
+    entries is a list of pairs (i, j) with 0 <= i < num_row and 0 <= j < num_col
+    specifying where the matrix has 1's.
+
+    """
+    arrows = dict()
+    for i in range(num_row):
+        arrows[("R", i)] = dict()
+    for i in range(num_col):
+        arrows[("C", i)] = dict()
+    for i, j in entries:
+        arrows[("R", i)][("C", j)] = F2.one
+    arrows = simplifyComplex(arrows)
+    cancelled = num_row + num_col - len(arrows)
+    assert cancelled % 2 == 0
+    return cancelled / 2

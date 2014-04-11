@@ -2,6 +2,7 @@
 
 from signs import *
 from grading import DEFAULT_REFINEMENT, lowerRefinement
+from pmc import PMC
 from pmc import antipodalPMC, linearPMC, splitPMC
 from utility import ZZ
 import unittest
@@ -111,6 +112,12 @@ class PreStrandAlgebraTest(unittest.TestCase):
                             # Tests associativity of multiplication
                             self.assertEquals(
                                 (gen1 * gen2) * gen3, gen1 * (gen2 * gen3))
+
+class SignLinAlgTest(unittest.TestCase):
+    def testCreateRowSystem(self):
+        sign = SignLinAlg(StrandAlgebra(F2, antipodalPMC(2), idem_size = 2,
+                                        mult_one = True))
+        sign.createRowSystem()
 
 if __name__ == "__main__":
     unittest.main()

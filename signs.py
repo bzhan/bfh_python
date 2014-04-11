@@ -2,11 +2,13 @@
 
 from fractions import Fraction
 
+from algebra import findRankOverF2
 from algebra import DGAlgebra, Element, Generator
 from algebra import E0
 from grading import standardRefinement, standardRefinementForIdem
 from grading import DEFAULT_REFINEMENT
-from pmc import StrandDiagram
+from linalg import F2RowSystem
+from pmc import StrandAlgebra, StrandDiagram
 from utility import memorize
 from utility import F2
 
@@ -280,10 +282,6 @@ class PreStrandAlgebra(DGAlgebra):
         else:
             return self.multiplySign(gen1, gen2) * product
 
-    def grSign(self, gen):
-        """Returns (-1)^gr(gen), where gr is the absolute Z/2Z grading."""
-        return 1 - 2*self.abs_gr.getAbsGrading(gen)
-
     @memorize
     def diffSign(self, gen, n1, n2):
         """Returns the sign (+/-1) of the differential of gen when resolving the
@@ -397,3 +395,138 @@ class PreStrandAlgebra(DGAlgebra):
             return self.multiplySign(l1_b, l2_b) * \
                 self.multiplySign(a, l1_b) * \
                 self.multiplySign(self._multiplyRaw(a, l1_b), l2_b)
+
+class SignLinAlg():
+    """Try to obtain a sign convention by solving a linear algebra problem. """
+    def __init__(self, algebra):
+        self.algebra = algebra
+        self.abs_gr = AbsZ2Grading(algebra)
+
+    def grSign(self, gen):
+        """Returns (-1)^gr(gen), where gr is the absolute Z/2Z grading."""
+        return 1 - 2*self.abs_gr.getAbsGrading(gen)
+
+    def createRowSystem(self):
+        """Create row system. Each row represents either a multiplication or an
+        arrow in the differential. Each column represents one of the constraints
+        that must be satisfied.
+
+        """
+        all_gens = [gen for gen in self.algebra.getGenerators()
+                    if not gen.isIdempotent()]
+        print "Number of generators:", len(all_gens)
+        # Maps multiplication / differential to the column index
+        self.index = dict()
+        for gen1 in all_gens:
+            for gen2 in self.algebra.getGeneratorsForIdem(
+                    left_idem = gen1.right_idem):
+                if (not gen2.isIdempotent()) and gen1 * gen2 != 0:
+                    self.index[("M", gen1, gen2)] = len(self.index)
+        for gen in all_gens:
+            for dgen_term in gen.diff():
+                self.index[("D", gen, dgen_term)] = len(self.index)
+        num_row = len(self.index)
+        print "Number of operations:", num_row
+
+        # Linear combination of rows to look for.
+        expected_sums = []
+        # Pairs (i, j), zero-based indices indicating a_ij is one.
+        entries = []
+        # Current number of columns
+        num_col = 0
+
+        def addColumn(row_indices, num_col, expected_sum):
+            for row_index in row_indices:
+                entries.append((row_index, num_col))
+            expected_sums.append(expected_sum)            
+
+        # Now create row for each relation
+        for gen in all_gens:
+            # First part: d^2 = 0
+            # Create a map from terms in ddgen to list of terms in dgen
+            dd_to_d_map = dict()
+            for dgen in gen.diff():
+                for ddgen in dgen.diff():
+                    if ddgen not in dd_to_d_map:
+                        dd_to_d_map[ddgen] = []
+                    dd_to_d_map[ddgen].append(dgen)
+            # Now use that map to produce the relations in d^2=0
+            for ddgen, dgen_list in dd_to_d_map.items():
+                assert len(dgen_list) == 2
+                dgen1, dgen2 = dgen_list
+                c1, c2, c3, c4 = [self.index[("D", g1, g2)] for g1, g2 in
+                                  [(gen, dgen1), (gen, dgen2),
+                                   (dgen1, ddgen), (dgen2, ddgen)]]
+                addColumn([c1, c2, c3, c4], num_col, 1)
+                num_col += 1
+
+        for gen1 in all_gens:
+            for gen2 in self.algebra.getGeneratorsForIdem(
+                    left_idem = gen1.right_idem):
+                if gen2.isIdempotent() or gen1 * gen2 == 0:
+                    continue
+                c1 = self.index[("M", gen1, gen2)]
+                # Second part: d(ab) = da * b + (-1)^gr(a) a*db
+                if (gen1 * gen2).diff() != 0:
+                    for term in (gen1 * gen2).diff():
+                        c2 = self.index[("D", (gen1*gen2).getElt(), term)]
+                        for t1 in gen1.diff():
+                            if t1 * gen2 == term.elt():
+                                c3 = self.index[("D", gen1, t1)]
+                                c4 = self.index[("M", t1, gen2)]
+                                addColumn([c1, c2, c3, c4], num_col, 0)
+                                num_col += 1
+                        for t2 in gen2.diff():
+                            if gen1 * t2 == term.elt():
+                                c3 = self.index[("D", gen2, t2)]
+                                c4 = self.index[("M", gen1, t2)]
+                                addColumn([c1, c2, c3, c4], num_col,
+                                          self.abs_gr.getAbsGrading(gen1))
+                                num_col += 1
+                # Third part: (ab)c = a(bc)
+                for gen3 in self.algebra.getGeneratorsForIdem(
+                        left_idem = gen2.right_idem):
+                    if gen3.isIdempotent() or gen2 * gen3 == 0:
+                        continue
+                    if (gen1*gen2) * gen3 == 0:
+                        continue
+                    c2 = self.index[("M", (gen1*gen2).getElt(), gen3)]
+                    c3 = self.index[("M", gen2, gen3)]
+                    c4 = self.index[("M", gen1, (gen2*gen3).getElt())]
+                    addColumn([c1, c2, c3, c4], num_col, 0)
+                    num_col += 1
+
+        print "Number of constraints:", num_col
+
+        # Use the following to find a solution
+        # matrix = [[0] * num_col for i in range(num_row)]
+        # for i, j in entries:
+        #     matrix[i][j] = 1
+        # row_sys = F2RowSystem(matrix)
+        # comb = row_sys.getComb(expected_sums)
+        # assert comb is not None, "Cannot be solved"
+        # for op, index in self.index.items():
+        #     print op, comb[index]
+
+        # Use simplify method
+        row_rank = findRankOverF2(num_row, num_col, entries)
+        print "Rank:", row_rank
+
+        # Form row system of gauge equivalences
+        gen_index = dict()
+        for i in range(len(all_gens)):
+            gen_index[all_gens[i]] = i
+        # Pairs (i, j), zero-based indices indicating a_ij is one in gauge
+        # matrix.
+        gauge_entries = []
+
+        for op, index in self.index.items():
+            assert op[1] != op[2]
+            gauge_entries.append((index, gen_index[op[1]]))
+            gauge_entries.append((index, gen_index[op[2]]))
+            if op[0] == "M":
+                gauge_entries.append((index, gen_index[(op[1]*op[2]).getElt()]))
+
+        gauge_rank = findRankOverF2(num_row, len(all_gens), gauge_entries)
+        print "Rank of gauge equivalences:", gauge_rank
+        print "Free choice:", num_row - row_rank - gauge_rank
