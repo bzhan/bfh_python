@@ -435,10 +435,10 @@ class SignLinAlg():
         # Current number of columns
         num_col = 0
 
-        def addColumn(row_indices, num_col, expected_sum):
-            for row_index in row_indices:
-                entries.append((row_index, num_col))
-            expected_sums.append(expected_sum)            
+        def addColumn(ops, expected_sum):
+            for op in ops:
+                entries.append((self.index[op], num_col))
+            expected_sums.append(expected_sum)
 
         # Now create row for each relation
         for gen in all_gens:
@@ -454,10 +454,8 @@ class SignLinAlg():
             for ddgen, dgen_list in dd_to_d_map.items():
                 assert len(dgen_list) == 2
                 dgen1, dgen2 = dgen_list
-                c1, c2, c3, c4 = [self.index[("D", g1, g2)] for g1, g2 in
-                                  [(gen, dgen1), (gen, dgen2),
-                                   (dgen1, ddgen), (dgen2, ddgen)]]
-                addColumn([c1, c2, c3, c4], num_col, 1)
+                addColumn([("D", gen, dgen1), ("D", gen, dgen2),
+                           ("D", dgen1, ddgen), ("D", dgen2, ddgen)], 1)
                 num_col += 1
 
         for gen1 in all_gens:
@@ -465,22 +463,22 @@ class SignLinAlg():
                     left_idem = gen1.right_idem):
                 if gen2.isIdempotent() or gen1 * gen2 == 0:
                     continue
-                c1 = self.index[("M", gen1, gen2)]
                 # Second part: d(ab) = da * b + (-1)^gr(a) a*db
                 if (gen1 * gen2).diff() != 0:
-                    for term in (gen1 * gen2).diff():
-                        c2 = self.index[("D", (gen1*gen2).getElt(), term)]
-                        for t1 in gen1.diff():
-                            if t1 * gen2 == term.elt():
-                                c3 = self.index[("D", gen1, t1)]
-                                c4 = self.index[("M", t1, gen2)]
-                                addColumn([c1, c2, c3, c4], num_col, 0)
+                    for dgen12 in (gen1 * gen2).diff():
+                        for dgen1 in gen1.diff():
+                            if dgen1 * gen2 == dgen12.elt():
+                                addColumn([("M", gen1, gen2),
+                                           ("D", (gen1*gen2).getElt(), dgen12),
+                                           ("D", gen1, dgen1),
+                                           ("M", dgen1, gen2)], 0)
                                 num_col += 1
-                        for t2 in gen2.diff():
-                            if gen1 * t2 == term.elt():
-                                c3 = self.index[("D", gen2, t2)]
-                                c4 = self.index[("M", gen1, t2)]
-                                addColumn([c1, c2, c3, c4], num_col,
+                        for dgen2 in gen2.diff():
+                            if gen1 * dgen2 == dgen12.elt():
+                                addColumn([("M", gen1, gen2),
+                                           ("D", (gen1*gen2).getElt(), dgen12),
+                                           ("D", gen2, dgen2),
+                                           ("M", gen1, dgen2)],
                                           self.abs_gr.getAbsGrading(gen1))
                                 num_col += 1
                 # Third part: (ab)c = a(bc)
@@ -490,10 +488,10 @@ class SignLinAlg():
                         continue
                     if (gen1*gen2) * gen3 == 0:
                         continue
-                    c2 = self.index[("M", (gen1*gen2).getElt(), gen3)]
-                    c3 = self.index[("M", gen2, gen3)]
-                    c4 = self.index[("M", gen1, (gen2*gen3).getElt())]
-                    addColumn([c1, c2, c3, c4], num_col, 0)
+                    addColumn(
+                        [("M", gen1, gen2), ("M", (gen1*gen2).getElt(), gen3),
+                         ("M", gen2, gen3), ("M", gen1, (gen2*gen3).getElt())],
+                        0)
                     num_col += 1
 
         print "Number of constraints:", num_col
