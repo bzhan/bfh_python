@@ -192,14 +192,14 @@ class ExperimentalTest(unittest.TestCase):
             # Slide2
             [(0,1),(3,4),(6,7),(6,5),(2,3),(1,2),(3,2)]
             ]
-        for slides in cases[0:1]+cases[3:4]:
+        for slides in cases:
             # Convert (b_1, c_1) into arcslides and then DD structures
             cur_pmc = splitPMC(2)
             slides_dd = []
             for b1, c1 in slides:
                 arcslide = Arcslide(cur_pmc, b1, c1)
                 cur_pmc = arcslide.end_pmc
-                slides_dd.append(arcslide.getDDStructure(0))
+                slides_dd.append(arcslide.getDDStructure())
 
             # Tensor each of the DD structures onto d_start
             d_mid = d_start
@@ -210,9 +210,9 @@ class ExperimentalTest(unittest.TestCase):
 
             print "Case: %s" % slides
             print d_mid
-            print d_mid.gr_set.simplifiedSet()
-            for gen in d_mid.getGenerators():
-                print gen, d_mid.grading[gen].simplifiedElt()
+            # Rough check that this equals the original
+            self.assertEquals(len(d_mid), 1)
+            self.assertEquals(len(d_mid.getGenerators()[0].delta()), 2)
 
     def testTrefoilSurgery(self):
         """Computes HF for +1 and -1 surgery on left-handed trefoil. """
