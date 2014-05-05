@@ -394,6 +394,8 @@ class StrandDiagram(Generator):
         # Calculate right idempotent if necessary
         if right_idem is None:
             right_idem = self.strands.propagateRight(self.left_idem)
+        assert right_idem is not None, \
+            "Invalid init data for strand diagram: cannot propagate to right."
         self.right_idem = right_idem
         if not isinstance(self.right_idem, Idempotent):
             self.right_idem = Idempotent(self.pmc, self.right_idem)

@@ -230,6 +230,25 @@ class LocalIdempotent(tuple):
     def __repr__(self):
         return "(%s)" % ",".join(str(self.local_pmc.pairs[i]) for i in self)
 
+    def removeSingleHor(self, idems = None):
+        """Returns a new idempotent with single points removed.
+
+        If idems is None (default case): all single idempotents will be removed.
+        Otherwise, idems must be a list containing single idems to be removed.
+
+        """
+        return LocalIdempotent(
+            self.local_pmc, [i for i in self
+                             if len(self.local_pmc.pairs[i]) == 2 or
+                             (idems is not None and i not in idems)])
+
+    def toAlgElt(self):
+        """Get the local strand diagram corresponding to this idempotent (the
+        strand algebra is uniquely specified from the local PMC.
+
+        """
+        return LocalStrandDiagram(self.local_pmc.getAlgebra(), self, [])
+
 class LocalStrands(tuple):
     """Represents a fixed list of strands in a local PMC. Stored as a tuple of
     pairs.
@@ -525,6 +544,20 @@ def restrictStrandDiagram(pmc, sd, local_pmc, mapping):
     return LocalStrandDiagram(local_pmc.getAlgebra(),
                               local_left_idem, local_strands)
 
+def restrictIdempotent(pmc, idem, local_pmc, mapping):
+    """Restrict the given idempotent to the local_pmc, using mapping as the
+    dictionary from points in pmc to points in local_pmc.
+
+    """
+    local_idem = []
+    for pairid in idem:
+        p, q = pmc.pairs[pairid]
+        if p in mapping:
+            local_idem.append(local_pmc.pairid[mapping[p]])
+        elif q in mapping:
+            local_idem.append(local_pmc.pairid[mapping[q]])
+    return LocalIdempotent(local_pmc, local_idem)
+                              
 class LocalStrandAlgebra(DGAlgebra):
     """Represents the strand algebra of a local PMC."""
 

@@ -3,6 +3,7 @@
 from algebra import E0, TensorGenerator
 from dastructure import DAStructure, SimpleDAGenerator, SimpleDAStructure
 from dastructure import AddChordToDA
+from extendbyid import ExtendedDAStructure
 from hdiagram import getArcslideDiagram
 from linalg import F2RowSystem
 from localpmc import LocalIdempotent, LocalStrandAlgebra, LocalStrandDiagram
@@ -13,7 +14,7 @@ from utility import ACTION_LEFT, ACTION_RIGHT, F2
 import itertools
 from Queue import Queue
 
-class ArcslideDA(DAStructure):
+class ArcslideDA(ExtendedDAStructure):
     """Responsible for producing a type DA structure for an arcslide, using
     local actions.
 
@@ -33,16 +34,14 @@ class ArcslideDA(DAStructure):
         self.slide = slide
         self.pmc1, self.pmc2 = slide.start_pmc, slide.end_pmc
 
-        # Initiate with usual attributes of a DAStructure
-        DAStructure.__init__(self, F2, algebra1 = self.pmc1.getAlgebra(),
-                             algebra2 = self.pmc2.getAlgebra(),
-                             side1 = ACTION_LEFT, side2 = ACTION_RIGHT)
-
         n = self.pmc1.n
         b1, c1, c2 = slide.b1, slide.c1, slide.c2
         b1p, c1p, c2p = [slide.to_r[p] for p in b1, c1, c2]
 
         # Note intervals (start, end) with start > end are ignored.
+        # patterns_base specifies one of the four base patterns of arcslides.
+        # translator gives the mapping between points in the base pattern and
+        # points in the pattern at hand.
         if b1 == c1 + 1:  # downward
             if c2 == c1 + 2:  # short underslide downward
                 local_cut1, outer_cut1, local_cut2, outer_cut2 = (
@@ -172,15 +171,12 @@ class ArcslideDA(DAStructure):
                     tuple([coeff.removeSingleHor()
                            for coeff in pattern[:prefix_len]]))
 
-        # Compute the set of generators, and add to itself
-        dd_idems = self.slide.getIdems()
-        da_idems = [(l_idem, r_idem.opp().comp())
-                    for l_idem, r_idem in dd_idems]
-        self.generators = set()
-        for i in range(len(da_idems)):
-            l_idem, r_idem = da_idems[i]
-            self.generators.add(
-                SimpleDAGenerator(self, l_idem, r_idem, "%d" % i))
+        # Initiate the ExtendedDAStructure
+        ExtendedDAStructure.__init__(
+            self, self.getLocalDAStructure(), self.outer_pmc1, self.pmc1,
+            self.pmc2, self.mapping1, self.outer_mapping1, self.mapping2,
+            self.outer_mapping2)
+
         # With generators set, add grading. Any generator can serve as base_gen
         for gen in self.generators:
             base_gen = gen
@@ -306,75 +302,6 @@ class ArcslideDA(DAStructure):
 
     def getGenerators(self):
         return list(self.generators)
-
-    def delta(self, MGen, algGens):
-        # Idempotent must match
-        if any([algGens[i].right_idem != algGens[i+1].left_idem
-                for i in range(len(algGens)-1)]):
-            return E0
-        if any([alg.isIdempotent() for alg in algGens]):
-            return E0
-
-        result = E0
-        mod_gens = self.getGenerators()
-        # Take care of case with zero algebra inputs
-        if len(algGens) == 0:
-            short_chord = [tuple(sorted([self.slide.b1, self.slide.c1]))]
-            st = Strands(self.pmc1, short_chord)
-            if st.leftCompatible(MGen.idem1):
-                alg_d = StrandDiagram(self.algebra1, MGen.idem1, st)
-                for y in mod_gens:
-                    if ArcslideDA.idemMatchDA(MGen, y, alg_d, []):
-                        result += 1 * TensorGenerator((alg_d, y), self.AtensorM)
-            return result
-
-        # Take care of remaining case
-        if MGen.idem2 != algGens[0].left_idem:
-            return E0
-        # - Make sure the outside multiplies correctly
-        prod_d = restrictStrandDiagram(self.pmc2, algGens[0],
-                                       self.outer_pmc2, self.outer_mapping2)
-        has_product = True
-        for alg in algGens[1:]:
-            prod_d = prod_d.parent.multiplyGeneral(
-                prod_d, restrictStrandDiagram(
-                    self.pmc2, alg, self.outer_pmc2, self.outer_mapping2),
-                False)  # strict_idems = False
-            if prod_d == 0:
-                has_product = False
-                break
-            else:
-                prod_d = prod_d.getElt()
-        if not has_product:
-            return E0
-
-        # - Now check the inside
-        alg_local = tuple([restrictStrandDiagram(
-            self.pmc2, alg, self.local_pmc2, self.mapping2) for alg in algGens])
-        pattern = ArcslideDA.adjustSingleHors(alg_local)
-        if pattern not in self.arrow_patterns:
-            return E0
-        for local_d in self.arrow_patterns[pattern]:
-            alg_d = local_d.join(prod_d.removeSingleHor(), self.pmc1,
-                                 self.mapping1, self.outer_mapping1)
-            if alg_d is None:
-                continue
-            for y in mod_gens:
-                if ArcslideDA.idemMatchDA(MGen, y, alg_d, algGens):
-                    result += 1 * TensorGenerator((alg_d, y), self.AtensorM)
-        return result
-
-    def deltaPrefix(self, MGen, algGens):
-        if len(algGens) == 0:
-            return True
-        if MGen.idem2 != algGens[0].left_idem:
-            return False
-        # Note: Testing shows probably not worth it to multipliy outside.
-        # Test inside.
-        alg_local = [restrictStrandDiagram(
-            self.pmc2, alg, self.local_pmc2, self.mapping2) for alg in algGens]
-        alg_local = tuple([alg.removeSingleHor() for alg in alg_local])
-        return alg_local in self.strict_prefix_set
 
     def getLocalDAStructure(self):
         """Returns the local type DA structure associated to slide. Mainly for

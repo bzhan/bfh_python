@@ -118,6 +118,14 @@ class DAStructure(FreeModule):
         """
         return 1*TensorGenerator((AGen, MGen), self.AtensorM)
 
+    def toSimpleDAStructure(self):
+        """Using delta and deltaPrefix, product a simple DA structure (with
+        explicit DA action). Does not work when there are infinitely many
+        actions.
+
+        """
+        return NotImplementedError("toSimpleDAStructure not yet implemented.")
+
     def tensorD(self, dstr):
         """Compute the box tensor product DA * D of this bimodule with the given
         type D structure. Returns the resulting type D structure. Uses delta()
@@ -287,7 +295,10 @@ class SimpleDAStructure(DAStructure):
                 del self.da_action[source]
 
     def delta(self, MGen, algGens):
-        if (MGen, algGens) not in self.da_action:
+        if len(algGens) == 1 and algGens[0].isIdempotent() and \
+           algGens[0].left_idem == MGen.idem2:
+            return MGen.idem1.toAlgElt() * MGen
+        elif (MGen, algGens) not in self.da_action:
             return E0
         else:
             return self.da_action[(MGen, algGens)]
@@ -301,7 +312,7 @@ class SimpleDAStructure(DAStructure):
         return False
 
     def toDDStructure(self):
-        """ Convert this to a type DD structure over algebra1 and cobar of
+        """Convert this to a type DD structure over algebra1 and cobar of
         algebra2.
 
         """
