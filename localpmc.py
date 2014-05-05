@@ -497,6 +497,7 @@ def restrictStrandDiagram(pmc, sd, local_pmc, mapping):
     dictionary from points in pmc to points in local_pmc.
 
     """
+    assert sd.parent.pmc == pmc
     # First construct the left idempotent.
     local_left_idem = []
     for (start, end) in sd.strands:

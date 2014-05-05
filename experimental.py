@@ -10,7 +10,6 @@ from dstructure import SimpleDStructure, SimpleDGenerator
 from dstructure import zeroTypeD
 from ddstructure import SimpleDDGenerator, SimpleDDStructure
 from ddstructure import DDStrFromDStr
-from dastructure import DAStrFromChords
 from utility import DEFAULT_GRADING, F2, SMALL_GRADING
 import itertools
 import unittest

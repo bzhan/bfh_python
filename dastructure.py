@@ -124,7 +124,48 @@ class DAStructure(FreeModule):
         actions.
 
         """
-        return NotImplementedError("toSimpleDAStructure not yet implemented.")
+        assert self.side1 == ACTION_LEFT and self.side2 == ACTION_RIGHT
+        dastr = SimpleDAStructure(F2, self.algebra1, self.algebra2,
+                                  side1 = ACTION_LEFT, side2 = ACTION_RIGHT)
+        gen_map = dict()
+        for gen in self.getGenerators():
+            gen_map[gen] = SimpleDAGenerator(
+                dastr, gen.idem1, gen.idem2, gen.name)
+            dastr.addGenerator(gen_map[gen])
+
+        alg2_gens = [alg_gen for alg_gen in self.algebra2.getGenerators()
+                     if not alg_gen.isIdempotent()]
+
+        def search(start_gen, cur_coeffs_a):
+            """Search for terms in the action, starting from the generator
+            start_gen, and with the current list of A-side inputs cur_coeffs_a
+            (to be possibly extended).
+
+            """
+            cur_delta = self.delta(start_gen, cur_coeffs_a)
+            for (coeff_d, gen_to), ring_coeff in cur_delta.items():
+                dastr.addDelta(gen_map[start_gen], gen_map[gen_to], coeff_d,
+                               cur_coeffs_a, ring_coeff)
+            if self.deltaPrefix(start_gen, cur_coeffs_a):
+                for coeff_a in alg2_gens:
+                    search(start_gen, cur_coeffs_a + (coeff_a,))
+
+        for gen in self.getGenerators():
+            search(gen, ())
+
+        # Copy over Heegaard diagram and grading information
+        if hasattr(self, "hdiagram"):
+            dastr.hdiagram = self.hdiagram
+            dastr.hdiagram_gen_map = dict()
+            for dagen, hgen in self.hdiagram_gen_map.items():
+                dastr.hdiagram_gen_map[gen_map[dagen]] = hgen
+        if hasattr(self, "gr_set"):
+            dastr.gr_set = self.gr_set
+            dastr.grading = dict()
+            for gen, gr in self.grading.items():
+                dastr.grading[gen_map[gen]] = gr
+
+        return dastr
 
     def tensorD(self, dstr):
         """Compute the box tensor product DA * D of this bimodule with the given
@@ -417,52 +458,4 @@ def identityDA(pmc):
         base_gen = gen
         break
     dastr.registerHDiagram(getIdentityDiagram(pmc), base_gen)
-    return dastr
-
-def AddChordToDA(dastr, coeff_d, coeffs_a):
-    alg1 = dastr.algebra1
-    alg2 = dastr.algebra2
-    gen_set = dastr.getGenerators()
-    for x in gen_set:
-        for y in gen_set:
-            if alg1.mult_one and not coeff_d.isMultOne():
-                continue
-            if alg2.mult_one and \
-               not all([coeff_a.isMultOne() for coeff_a in coeffs_a]):
-                continue
-            if not coeff_d.idemCompatible(x.idem1, y.idem1):
-                continue
-            alg_d = StrandDiagram(alg1, x.idem1, coeff_d)
-            # Now test that the sequence of A inputs match the idempotents.
-            # Construct the algebra inputs at the same time.
-            alg_a = []
-            cur_idem = x.idem2
-            idem_ok = True
-            for coeff_a in coeffs_a:
-                next_idem = coeff_a.propagateRight(cur_idem)
-                if next_idem is None:
-                    idem_ok = False
-                    break
-                alg_a.append(StrandDiagram(alg2, cur_idem, coeff_a))
-                cur_idem = next_idem
-            if idem_ok and cur_idem == y.idem2:
-                dastr.addDelta(x, y, alg_d, alg_a, 1)
-
-def DAStrFromChords(alg1, alg2, idem_pairs, chord_pairs):
-    """Construct type DA structure from list of idempotent pairs and chord
-    pairs. This is usually used to construct the 'initial' type DA structure,
-    to be completed by DAStrFromBasis.
-    - idem_pairs is list of pairs of Idempotent. Left idempotent is D side,
-    right idempotent is A side.
-    - chord_pairs is list of pairs (coeff_d, coeffs_a), where coeff_d is of
-    class Strands (for D side output), and coeffs_a is a list of Strands (for A
-    side input).
-
-    """
-    dastr = SimpleDAStructure(F2, alg1, alg2)
-    for i in range(len(idem_pairs)):
-        dastr.addGenerator(SimpleDAGenerator(
-            dastr, idem_pairs[i][0], idem_pairs[i][1], i))
-    for coeff_d, coeffs_a in chord_pairs:
-        AddChordToDA(dastr, coeff_d, coeffs_a)
     return dastr

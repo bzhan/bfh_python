@@ -26,7 +26,7 @@ class ArcslideDATest(unittest.TestCase):
         ]
         for slide in slides_to_test:
             print slide
-            dastr = ArcslideDA(slide).getDAStructure()
+            dastr = ArcslideDA(slide).toSimpleDAStructure()
             self.assertTrue(dastr.testDelta())
 
     def testShortUnderslideDownLocal(self):
@@ -59,7 +59,7 @@ class ArcslideDATest(unittest.TestCase):
         ]
         for slide in slides_to_test:
             print slide
-            dastr = ArcslideDA(slide).getDAStructure()
+            dastr = ArcslideDA(slide).toSimpleDAStructure()
             self.assertTrue(dastr.testDelta())
 
     def testGeneralUnderslideDownLocal(self):
@@ -87,7 +87,7 @@ class ArcslideDATest(unittest.TestCase):
         ]
         for slide in slides_to_test:
             print slide
-            dastr = ArcslideDA(slide).getDAStructure()
+            dastr = ArcslideDA(slide).toSimpleDAStructure()
             self.assertTrue(dastr.testDelta())
 
     def testGeneralOverslideDownLocal(self):
@@ -118,7 +118,7 @@ class ArcslideDATest(unittest.TestCase):
         ]
         for slide in slides_to_test:
             print slide
-            dastr = ArcslideDA(slide).getDAStructure()
+            dastr = ArcslideDA(slide).toSimpleDAStructure()
             self.assertTrue(dastr.testDelta())
 
     def testShortUnderslideUpLocal(self):
@@ -151,7 +151,7 @@ class ArcslideDATest(unittest.TestCase):
         ]
         for slide in slides_to_test:
             print slide
-            dastr = ArcslideDA(slide).getDAStructure()
+            dastr = ArcslideDA(slide).toSimpleDAStructure()
             self.assertTrue(dastr.testDelta())
 
     def testGeneralUnderslideUpLocal(self):
@@ -179,7 +179,7 @@ class ArcslideDATest(unittest.TestCase):
         ]
         for slide in slides_to_test:
             print slide
-            dastr = ArcslideDA(slide).getDAStructure()
+            dastr = ArcslideDA(slide).toSimpleDAStructure()
             self.assertTrue(dastr.testDelta())
 
     def testGeneralOverslideUpLocal(self):
@@ -192,30 +192,6 @@ class ArcslideDATest(unittest.TestCase):
         for slide in slides_to_test:
             local_dastr = ArcslideDA(slide).getLocalDAStructure()
             self.assertTrue(local_dastr.testDelta())
-
-    def testDeltaAndPrefix(self):
-        # Rough test for the correctness of delta() and deltaPrefix().
-        slides_to_test = [
-            Arcslide(splitPMC(2), 1, 0),
-            Arcslide(antipodalPMC(2), 1, 0),
-            Arcslide(splitPMC(2), 3, 2),
-            Arcslide(splitPMC(2), 1, 2),
-            Arcslide(antipodalPMC(2), 3, 4),
-            Arcslide(splitPMC(2), 3, 4),
-        ]
-        for slide in slides_to_test:
-            slide_da = ArcslideDA(slide)
-            dastr = slide_da.getDAStructure()
-            for (gen_from, coeffs_a), target in dastr.da_action.items():
-                # Find generator in slide_da matching that of dastr
-                ori_gen = None
-                for gen in slide_da.getGenerators():
-                    if gen.idem1 == gen_from.idem1 and \
-                       gen.idem2 == gen_from.idem2:
-                        ori_gen = gen
-                assert slide_da.delta(ori_gen, coeffs_a) != E0
-                for i in range(len(coeffs_a)):
-                    assert slide_da.deltaPrefix(ori_gen, coeffs_a[:i])
 
     def testAutoCompleteArcslide(self):
         def run_test(slide, d_side_order, intervals, single_idems):
@@ -288,7 +264,7 @@ class ArcslideDATest(unittest.TestCase):
         ]
         for slide in slides_to_test:
             dastr = ArcslideDA(slide)
-            dastr.getDAStructure().checkGrading()
+            dastr.toSimpleDAStructure().checkGrading()
 
 class TensorTest(unittest.TestCase):
     def testDATensorD(self):

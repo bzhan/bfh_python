@@ -2,7 +2,6 @@
 
 from algebra import E0, TensorGenerator
 from dastructure import DAStructure, SimpleDAGenerator, SimpleDAStructure
-from dastructure import AddChordToDA
 from extendbyid import ExtendedDAStructure
 from hdiagram import getArcslideDiagram
 from linalg import F2RowSystem
@@ -196,109 +195,6 @@ class ArcslideDA(ExtendedDAStructure):
         else:
             return x.idem2 == coeffs_a[0].left_idem and \
                 y.idem2 == coeffs_a[-1].right_idem
-
-    @staticmethod
-    def adjustSingleHors(coeffs_a):
-        """Given a tuple of A-side inputs, delete single idempotents from inputs
-        in a best effort to make the idempotents match.
-
-        """
-        coeffs_a = list(coeffs_a)
-        # Remove single horizontals that cause mismatch between adjacent
-        # idempotents.
-        while not all([coeffs_a[i].right_idem == coeffs_a[i+1].left_idem
-                       for i in range(len(coeffs_a)-1)]):
-            changed = False  # Must modify something on each run through
-            for i in range(len(coeffs_a)-1):
-                if coeffs_a[i].right_idem == coeffs_a[i+1].left_idem:
-                    continue
-                for idem in coeffs_a[i].right_idem:
-                    if idem not in coeffs_a[i+1].left_idem and \
-                       idem in coeffs_a[i].single_hor:
-                        coeffs_a[i] = coeffs_a[i].removeSingleHor([idem])
-                        changed = True
-                for idem in coeffs_a[i+1].left_idem:
-                    if idem not in coeffs_a[i].right_idem and \
-                       idem in coeffs_a[i+1].single_hor:
-                        coeffs_a[i+1] = coeffs_a[i+1].removeSingleHor([idem])
-                        changed = True
-            assert changed
-        return tuple(coeffs_a)
-
-    def getDAStructure(self):
-        """Returns the simple type DA structure corresponding to slide."""
-        dastr = SimpleDAStructure(F2, self.algebra1, self.algebra2)
-        for gen in self.getGenerators():
-            dastr.addGenerator(SimpleDAGenerator(
-                dastr, gen.idem1, gen.idem2, gen.name))
-
-        # Get gradings from Heegaard diagram
-        for gen in dastr.getGenerators():
-            base_gen = gen
-            break
-        dastr.registerHDiagram(getArcslideDiagram(self.slide), base_gen)
-
-        alg1_gens = self.algebra1.getGenerators()
-        alg2_gens = self.algebra2.getGenerators()
-        mod_gens = dastr.getGenerators()
-
-        # Add action with zero algebra input
-        short_chord = [tuple(sorted([self.slide.b1, self.slide.c1]))]
-        AddChordToDA(dastr, Strands(self.pmc1, short_chord), [])
-
-        def search(cur_list, cur_list_local, cur_prod_d):
-            """Find arrows matching one of the local actions by recursively
-            searching through possible lists of algebra inputs. The parameters
-            are:
-            - cur_list: current list of algebra inputs.
-            - cur_list_local: restrictions of current list of algebra inputs to
-              the local PMC. Must match the prefix of one of the local patterns.
-            - cur_prod_d: product of the restrictions of algebra generators to
-              the outside local PMC. So named since it equals the restriction of
-              the D-side output to the outside local PMC. Must not be None,
-              except at the beginning (when cur_list and cur_list_local are
-              empty).
-
-            """
-            for cur_a in alg2_gens:
-                if cur_a.isIdempotent():
-                    continue
-                if len(cur_list) > 0 and \
-                   cur_list[-1].right_idem != cur_a.left_idem:
-                    continue
-                new_list = cur_list + (cur_a,)
-                new_list_local = cur_list_local + (restrictStrandDiagram(
-                    self.pmc2, cur_a, self.local_pmc2, self.mapping2),)
-                outer_a = restrictStrandDiagram(
-                    self.pmc2, cur_a, self.outer_pmc2, self.outer_mapping2)
-                # Compute product on the outside
-                if cur_prod_d is None:
-                    new_prod_d = 1 * outer_a
-                else:
-                    new_prod_d = cur_prod_d.parent.multiplyGeneral(
-                        cur_prod_d, outer_a, False)  # strict_idems = False
-                if new_prod_d == 0:
-                    continue
-                new_prod_d = new_prod_d.getElt()
-                # Local patterns match exactly one of the arrows
-                pattern = ArcslideDA.adjustSingleHors(new_list_local)
-                if pattern in self.arrow_patterns:
-                    for local_d in self.arrow_patterns[pattern]:
-                        alg_d = local_d.join(
-                            new_prod_d.removeSingleHor(), self.pmc1,
-                            self.mapping1, self.outer_mapping1)
-                        if alg_d is None:
-                            continue
-                        for x, y in itertools.product(mod_gens, mod_gens):
-                            if ArcslideDA.idemMatchDA(x, y, alg_d, new_list):
-                                dastr.addDelta(x, y, alg_d, new_list, 1)
-                # Local patterns match the prefix of one of the arrows
-                if tuple([coeff.removeSingleHor() for coeff in new_list_local
-                      ]) in self.strict_prefix_set:
-                    search(new_list, new_list_local, new_prod_d)
-
-        search((), (), None)
-        return dastr
 
     def getGenerators(self):
         return list(self.generators)

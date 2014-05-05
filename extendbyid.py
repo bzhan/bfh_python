@@ -162,6 +162,8 @@ class ExtendedDAStructure(DAStructure):
             self.pmc2, alg, self.local_pmc2, self.mapping2) for alg in algGens])
         (idem_local, alg_local) = ExtendedDAStructure.adjustSingleHors(
             idem_local, alg_local)
+        if idem_local not in self.local_idem_to_gen:
+            return E0
         local_MGen = self.local_idem_to_gen[idem_local]
         local_delta = self.local_da.delta(local_MGen, alg_local)
         for (local_d, local_y), ring_coeff in local_delta.items():
