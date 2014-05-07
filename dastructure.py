@@ -345,12 +345,14 @@ class SimpleDAStructure(DAStructure):
             return self.da_action[(MGen, algGens)]
 
     def deltaPrefix(self, MGen, algGens):
-        # Very inefficient implementation.
-        for (gen_from, coeffs_a), target in self.da_action.items():
-            if MGen == gen_from and len(algGens) < len(coeffs_a) and \
-               algGens == coeffs_a[:len(algGens)]:
-                return True
-        return False
+        # Should be called only after all addDelta has completed
+        if not hasattr(self, "strict_prefix"):
+            self.strict_prefix = set()
+            for (gen_from, coeffs_a), target in self.da_action.items():
+                for i in range(len(coeffs_a)):
+                    self.strict_prefix.add((gen_from, tuple(coeffs_a[0:i])))
+
+        return (MGen, algGens) in self.strict_prefix
 
     def toDDStructure(self):
         """Convert this to a type DD structure over algebra1 and cobar of

@@ -9,6 +9,7 @@ from algebra import E0
 from pmc import Strands, StrandDiagram
 from utility import memorize, subset
 from utility import F2
+import itertools
 
 class LocalPMC:
     """Represents a pointed matched circle with boundaries and unmatched
@@ -97,6 +98,18 @@ class LocalPMC:
     def getAlgebra(self):
         """Returns the local strand algebra for this local PMC."""
         return LocalStrandAlgebra(F2, self)
+
+    def getSingleIdems(self):
+        """Return the list of indices of pairs / single points that are single
+        points.
+
+        """
+        return [i for i in range(self.num_pair) if len(self.pairs[i]) == 1]
+
+    def getIdempotents(self):
+        """Get the list of all idempotents (no restriction on size)."""
+        return [LocalIdempotent(self, data) for sz in range(self.num_pair+1)
+                for data in itertools.combinations(range(self.num_pair), sz)]
 
     def getStrandDiagrams(self):
         """Returns the list of generators of the local strand algebra. Note we
@@ -248,6 +261,11 @@ class LocalIdempotent(tuple):
 
         """
         return LocalStrandDiagram(self.local_pmc.getAlgebra(), self, [])
+
+    def join(self, idem2, pmc, mapping1, mapping2):
+        """Join with another local idempotent. """
+        return self.toAlgElt().join(idem2.toAlgElt(), pmc,
+                                    mapping1, mapping2).left_idem
 
 class LocalStrands(tuple):
     """Represents a fixed list of strands in a local PMC. Stored as a tuple of
@@ -605,14 +623,7 @@ class LocalStrandAlgebra(DGAlgebra):
         return self.local_pmc.getStrandDiagrams()
 
     @memorize
-    def multiplyGeneral(self, gen1, gen2, strict_idems):
-        """Implement a multiplication function taking an additional boolean
-        parameter strict_idems, that specifies whether to strictly enforce the
-        condition that the right idempotent of gen1 equals the left idempotent
-        of gen2. This condition should usually be enforced, except when
-        multiplying the outside strand diagrams when extending by identity.
-
-        """
+    def multiply(self, gen1, gen2):
         if not isinstance(gen1, LocalStrandDiagram):
             return NotImplemented
         if not isinstance(gen2, LocalStrandDiagram):
@@ -620,23 +631,10 @@ class LocalStrandAlgebra(DGAlgebra):
         assert gen1.parent == self and gen2.parent == self, \
             "Algebra not compatible."
 
-        pmc = self.local_pmc
-
-        # If strict_idems is True, enforce this condition
-        if strict_idems and gen1.right_idem != gen2.left_idem:
+        if gen1.right_idem != gen2.left_idem:
             return E0
 
-        # Otherwise we do not require idempotent to match exactly, but only for
-        # moving strands and double horizontals.
-        for mid_idem in \
-            [pmc.pairid[q] for p, q in gen1.strands] + list(gen1.double_hor):
-            if mid_idem != -1 and mid_idem not in gen2.left_idem:
-                return E0
-        for mid_idem in \
-            [pmc.pairid[p] for p, q in gen2.strands] + list(gen2.double_hor):
-            if mid_idem != -1 and mid_idem not in gen1.right_idem:
-                return E0
-
+        pmc = self.local_pmc
         # Multiplicity-one condition
         total_mult = [m1+m2 for m1, m2 in zip(gen1.multiplicity,
                                               gen2.multiplicity)]
@@ -666,17 +664,6 @@ class LocalStrandAlgebra(DGAlgebra):
                     strands_right.remove(sd2)
 
         new_strands.extend(strands_right)
-        left_idem = list(gen1.left_idem)
-        # Remove single horizontal strands that is not matched at right, either
-        # by moving or horizontal strands
-        for i in gen1.single_hor:
-            if i not in gen2.single_hor and \
-               all([i != pmc.pairid[start] for start, end in new_strands]):
-                left_idem.remove(i)
-
         # Since we are in the multiplicity-one case, no need to worry about
         # double-crossing. Can return now.
-        return LocalStrandDiagram(self, left_idem, new_strands).elt()
-
-    def multiply(self, gen1, gen2):
-        return self.multiplyGeneral(gen1, gen2, True)  # strict_idems = True
+        return LocalStrandDiagram(self, gen1.left_idem, new_strands).elt()
