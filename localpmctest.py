@@ -129,22 +129,45 @@ class LocalStrandDiagramTest(unittest.TestCase):
         sd2 = pmc1.sd([1, (0, 2)])    
         self.assertEqual(len(sd2.factor()), 2)
 
+class PMCSplittingTest(unittest.TestCase):
+    def testRestrictPMC(self):
+        pmc1 = splitPMC(1)
+        pmc2 = splitPMC(2)
+        self.assertEqual(PMCSplitting.restrictPMC(pmc1, [(0, 2)]),
+                         (LocalPMC(4, [(0, 2), (1,)], [3]), {0:0, 1:1, 2:2}))
+        self.assertEqual(PMCSplitting.restrictPMC(pmc1, [(1, 3)]),
+                         (LocalPMC(4, [(1, 3), (2,)], [0]), {1:1, 2:2, 3:3}))
+        self.assertEqual(PMCSplitting.restrictPMC(pmc2, [(5, 7)]),
+                         (LocalPMC(4, [(1, 3), (2,)], [0]), {5:1, 6:2, 7:3}))
+        # Restriction is (0*-1-2*) (3*-4-5*), with 2 and 4 paired
+        self.assertEqual(PMCSplitting.restrictPMC(pmc2, [(4, 4), (6, 6)]),
+                         (LocalPMC(6, [(1, 4)], [0, 2, 3, 5]), {4:1, 6:4}))
+
+    def testComplementIntervals(self):
+        self.assertEquals(
+            PMCSplitting.complementIntervals(splitPMC(2), [(0, 2), (6, 6)]),
+            [(3, 5), (7, 7)])
+
     def testJoin(self):
         pmc = splitPMC(2)
-        # Restriction is (0-1-2-3*), (4*-5-6*), where 0 and 2 are paired
+
+        # Local restriction is (0-1-2-3*), (4*-5-6*), where 0 and 2 are paired
         # (pair-id = 0), and 1, 5 have pair-id 1 and 2, respectively.
-        local_pmc1, mapping1 = restrictPMC(pmc, [(0, 2), (6, 6)])
-        # Restriction is (0*-1-2-3-4*), (5*-6), where 3 and 6 are paired
+        # Outer restriction is (0*-1-2-3-4*), (5*-6), where 3 and 6 are paired
         # (pair-id = 2), and 1, 2 have pair-id 0 and 1, respectively.
-        local_pmc2, mapping2 = restrictPMC(pmc, [(3, 5), (7, 7)])
+
         # Correspondence between points in pmc and local_pmc1/2:
-        #        pmc - 0 1 2      3 4 5      6      7
-        # local_pmc1 - 0 1 2 3*           4* 5 6*
-        # local_pmc2 -         0* 1 2 3 4*       5* 6
+        #       pmc - 0 1 2      3 4 5      6      7
+        # local_pmc - 0 1 2 3*           4* 5 6*
+        # outer_pmc -         0* 1 2 3 4*       5* 6
+        splitting = PMCSplitting(pmc, [(0, 2), (6, 6)])
+
+        local_pmc = splitting.local_pmc
+        outer_pmc = splitting.outer_pmc
 
         # Format is as follows:
-        # - input to local_pmc1.sd
-        # - input to local_pmc2.sd
+        # - input to local_pmc.sd
+        # - input to outer_pmc.sd
         # - input to pmc.sd. None indicates join should fail.
         test_data = [
             # One strand
@@ -172,98 +195,65 @@ class LocalStrandDiagramTest(unittest.TestCase):
             ([(0, 1),(1, 3)], [(0, 1)], None)
         ]
         for sd1, sd2, sd_total in test_data:
-            # print idem1, sd1, idem2, sd2, sd_total
-            joined_sd = local_pmc1.sd(sd1).join(
-                local_pmc2.sd(sd2), pmc, mapping1, mapping2)
+            joined_sd = splitting.joinStrandDiagram(local_pmc.sd(sd1),
+                                                    outer_pmc.sd(sd2))
             if sd_total == None:
                 self.assertEqual(joined_sd, None)
             else:
                 self.assertEqual(joined_sd, pmc.sd(sd_total))
 
-class RestrictionsTest(unittest.TestCase):
-    def testRestrictPMC(self):
-        pmc1 = splitPMC(1)
-        pmc2 = splitPMC(2)
-        self.assertEqual(restrictPMC(pmc1, [(0, 2)]),
-                         (LocalPMC(4, [(0, 2), (1,)], [3]), {0:0, 1:1, 2:2}))
-        self.assertEqual(restrictPMC(pmc1, [(1, 3)]),
-                         (LocalPMC(4, [(1, 3), (2,)], [0]), {1:1, 2:2, 3:3}))
-        self.assertEqual(restrictPMC(pmc2, [(5, 7)]),
-                         (LocalPMC(4, [(1, 3), (2,)], [0]), {5:1, 6:2, 7:3}))
-        # Restriction is (0*-1-2*) (3*-4-5*), with 2 and 4 paired
-        self.assertEqual(restrictPMC(pmc2, [(4, 4), (6, 6)]),
-                         (LocalPMC(6, [(1, 4)], [0, 2, 3, 5]), {4:1, 6:4}))
-
     def testRestrictStrandDiagram(self):
         # First test case: one local PMC at the boundary
         # local_pmc1 is 0-1-2-3*, where 0 and 2 are paired.
-        pmc1 = splitPMC(2)
-        local_pmc1, mapping1 = restrictPMC(pmc1, [(0, 2)])
-        self.assertEqual(restrictStrandDiagram(pmc1, pmc1.sd([(0, 1)]),
-                                               local_pmc1, mapping1),
-                         local_pmc1.sd([(0, 1)]))
-        self.assertEqual(restrictStrandDiagram(pmc1, pmc1.sd([(0, 5)]),
-                                               local_pmc1, mapping1),
-                         local_pmc1.sd([(0, 3)]))
-        self.assertEqual(restrictStrandDiagram(pmc1, pmc1.sd([3, (0, 5)]),
-                                               local_pmc1, mapping1),
-                         local_pmc1.sd([1, (0, 3)]))
-        self.assertEqual(restrictStrandDiagram(pmc1, pmc1.sd([3, (4, 5)]),
-                                               local_pmc1, mapping1),
-                         local_pmc1.sd([1]))
-        self.assertEqual(restrictStrandDiagram(pmc1, pmc1.sd([(2, 5)]),
-                                               local_pmc1, mapping1),
-                         local_pmc1.sd([(2, 3)]))
-        self.assertEqual(restrictStrandDiagram(pmc1, pmc1.sd([0, (1, 3)]),
-                                               local_pmc1, mapping1),
-                         local_pmc1.sd([0, (1, 3)]))
+        pmc = splitPMC(2)
+        splitting1 = PMCSplitting(pmc, [(0, 2)])
+        local_pmc1 = splitting1.local_pmc
+        for full_sd, local_sd in [
+            ([(0, 1)], [(0, 1)]),
+            ([(0, 5)], [(0, 3)]),
+            ([3, (0, 5)], [1, (0, 3)]),
+            ([3, (4, 5)], [1]),
+            ([(2, 5)], [(2, 3)]),
+            ([0, (1, 3)], [0, (1, 3)]),
+            ]:
+            self.assertEqual(
+                splitting1.restrictStrandDiagramLocal(pmc.sd(full_sd)),
+                local_pmc1.sd(local_sd))
 
         # Second test case: one local PMC's in the middle
         # local_pmc2 is 0*-1-2-3-4*, where no points are paired.
         # so point 1 has pair-id 0, point 2 has pair-id 1, and point3 has
         # pair-id 2.
-        local_pmc2, mapping2 = restrictPMC(pmc1, [(3, 5)])
-        self.assertEqual(restrictStrandDiagram(pmc1, pmc1.sd([(0, 1)]),
-                                               local_pmc2, mapping2),
-                         local_pmc2.sd([]))
-        self.assertEqual(restrictStrandDiagram(pmc1, pmc1.sd([(0, 6)]),
-                                               local_pmc2, mapping2),
-                         local_pmc2.sd([(0, 4)]))
-        self.assertEqual(restrictStrandDiagram(pmc1, pmc1.sd([(1, 6)]),
-                                               local_pmc2, mapping2),
-                         local_pmc2.sd([(0, 4)]))
-        self.assertEqual(restrictStrandDiagram(pmc1, pmc1.sd([1]),
-                                               local_pmc2, mapping2),
-                         local_pmc2.sd([1]))
-        self.assertEqual(restrictStrandDiagram(pmc1, pmc1.sd([(0, 4)]),
-                                               local_pmc2, mapping2),
-                         local_pmc2.sd([(0, 2)]))
-        self.assertEqual(restrictStrandDiagram(pmc1, pmc1.sd([(4, 6)]),
-                                               local_pmc2, mapping2),
-                         local_pmc2.sd([(2, 4)]))
+        splitting2 = PMCSplitting(pmc, [(3, 5)])
+        local_pmc2 = splitting2.local_pmc
+        for full_sd, local_sd in [
+            ([(0, 1)], []),
+            ([(0, 6)], [(0, 4)]),
+            ([(1, 6)], [(0, 4)]),
+            ([1], [1]),
+            ([(0, 4)], [(0, 2)]),
+            ([(4, 6)], [(2, 4)]),
+            ]:
+            self.assertEqual(
+                splitting2.restrictStrandDiagramLocal(pmc.sd(full_sd)),
+                local_pmc2.sd(local_sd))
 
         # Third test case: local PMC has two separated intervals.
         # local_pmc3 is (0-1-2-3*), (4*-5-6*), where 0 and 2 are paired
         # (pair-id = 0), 1 and 5 are single (pair-id = 1 and 2).
-        local_pmc3, mapping3 = restrictPMC(pmc1, [(0, 2), (6, 6)])
-        self.assertEqual(restrictStrandDiagram(pmc1, pmc1.sd([(0, 7)]),
-                                               local_pmc3, mapping3),
-                         local_pmc3.sd([(0, 3), (4, 6)]))
-        self.assertEqual(restrictStrandDiagram(pmc1, pmc1.sd([(0, 6)]),
-                                               local_pmc3, mapping3),
-                         local_pmc3.sd([(0, 3), (4, 5)]))
-        self.assertEqual(restrictStrandDiagram(pmc1, pmc1.sd([(0, 5)]),
-                                               local_pmc3, mapping3),
-                         local_pmc3.sd([(0, 3)]))
-        self.assertEqual(restrictStrandDiagram(pmc1, pmc1.sd([(2, 6)]),
-                                               local_pmc3, mapping3),
-                         local_pmc3.sd([(2, 3), (4, 5)]))
-        self.assertEqual(restrictStrandDiagram(pmc1, pmc1.sd([(3, 6)]),
-                                               local_pmc3, mapping3),
-                         local_pmc3.sd([(4, 5)]))
-        self.assertEqual(restrictStrandDiagram(pmc1, pmc1.sd([0, 4]),
-                                               local_pmc3, mapping3),
-                         local_pmc3.sd([0, 5]))
+        splitting3 = PMCSplitting(pmc, [(0, 2), (6, 6)])
+        local_pmc3 = splitting3.local_pmc
+        for full_sd, local_sd in [
+            ([(0, 7)], [(0, 3), (4, 6)]),
+            ([(0, 6)], [(0, 3), (4, 5)]),
+            ([(0, 5)], [(0, 3)]),
+            ([(2, 6)], [(2, 3), (4, 5)]),
+            ([(3, 6)], [(4, 5)]),
+            ([0, 4], [0, 5]),
+            ]:
+            self.assertEqual(
+                splitting3.restrictStrandDiagramLocal(pmc.sd(full_sd)),
+                local_pmc3.sd(local_sd))
 
 if __name__ == "__main__":
     unittest.main()

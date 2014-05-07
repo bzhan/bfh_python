@@ -3,7 +3,6 @@
 from extendbyid import *
 from dastructure import SimpleDAGenerator, SimpleDAStructure
 from localpmc import LocalIdempotent
-from localpmc import restrictPMC
 from pmc import Idempotent
 from pmc import splitPMC
 import unittest
@@ -11,8 +10,9 @@ import unittest
 class ExtendedDAStructureTest(unittest.TestCase):
     def setUp(self):
         self.pmc = splitPMC(2)
-        local_pmc, mapping = restrictPMC(self.pmc, [(0, 2)])
-        outer_pmc, outer_mapping = restrictPMC(self.pmc, [(3, 7)])
+        self.splitting = PMCSplitting(self.pmc, [(0, 2)])
+        local_pmc = self.splitting.local_pmc
+        outer_pmc = self.splitting.outer_pmc
 
         # Construct the local generators
         local_da = SimpleDAStructure(
@@ -43,8 +43,7 @@ class ExtendedDAStructureTest(unittest.TestCase):
                               [local_pmc.sd(alg_a) for alg_a in algs_a], 1)
 
         self.extended_da = ExtendedDAStructure(
-            local_da, outer_pmc, self.pmc, self.pmc, mapping, outer_mapping,
-            mapping, outer_mapping)
+            local_da, self.splitting, self.splitting)
         mod_gens = self.extended_da.getGenerators()
         # Set up short names for the extended generators
         extended_idems = {"y1" : ([0, 1], [0, 1]),

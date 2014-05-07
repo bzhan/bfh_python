@@ -3,7 +3,7 @@
 from algebra import TensorGenerator
 from algebra import E0
 from dastructure import DAGenerator, DAStructure, SimpleDAGenerator
-from localpmc import restrictIdempotent, restrictStrandDiagram
+from localpmc import PMCSplitting
 from utility import ACTION_LEFT, ACTION_RIGHT, F2
 
 class ExtendedDAGenerator(SimpleDAGenerator):
@@ -16,10 +16,8 @@ class ExtendedDAGenerator(SimpleDAGenerator):
         assert outer_idem.local_pmc == parent.outer_pmc
         self.local_gen = local_gen
         self.outer_idem = outer_idem
-        idem1 = local_gen.idem1.join(
-            outer_idem, parent.pmc1, parent.mapping1, parent.outer_mapping1)
-        idem2 = local_gen.idem2.join(
-            outer_idem, parent.pmc2, parent.mapping2, parent.outer_mapping2)
+        idem1 = parent.splitting1.joinIdempotent(local_gen.idem1, outer_idem)
+        idem2 = parent.splitting2.joinIdempotent(local_gen.idem2, outer_idem)
         SimpleDAGenerator.__init__(self, parent, idem1, idem2, name)
 
 class ExtendedDAStructure(DAStructure):
@@ -27,8 +25,7 @@ class ExtendedDAStructure(DAStructure):
     structure.
 
     """
-    def __init__(self, local_da, outer_pmc, pmc1, pmc2,
-                 mapping1, outer_mapping1, mapping2, outer_mapping2):
+    def __init__(self, local_da, splitting1, splitting2):
         """Specifies the local type DA structure (local_da, of type
         DAStructure), and the following data needed for an extension:
          - outer_pmc: of type LocalPMC, the local PMC on the outside.
@@ -39,13 +36,21 @@ class ExtendedDAStructure(DAStructure):
         
         """
         self.local_da = local_da
-        self.outer_pmc = outer_pmc
-        self.pmc1, self.pmc2 = pmc1, pmc2
-        self.mapping1, self.outer_mapping1 = mapping1, outer_mapping1
-        self.mapping2, self.outer_mapping2 = mapping2, outer_mapping2
+        self.splitting1 = splitting1
+        self.splitting2 = splitting2
+
+        self.pmc1, self.pmc2 = splitting1.pmc, splitting2.pmc
+
+        self.outer_pmc = splitting1.outer_pmc
+        assert self.outer_pmc == splitting2.outer_pmc
 
         self.local_pmc1 = local_da.algebra1.local_pmc
         self.local_pmc2 = local_da.algebra2.local_pmc
+        assert self.local_pmc1 == splitting1.local_pmc
+        assert self.local_pmc2 == splitting2.local_pmc
+
+        mapping1 = splitting1.local_mapping
+        mapping2 = splitting2.local_mapping
 
         self.idem_size1 = self.pmc1.genus
         self.idem_size2 = self.pmc2.genus
@@ -186,8 +191,7 @@ class ExtendedDAStructure(DAStructure):
         prod_d = None
         for i in range(len(algGens)):
             alg = algGens[i]
-            outer_sd = restrictStrandDiagram(
-                self.pmc2, alg, self.outer_pmc, self.outer_mapping2)
+            outer_sd = self.splitting2.restrictStrandDiagramOuter(alg)
             if assignments[i] == self.LOCAL:
                 outer_sd = outer_sd.removeSingleHor()
             if prod_d is None:
@@ -202,16 +206,16 @@ class ExtendedDAStructure(DAStructure):
         if not has_product:
             return E0
         if prod_d is None:  # No algebra input
-            prod_d = restrictIdempotent(self.pmc2, MGen.idem2, self.outer_pmc,
-                                        self.outer_mapping2).toAlgElt()
+            prod_d = \
+                self.splitting2.restrictIdempotentOuter(MGen.idem2).toAlgElt()
             prod_d = prod_d.removeSingleHor()
 
         # Test the inside
         local_MGen = MGen.local_gen
         alg_local = []
         for i in range(len(algGens)):
-            cur_alg_local = restrictStrandDiagram(
-                self.pmc2, algGens[i], self.local_pmc2, self.mapping2)
+            cur_alg_local = \
+                self.splitting2.restrictStrandDiagramLocal(algGens[i])
             if assignments[i] == self.OUTER:
                 cur_alg_local = cur_alg_local.removeSingleHor()
             alg_local.append(cur_alg_local)
@@ -226,8 +230,7 @@ class ExtendedDAStructure(DAStructure):
             local_delta = self.local_da.delta(local_MGen, alg_local)
 
         for (local_d, local_y), ring_coeff in local_delta.items():
-            alg_d = local_d.join(prod_d, self.pmc1, self.mapping1,
-                                 self.outer_mapping1)
+            alg_d = self.splitting1.joinStrandDiagram(local_d, prod_d)
             if alg_d is None:
                 continue
             if self.single_outer in prod_d.right_idem:
@@ -256,8 +259,8 @@ class ExtendedDAStructure(DAStructure):
             local_MGen = MGen.local_gen
             alg_local = []
             for i in range(len(algGens)):
-                cur_alg_local = restrictStrandDiagram(
-                    self.pmc2, algGens[i], self.local_pmc2, self.mapping2)
+                cur_alg_local = \
+                    self.splitting2.restrictStrandDiagramLocal(algGens[i])
                 if assignments[i] == self.OUTER:
                     cur_alg_local = cur_alg_local.removeSingleHor()
                 alg_local.append(cur_alg_local)

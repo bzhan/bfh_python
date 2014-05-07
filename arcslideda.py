@@ -5,8 +5,8 @@ from dastructure import DAStructure, SimpleDAGenerator, SimpleDAStructure
 from extendbyid import ExtendedDAStructure
 from hdiagram import getArcslideDiagram
 from linalg import F2RowSystem
-from localpmc import LocalIdempotent, LocalStrandAlgebra, LocalStrandDiagram
-from localpmc import restrictPMC, restrictStrandDiagram
+from localpmc import LocalIdempotent, LocalStrandAlgebra, LocalStrandDiagram, \
+    PMCSplitting
 from pmc import Strands, StrandDiagram
 from utility import memorize, subset
 from utility import ACTION_LEFT, ACTION_RIGHT, F2
@@ -43,9 +43,7 @@ class ArcslideDA(ExtendedDAStructure):
         # points in the pattern at hand.
         if b1 == c1 + 1:  # downward
             if c2 == c1 + 2:  # short underslide downward
-                local_cut1, outer_cut1, local_cut2, outer_cut2 = (
-                    [(c1, c2)], [(0, c1-1), (c2+1, n-1)],
-                    [(c1p, c2p)], [(0, c1p-1), (c2p+1, n-1)])
+                local_cut1, local_cut2 = ([(c1, c2)], [(c1p, c2p)])
                 patterns_base = ArcslideDA._short_underslide_down_middle()
                 if c1 == 0:
                     translator = ([-1, 0, 1, 2, 3], [-1, 0, 1, 2, 3])
@@ -54,11 +52,8 @@ class ArcslideDA(ExtendedDAStructure):
                 else:
                     translator = None
             elif c2 > c1:  # general underslide downward
-                local_cut1, outer_cut1, local_cut2, outer_cut2 = (
-                    [(c1, b1), (c2, c2)],
-                    [(0, c1-1), (b1+1, c2-1), (c2+1, n-1)],
-                    [(c1p, c1p), (b1p, c2p)],
-                    [(0, c1p-1), (c1p+1, b1p-1), (c2p+1, n-1)])
+                local_cut1, local_cut2 = (
+                    [(c1, b1), (c2, c2)], [(c1p, c1p), (b1p, c2p)])
                 patterns_base = ArcslideDA._general_underslide_down_middle()
                 if c1 == 0:
                     translator = ([-1, 0, 1, 2, 3, 4, 5],
@@ -69,11 +64,8 @@ class ArcslideDA(ExtendedDAStructure):
                 else:
                     translator = None
             else:  # c2 < c1, general overslide downward
-                local_cut1, outer_cut1, local_cut2, outer_cut2 = (
-                    [(c2, c2), (c1, b1)],
-                    [(0, c2-1), (c2+1, c1-1), (b1+1, n-1)],
-                    [(b1p, c2p), (c1p, c1p)],
-                    [(0, b1p-1), (c2p+1, c1p-1), (c1p+1, n-1)])
+                local_cut1, local_cut2 = (
+                    [(c2, c2), (c1, b1)], [(b1p, c2p), (c1p, c1p)])
                 patterns_base = ArcslideDA._general_underslide_down_middle()
                 if c2 == 0 and b1 == n - 1:
                     translator = ([2, 3, 4, -1, -1, 0, 1],
@@ -88,9 +80,7 @@ class ArcslideDA(ExtendedDAStructure):
                     translator = ([3, 4, 5, 6, 0, 1, 2], [4, 5, 6, 0, 1, 2, 3])
         elif b1 == c1 - 1:  # upward
             if c2 == c1 - 2:  # short underslide upward
-                local_cut1, outer_cut1, local_cut2, outer_cut2 = (
-                    [(c2, c1)], [(0, c2-1), (c1+1, n-1)],
-                    [(c2p, c1p)], [(0, c2p-1), (c1p+1, n-1)])
+                local_cut1, local_cut2 = ([(c2, c1)], [(c2p, c1p)])
                 patterns_base = ArcslideDA._short_underslide_up_middle()
                 if c2 == 0:
                     translator = ([-1, 0, 1, 2, 3], [-1, 0, 1, 2, 3])
@@ -99,11 +89,8 @@ class ArcslideDA(ExtendedDAStructure):
                 else:
                     translator = None
             elif c2 < c1:  # general underslide upward
-                local_cut1, outer_cut1, local_cut2, outer_cut2 = (
-                    [(c2, c2), (b1, c1)],
-                    [(0, c2-1), (c2+1, b1-1), (c1+1, n-1)],
-                    [(c2p, b1p), (c1p, c1p)],
-                    [(0, c2p-1), (b1p+1, c1p-1), (c1p+1, n-1)])
+                local_cut1, local_cut2 = (
+                    [(c2, c2), (b1, c1)], [(c2p, b1p), (c1p, c1p)])
                 patterns_base = ArcslideDA._general_underslide_up_middle()
                 if c2 == 0:
                     translator = ([-1, 0, 1, 2, 3, 4, 5],
@@ -114,11 +101,8 @@ class ArcslideDA(ExtendedDAStructure):
                 else:
                     translator = None
             else:  # c2 > c1, general overslide upward
-                local_cut1, outer_cut1, local_cut2, outer_cut2 = (
-                    [(b1, c1), (c2, c2)],
-                    [(0, b1-1), (c1+1, c2-1), (c2+1, n-1)],
-                    [(c1p, c1p), (c2p, b1p)],
-                    [(0, c1p-1), (c1p+1, c2p-1), (b1p+1, n-1)])
+                local_cut1, local_cut2 = (
+                    [(b1, c1), (c2, c2)], [(c1p, c1p), (c2p, b1p)])
                 patterns_base = ArcslideDA._general_underslide_up_middle()
                 if b1 == 0 and c2 == n - 1:
                     translator = ([3, 4, -1, -1, 0, 1, 2],
@@ -141,15 +125,15 @@ class ArcslideDA(ExtendedDAStructure):
             patterns_raw = ArcslideDA._restrict_local_arrows(
                 patterns_base, translator[0], translator[1])
 
-        self.local_pmc1, self.mapping1 = restrictPMC(self.pmc1, local_cut1)
-        self.outer_pmc1, self.outer_mapping1 = restrictPMC(
-            self.pmc1, outer_cut1)
-        self.local_pmc2, self.mapping2 = restrictPMC(self.pmc2, local_cut2)
-        self.outer_pmc2, self.outer_mapping2 = restrictPMC(
-            self.pmc2, outer_cut2)
+        self.splitting1 = PMCSplitting(self.pmc1, local_cut1)
+        self.splitting2 = PMCSplitting(self.pmc2, local_cut2)
+        self.local_pmc1 = self.splitting1.local_pmc
+        self.local_pmc2 = self.splitting2.local_pmc
+        self.mapping1 = self.splitting1.local_mapping
+        self.mapping2 = self.splitting2.local_mapping
 
         # Required so the left to right transition on the outside can proceed.
-        assert self.outer_pmc1 == self.outer_pmc2
+        assert self.splitting1.outer_pmc == self.splitting2.outer_pmc
 
         # Compute the set of arrow patterns
         self.arrow_patterns = {}
@@ -172,9 +156,7 @@ class ArcslideDA(ExtendedDAStructure):
 
         # Initiate the ExtendedDAStructure
         ExtendedDAStructure.__init__(
-            self, self.getLocalDAStructure(), self.outer_pmc1, self.pmc1,
-            self.pmc2, self.mapping1, self.outer_mapping1, self.mapping2,
-            self.outer_mapping2)
+            self, self.getLocalDAStructure(), self.splitting1, self.splitting2)
 
         # With generators set, add grading. Any generator can serve as base_gen
         for gen in self.generators:

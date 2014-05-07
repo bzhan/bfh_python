@@ -165,54 +165,6 @@ class LocalPMC:
         search([])
         return result
                 
-def restrictPMC(pmc, intervals):
-    """Given a normal PMC, and a list of intervals (specified by pairs), return
-    a pair (local_pmc, mapping) where
-    - local_pmc is the local PMC that is the restriction of pmc to the
-    intervals.
-    - mapping is a dictionary mapping from points in pmc to points in
-    local_pmc.
-
-    Input parameters:
-    - pmc: must be an object of PMC.
-    - intervals: must be ordered, disjoint intervals. Each interval is
-    specified in the format (start, end), which represents the interval between
-    these two points. Intervals with start > end are ignored.
-
-    Example:
-    restrictPMC(PMC([(0, 2),(1, 3)]), [(0, 2)])
-      => (LocalPMC(4, [(0, 2), (1,)], [3]), {0:0, 1:1, 2:2})
-
-    """
-    # For each interval, add the appropriate endpoints. Fill in endpoints and
-    # mapping first.
-    num_local_points = 0
-    endpoints = []
-    mapping = {}
-    for start, end in intervals:
-        if start > end:
-            continue
-        length = end - start + 1
-        if start != 0:
-            endpoints.append(num_local_points)
-            num_local_points += 1
-        for pt in range(start, end+1):
-            mapping[pt] = num_local_points
-            num_local_points += 1
-        if end != pmc.n - 1:
-            endpoints.append(num_local_points)
-            num_local_points += 1
-    # Now compute the matching.
-    matching = []
-    for p, q in pmc.pairs:
-        if p in mapping and q in mapping:
-            matching.append((mapping[p], mapping[q]))
-        elif p in mapping and q not in mapping:
-            matching.append((mapping[p],))
-        elif p not in mapping and q in mapping:
-            matching.append((mapping[q],))
-    return (LocalPMC(num_local_points, matching, endpoints), mapping)
-
 class LocalIdempotent(tuple):
     """Represents a local idempotent in a certain local PMC. Stored as a tuple
     of occupied pairs.
@@ -261,11 +213,6 @@ class LocalIdempotent(tuple):
 
         """
         return LocalStrandDiagram(self.local_pmc.getAlgebra(), self, [])
-
-    def join(self, idem2, pmc, mapping1, mapping2):
-        """Join with another local idempotent. """
-        return self.toAlgElt().join(idem2.toAlgElt(), pmc,
-                                    mapping1, mapping2).left_idem
 
 class LocalStrands(tuple):
     """Represents a fixed list of strands in a local PMC. Stored as a tuple of
@@ -405,178 +352,9 @@ class LocalStrandDiagram(Generator):
                 new_left_idem.remove(i)
         return LocalStrandDiagram(self.parent, new_left_idem, self.strands)
 
-    def join(self, sd2, pmc, mapping1, mapping2):
-        """Join with another local strand diagram. Returns None if these two
-        local strand diagrams cannot be joined. Otherwise returns the (normal)
-        strand diagram in a normal PMC.
-
-        Input parameters:
-        - pmc: PMC for the joined strand diagram.
-        - mapping1 and mapping2 are dictionaries mapping points in pmc to
-        points in self.local_pmc and sd2.local_pmc.
-
-        """
-        # First make sure that the two local PMC's can be joined into pmc.
-        # Can add more checks...
-        for pt in range(pmc.n):
-            assert (pt in mapping1 and pt not in mapping2) \
-                or (pt not in mapping1 and pt in mapping2)
-
-        # Check idempotent is OK. Create joined left_idem.
-        left_idem = []
-        mapping = {1 : mapping1, 2 : mapping2}
-        local_pmc = {1 : self.local_pmc, 2 : sd2.local_pmc}
-        local_left_idem = {1 : self.left_idem, 2 : sd2.left_idem}
-        for pairid in range(pmc.num_pair):
-            p, q = pmc.pairs[pairid]
-            for i in (1, 2):
-                if p in mapping[i]:
-                    has_idem_p = (local_pmc[i].pairid[mapping[i][p]]
-                                  in local_left_idem[i])
-                if q in mapping[i]:
-                    has_idem_q = (local_pmc[i].pairid[mapping[i][q]]
-                                  in local_left_idem[i])
-            if has_idem_p or has_idem_q:
-                left_idem.append(pairid)
-
-        # Construct inverse mapping from points in local_pmc to points in pmc.
-        inv_mapping = {1 : {}, 2 : {}}
-        for pt, local_pt in mapping[1].items():
-            inv_mapping[1][local_pt] = pt
-        for pt, local_pt in mapping[2].items():
-            inv_mapping[2][local_pt] = pt
-
-        # Create joined strands.
-        # First create list of local strands in sorted order in original pmc.
-        local_strands = {1 : self.strands, 2 : sd2.strands}
-        all_local_strands = []
-        for i in (1, 2):
-            for start, end in local_strands[i]:
-                if start in local_pmc[i].endpoints:
-                    assert start+1 not in local_pmc[i].endpoints
-                    start_pos = inv_mapping[i][start + 1]
-                else:
-                    start_pos = inv_mapping[i][start]
-                all_local_strands.append((start_pos, (start, end), i))
-        all_local_strands = sorted(all_local_strands)
-
-        # First check that every loose end is matched. Otherwise return.
-        for strands_id in range(len(all_local_strands)):
-            start_pos, (start, end), pmc_id = all_local_strands[strands_id]
-            if start in local_pmc[pmc_id].endpoints:
-                if strands_id == 0:
-                    return None
-                prev_pos, (prev_start, prev_end), prev_pmc_id = \
-                    all_local_strands[strands_id - 1]
-                if prev_end not in local_pmc[prev_pmc_id].endpoints:
-                    return None
-                # Check boundaries match in one of the two directions
-                if prev_pmc_id == pmc_id:
-                    return None
-                if inv_mapping[pmc_id][start+1] - 1 != \
-                   inv_mapping[prev_pmc_id][prev_end-1]:
-                    return None
-            if end in local_pmc[pmc_id].endpoints:
-                if strands_id == len(all_local_strands) - 1:
-                    return None
-                next_pos, (next_start, next_end), next_pmc_id = \
-                    all_local_strands[strands_id + 1]
-                if next_start not in local_pmc[next_pmc_id].endpoints:
-                    return None
-
-        # Having made sure that every loose end is closed, we can simply take
-        # the sequence of non-endpoints.
-        all_strand_boundaries = []
-        for start_pos, (start, end), pmc_id in all_local_strands:
-            for pt in (start, end):
-                if pt not in local_pmc[pmc_id].endpoints:
-                    all_strand_boundaries.append(inv_mapping[pmc_id][pt])
-        # Now, simply take pairs:
-        start_pts = all_strand_boundaries[::2]
-        end_pts = all_strand_boundaries[1::2]
-        for pt in start_pts:
-            if pmc.otherp[pt] in start_pts:
-                return None
-        for pt in end_pts:
-            if pmc.otherp[pt] in end_pts:
-                return None
-        strands = zip(start_pts, end_pts)
-        if not Strands(pmc, strands).leftCompatible(left_idem):
-            return None
-        return StrandDiagram(pmc.getAlgebra(idem_size = len(left_idem),
-                                            mult_one = True),
-                             left_idem, strands)
-
 # Don't need anything beyond Element at this time.
 LocalStrandDiagram.ELT_CLASS = Element
 
-def restrictStrandDiagram(pmc, sd, local_pmc, mapping):
-    """Restrict the given strand diagram to the local_pmc, using mapping as the
-    dictionary from points in pmc to points in local_pmc.
-
-    """
-    assert sd.parent.pmc == pmc
-    # First construct the left idempotent.
-    local_left_idem = []
-    for (start, end) in sd.strands:
-        if start in mapping:
-            local_left_idem.append(local_pmc.pairid[mapping[start]])
-    for pairid in sd.double_hor:
-        p, q = pmc.pairs[pairid]
-        if p in mapping:
-            local_left_idem.append(local_pmc.pairid[mapping[p]])
-        elif q in mapping:
-            local_left_idem.append(local_pmc.pairid[mapping[q]])
-
-    # Next, construct strands. For each strand in sd, construct zero or more
-    # child strands.
-    local_strands = []
-    for start, end in sd.strands:
-        # Whether to extend the previous item on local_strands. Otherwise, will
-        # add new local_strand when needed.
-        extend_prev = False
-        for pt in range(start, end):
-            if pt in mapping:
-                local_pt = mapping[pt]
-                # The interval (pt, pt+1) corresponds to (local_pt, local_pt+1)
-                # in the local PMC. Note local_pt+1 may be an endpoint.
-                if extend_prev:
-                    prev_start, prev_end = local_strands[-1]
-                    assert prev_end == local_pt
-                    local_strands[-1] = (prev_start, local_pt+1)
-                else:
-                    if pt != start:
-                        assert local_pt - 1 in local_pmc.endpoints
-                        local_strands.append((local_pt-1, local_pt+1))
-                    else:
-                        local_strands.append((local_pt, local_pt+1))
-                    extend_prev = True
-                # Turn off extend_prev when endpoint in local_pmc is reached.
-                if local_pt + 1 in local_pmc.endpoints:
-                    extend_prev = False
-        # Special case at the end.
-        if end - 1 not in mapping and end in mapping:
-            local_end = mapping[end]
-            assert local_end - 1 in local_pmc.endpoints
-            local_strands.append((local_end - 1, local_end))
-
-    return LocalStrandDiagram(local_pmc.getAlgebra(),
-                              local_left_idem, local_strands)
-
-def restrictIdempotent(pmc, idem, local_pmc, mapping):
-    """Restrict the given idempotent to the local_pmc, using mapping as the
-    dictionary from points in pmc to points in local_pmc.
-
-    """
-    local_idem = []
-    for pairid in idem:
-        p, q = pmc.pairs[pairid]
-        if p in mapping:
-            local_idem.append(local_pmc.pairid[mapping[p]])
-        elif q in mapping:
-            local_idem.append(local_pmc.pairid[mapping[q]])
-    return LocalIdempotent(local_pmc, local_idem)
-                              
 class LocalStrandAlgebra(DGAlgebra):
     """Represents the strand algebra of a local PMC."""
 
@@ -667,3 +445,294 @@ class LocalStrandAlgebra(DGAlgebra):
         # Since we are in the multiplicity-one case, no need to worry about
         # double-crossing. Can return now.
         return LocalStrandDiagram(self, gen1.left_idem, new_strands).elt()
+
+class PMCSplitting:
+    """Contains information about a splitting of a full PMC into two local PMCs.
+
+    """
+
+    def __init__(self, pmc, intervals):
+        """Given a full PMC and a list of intervals (specified by pairs),
+        construct the splitting where local_pmc is the restriction of pmc to the
+        intervals, and outer_pmc is the restriction of pmc to the complement of
+        the intervals.
+
+        - intervals: must be ordered, disjoint intervals. Each interval is
+        specified in the format (start, end), which represents the interval
+        between these two points. Intervals with start > end are ignored.
+
+        """
+        self.pmc = pmc
+        outer_intervals = PMCSplitting.complementIntervals(self.pmc, intervals)
+        self.local_pmc, self.local_mapping = \
+            PMCSplitting.restrictPMC(self.pmc, intervals)
+        self.outer_pmc, self.outer_mapping = \
+            PMCSplitting.restrictPMC(self.pmc, outer_intervals)
+
+    def restrictStrandDiagramLocal(self, sd):
+        """Returns the local strand diagram that is the restriction of sd to
+        local_pmc.
+
+        """
+        return PMCSplitting.restrictStrandDiagram(
+            self.pmc, sd, self.local_pmc, self.local_mapping)
+
+    def restrictStrandDiagramOuter(self, sd):
+        """Returns the local strand diagram that is the restriction of sd to
+        outer_pmc.
+
+        """
+        return PMCSplitting.restrictStrandDiagram(
+            self.pmc, sd, self.outer_pmc, self.outer_mapping)
+
+    def restrictIdempotentLocal(self, idem):
+        """Returns the local idempotent that is the restriction of idem to
+        local_pmc.
+
+        """
+        return PMCSplitting.restrictIdempotent(
+            self.pmc, idem, self.local_pmc, self.local_mapping)
+
+    def restrictIdempotentOuter(self, idem):
+        """Returns the local idempotent that is the restriction of idem to
+        outer_pmc.
+
+        """
+        return PMCSplitting.restrictIdempotent(
+            self.pmc, idem, self.outer_pmc, self.outer_mapping)
+
+    def joinStrandDiagram(self, sd1, sd2):
+        """Joins two strand diagrams. sd1 is in local_pmc and sd2 is in
+        outer_pmc.
+        Returns None if these two local strand diagrams cannot be joined.
+        Otherwise returns the strand diagram in a full PMC.
+
+        """
+        assert sd1.parent.local_pmc == self.local_pmc
+        assert sd2.parent.local_pmc == self.outer_pmc
+
+        # Check idempotent is OK. Create joined left_idem.
+        left_idem = []
+        mappings = {1 : self.local_mapping, 2 : self.outer_mapping}
+        local_pmcs = {1 : self.local_pmc, 2 : self.outer_pmc}
+        local_left_idem = {1 : sd1.left_idem, 2 : sd2.left_idem}
+        for pairid in range(self.pmc.num_pair):
+            p, q = self.pmc.pairs[pairid]
+            for i in (1, 2):
+                if p in mappings[i]:
+                    has_idem_p = (local_pmcs[i].pairid[mappings[i][p]]
+                                  in local_left_idem[i])
+                if q in mappings[i]:
+                    has_idem_q = (local_pmcs[i].pairid[mappings[i][q]]
+                                  in local_left_idem[i])
+            if has_idem_p or has_idem_q:
+                left_idem.append(pairid)
+
+        # Construct inverse mapping from points in local_pmc to points in pmc.
+        inv_mappings = {1 : {}, 2 : {}}
+        for pt, local_pt in mappings[1].items():
+            inv_mappings[1][local_pt] = pt
+        for pt, local_pt in mappings[2].items():
+            inv_mappings[2][local_pt] = pt
+
+        # Create joined strands.
+        # First create list of local strands in sorted order in original pmc.
+        local_strands = {1 : sd1.strands, 2 : sd2.strands}
+        all_local_strands = []
+        for i in (1, 2):
+            for start, end in local_strands[i]:
+                if start in local_pmcs[i].endpoints:
+                    assert start+1 not in local_pmcs[i].endpoints
+                    start_pos = inv_mappings[i][start + 1]
+                else:
+                    start_pos = inv_mappings[i][start]
+                all_local_strands.append((start_pos, (start, end), i))
+        all_local_strands = sorted(all_local_strands)
+
+        # First check that every loose end is matched. Otherwise return.
+        for strands_id in range(len(all_local_strands)):
+            start_pos, (start, end), pmc_id = all_local_strands[strands_id]
+            if start in local_pmcs[pmc_id].endpoints:
+                if strands_id == 0:
+                    return None
+                prev_pos, (prev_start, prev_end), prev_pmc_id = \
+                    all_local_strands[strands_id - 1]
+                if prev_end not in local_pmcs[prev_pmc_id].endpoints:
+                    return None
+                # Check boundaries match in one of the two directions
+                if prev_pmc_id == pmc_id:
+                    return None
+                if inv_mappings[pmc_id][start+1] - 1 != \
+                   inv_mappings[prev_pmc_id][prev_end-1]:
+                    return None
+            if end in local_pmcs[pmc_id].endpoints:
+                if strands_id == len(all_local_strands) - 1:
+                    return None
+                next_pos, (next_start, next_end), next_pmc_id = \
+                    all_local_strands[strands_id + 1]
+                if next_start not in local_pmcs[next_pmc_id].endpoints:
+                    return None
+
+        # Having made sure that every loose end is closed, we can simply take
+        # the sequence of non-endpoints.
+        all_strand_boundaries = []
+        for start_pos, (start, end), pmc_id in all_local_strands:
+            for pt in (start, end):
+                if pt not in local_pmcs[pmc_id].endpoints:
+                    all_strand_boundaries.append(inv_mappings[pmc_id][pt])
+        # Now, simply take pairs:
+        start_pts = all_strand_boundaries[::2]
+        end_pts = all_strand_boundaries[1::2]
+        for pt in start_pts:
+            if self.pmc.otherp[pt] in start_pts:
+                return None
+        for pt in end_pts:
+            if self.pmc.otherp[pt] in end_pts:
+                return None
+        strands = zip(start_pts, end_pts)
+        if not Strands(self.pmc, strands).leftCompatible(left_idem):
+            return None
+        return StrandDiagram(self.pmc.getAlgebra(idem_size = len(left_idem),
+                                                 mult_one = True),
+                             left_idem, strands)
+
+    def joinIdempotent(self, idem1, idem2):
+        """Join two local idempotents. """
+        return self.joinStrandDiagram(
+            idem1.toAlgElt(), idem2.toAlgElt()).left_idem
+
+    @staticmethod
+    def complementIntervals(pmc, intervals):
+        """Given a full PMC and a list of intervals, return the list of
+        intervals that forms the complement.
+
+        """
+        result = []
+        if len(intervals) == 0:
+            result.append((0, pmc.n - 1))
+            return result
+
+        if intervals[0][0] != 0:
+            result.append((0, intervals[0][0] - 1))
+        if intervals[-1][1] != pmc.n - 1:
+            result.append((intervals[-1][1] + 1, pmc.n - 1))
+        for i in range(len(intervals) - 1):
+            # Consider this case later
+            assert intervals[i][1] != intervals[i+1][0], \
+                "Intervals with no points in the middle is not implemented."
+            result.append((intervals[i][1] + 1, intervals[i+1][0] - 1))
+        return sorted(result)
+
+    @staticmethod
+    def restrictPMC(pmc, intervals):
+        """Given a full PMC and a list of intervals, return a pair
+        (local_pmc, mapping) where
+        - local_pmc is the local PMC that is the restriction of pmc to the
+        intervals.
+        - mapping is a dictionary mapping from points in pmc to points in
+        local_pmc.
+
+        Example:
+        PMCSplitting.restrictPMC(PMC([(0, 2),(1, 3)]), [(0, 2)])
+          => (LocalPMC(4, [(0, 2), (1,)], [3]), {0:0, 1:1, 2:2})
+
+        """
+        # For each interval, add the appropriate endpoints. Fill in endpoints
+        # and mapping first.
+        num_local_points = 0
+        endpoints = []
+        mapping = {}
+        for start, end in intervals:
+            if start > end:
+                continue
+            length = end - start + 1
+            if start != 0:
+                endpoints.append(num_local_points)
+                num_local_points += 1
+            for pt in range(start, end+1):
+                mapping[pt] = num_local_points
+                num_local_points += 1
+            if end != pmc.n - 1:
+                endpoints.append(num_local_points)
+                num_local_points += 1
+        # Now compute the matching.
+        matching = []
+        for p, q in pmc.pairs:
+            if p in mapping and q in mapping:
+                matching.append((mapping[p], mapping[q]))
+            elif p in mapping and q not in mapping:
+                matching.append((mapping[p],))
+            elif p not in mapping and q in mapping:
+                matching.append((mapping[q],))
+        return (LocalPMC(num_local_points, matching, endpoints), mapping)
+
+    @staticmethod
+    def restrictStrandDiagram(pmc, sd, local_pmc, mapping):
+        """Restrict the given strand diagram to the local_pmc, using mapping as
+        the dictionary from points in pmc to points in local_pmc.
+
+        """
+        assert sd.parent.pmc == pmc
+        # First construct the left idempotent.
+        local_left_idem = []
+        for (start, end) in sd.strands:
+            if start in mapping:
+                local_left_idem.append(local_pmc.pairid[mapping[start]])
+        for pairid in sd.double_hor:
+            p, q = pmc.pairs[pairid]
+            if p in mapping:
+                local_left_idem.append(local_pmc.pairid[mapping[p]])
+            elif q in mapping:
+                local_left_idem.append(local_pmc.pairid[mapping[q]])
+
+        # Next, construct strands. For each strand in sd, construct zero or more
+        # child strands.
+        local_strands = []
+        for start, end in sd.strands:
+            # Whether to extend the previous item on local_strands. Otherwise,
+            # will add new local_strand when needed.
+            extend_prev = False
+            for pt in range(start, end):
+                if pt in mapping:
+                    local_pt = mapping[pt]
+                    # The interval (pt, pt+1) corresponds to
+                    # (local_pt, local_pt+1) in the local PMC. Note local_pt+1
+                    # may be an endpoint.
+                    if extend_prev:
+                        prev_start, prev_end = local_strands[-1]
+                        assert prev_end == local_pt
+                        local_strands[-1] = (prev_start, local_pt+1)
+                    else:
+                        if pt != start:
+                            assert local_pt - 1 in local_pmc.endpoints
+                            local_strands.append((local_pt-1, local_pt+1))
+                        else:
+                            local_strands.append((local_pt, local_pt+1))
+                        extend_prev = True
+                    # Turn off extend_prev when endpoint in local_pmc is
+                    # reached.
+                    if local_pt + 1 in local_pmc.endpoints:
+                        extend_prev = False
+            # Special case at the end.
+            if end - 1 not in mapping and end in mapping:
+                local_end = mapping[end]
+                assert local_end - 1 in local_pmc.endpoints
+                local_strands.append((local_end - 1, local_end))
+
+        return LocalStrandDiagram(local_pmc.getAlgebra(),
+                                  local_left_idem, local_strands)
+
+    @staticmethod
+    def restrictIdempotent(pmc, idem, local_pmc, mapping):
+        """Restrict the given idempotent to the local_pmc, using mapping as the
+        dictionary from points in pmc to points in local_pmc.
+
+        """
+        local_idem = []
+        for pairid in idem:
+            p, q = pmc.pairs[pairid]
+            if p in mapping:
+                local_idem.append(local_pmc.pairid[mapping[p]])
+            elif q in mapping:
+                local_idem.append(local_pmc.pairid[mapping[q]])
+        return LocalIdempotent(local_pmc, local_idem)
