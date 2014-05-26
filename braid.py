@@ -280,7 +280,25 @@ class BridgePresentation:
         return result
 
 def readBridgePresentation(str_input):
-    """Read bridge presentation from string input."""
+    """Read bridge presentation from string input. The format is as follows:
+
+    str_input is a line with space-separated tokens. The first token is the
+    name of the knot (can be anything that doesn't contain a space). The
+    remaining tokens are integers. The first integer is the integer k/2, where
+    k is the number of strands in the braid.
+
+    The next k integers 0 <= a_0, a_1, ... a_{k-1} < k specify the top closure
+    of the braid. That is, the i'th strand is paired with the (a_i)'th strand
+    (so we must have a_{a_i} = i).
+
+    The next integer is the number of crossings n. This is followed by n pairs
+    of integers, with each pair i, j meaning moving the i'th strand over the
+    j'th strand (so |i - j| = 1).
+
+    The next k integers specify the bottom closure of the braid, in the same
+    format as that for the top closure.
+
+    """
     tokens = str_input.split()
     name = tokens[0]
     rest = [int(token) for token in tokens[1:]]
