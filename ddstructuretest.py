@@ -78,6 +78,75 @@ class DDStructureTest(unittest.TestCase):
             cx = ddstr.hochschildCochains()
             cx.simplify()
             self.assertEqual(len(cx), 16)
+
+class DDMorphismTest(unittest.TestCase):
+    def testMappingCone(self):
+        pmc = splitPMC(1)
+        alg = pmc.getAlgebra()
+        tensor_alg = TensorDGAlgebra((alg, alg))
+        ddstr1 = SimpleDDStructure(F2, alg, alg)
+        ddstr2 = SimpleDDStructure(F2, alg, alg)
+
+        gens = dict()
+        gens["x"] = SimpleDDGenerator(ddstr1, pmc.idem([0]), pmc.idem([0]), "x")
+        gens["y"] = SimpleDDGenerator(ddstr2, pmc.idem([1]), pmc.idem([1]), "y")
+        ddstr1.addGenerator(gens["x"])
+        ddstr2.addGenerator(gens["y"])
+        ddstr1.addDelta(
+            gens["x"], gens["x"], pmc.sd([(0, 2)]), pmc.sd([(0, 2)]), 1)
+        ddstr2.addDelta(
+            gens["y"], gens["y"], pmc.sd([(1, 3)]), pmc.sd([(1, 3)]), 1)
+
+        morphism_cx = MorDDtoDDComplex(F2, ddstr1, ddstr2)
+        morphism = 1*MorDDtoDDGenerator(
+            morphism_cx, gens["x"],
+            TensorGenerator((pmc.sd([(0, 1)]), pmc.sd([(0, 1)])), tensor_alg),
+            gens["y"])
+        morphism += 1*MorDDtoDDGenerator(
+            morphism_cx, gens["x"],
+            TensorGenerator((pmc.sd([(2, 3)]), pmc.sd([(2, 3)])), tensor_alg),
+            gens["y"])
+        # Need diff of morphism to be zero for the mapping cone to satisfy
+        # d^2 = 0.
+        self.assertEqual(morphism.diff(), 0)
+        mapping_cone = morphism_cx.getMappingCone(morphism)
+
+        self.assertEqual(len(mapping_cone), 2)
+        mc_gens = dict()
+        for gen in mapping_cone.getGenerators():
+            mc_gens[gen.name] = gen
+        self.assertTrue("S_x" in mc_gens and "T_y" in mc_gens)
+        self.assertEqual(len(mapping_cone.delta(mc_gens["S_x"])), 3)
+        self.assertEqual(len(mapping_cone.delta(mc_gens["T_y"])), 1)
+        self.assertTrue(mapping_cone.testDelta())
+
+    def testMultiply(self):
+        pmc = splitPMC(2)
+        alg = pmc.getAlgebra()
+        tensor_alg = TensorDGAlgebra((alg, alg))
+        ddstr = SimpleDDStructure(F2, alg, alg)
+        gens = dict()
+        gens["x"] = SimpleDDGenerator(ddstr, pmc.idem([0]), pmc.idem([0]), "x")
+        gens["y"] = SimpleDDGenerator(ddstr, pmc.idem([1]), pmc.idem([1]), "y")
+        ddstr.addGenerator(gens["x"])
+        ddstr.addGenerator(gens["y"])
         
+        morphism_cx = MorDDtoDDComplex(F2, ddstr, ddstr)
+        morphism1 = 1*MorDDtoDDGenerator(
+            morphism_cx, gens["x"],
+            TensorGenerator((pmc.sd([(0, 1)]), pmc.sd([(0, 1)])), tensor_alg),
+            gens["y"])
+        morphism1 += 1*MorDDtoDDGenerator(
+            morphism_cx, gens["x"],
+            TensorGenerator((pmc.sd([(2, 3)]), pmc.sd([(2, 3)])), tensor_alg),
+            gens["y"])
+        morphism2 = 1*MorDDtoDDGenerator(
+            morphism_cx, gens["y"],
+            TensorGenerator((pmc.sd([(1, 2)]), pmc.sd([(1, 2)])), tensor_alg),
+            gens["x"])
+        self.assertEqual(len(morphism1 * morphism2), 1)
+        self.assertEqual(len(morphism2 * morphism1), 1)
+        self.assertNotEqual(morphism1 * morphism2, morphism2 * morphism1)
+
 if __name__ == "__main__":
     unittest.main()

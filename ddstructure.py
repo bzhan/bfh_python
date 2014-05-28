@@ -1,7 +1,8 @@
 """Defines type DD structures."""
 
-from algebra import DGAlgebra, FreeModule, Generator, SimpleChainComplex, \
-    Tensor, TensorDGAlgebra, TensorIdempotent, TensorGenerator
+from algebra import ChainComplex, DGAlgebra, Element, FreeModule, Generator, \
+    SimpleChainComplex, Tensor, TensorDGAlgebra, TensorIdempotent, \
+    TensorGenerator
 from algebra import expandTensor, simplifyComplex
 from algebra import E0
 from dstructure import DGenerator, SimpleDGenerator, SimpleDStructure
@@ -70,10 +71,9 @@ class MorDDtoDGenerator(DGenerator, MorObject):
         MorObject.__init__(self, source, coeff, target)
 
 class MorDDtoDDGenerator(Generator, MorObject):
-    """Represents a generator of the chain complex of bimodule morphisms from a type
-    DD structure to a type DD structure.
+    """Represents a generator of the chain complex of bimodule morphisms from a
+    type DD structure to a type DD structure.
 
-    Multiplication is composition, when defined. Multiplication does not generate its parent correctly.
     """
     def __init__(self, parent, source, coeff, target):
         """Specifies the morphism source -> coeff * target. Note coeff has type
@@ -83,11 +83,98 @@ class MorDDtoDDGenerator(Generator, MorObject):
         Generator.__init__(self, parent)
         MorObject.__init__(self, source, coeff, target)
 
-    def __mul__(self, other):
-#        assert self.target.parent == other.source.parent
-        if isinstance(other, MorDDtoDDGenerator):
-            return MorDDtoDDGenerator(None, self.source, self.coeff*other.coeff, other.target)
-        return NotImplemented
+class MorDDtoDDComplex(ChainComplex):
+    """Represents the complex of type DD morphisms between two type DD
+    structures.
+
+    """
+    def __init__(self, ring, source, target):
+        """Specifies the source and target DD structures."""
+        ChainComplex.__init__(self, ring)
+        assert source.algebra1 == target.algebra1 and \
+            source.algebra2 == target.algebra2
+        assert source.side1 == target.side1 and source.side2 == target.side2
+        self.source = source
+        self.target = target
+
+    def __eq__(self, other):
+        # Unlike other structures, MorDDtoDDComplex is distinguished by its
+        # source and target
+        return self.source == other.source and self.target == other.target
+
+    def __ne__(self, other):
+        return not (self == other)
+
+    def __hash__(self, other):
+        return hash(tuple((self.source, self.target)))
+
+    def multiply(self, gen1, gen2):
+        """Return the composition of two morphisms."""
+        if not isinstance(gen1, MorDDtoDDGenerator):
+            return NotImplemented
+        if not isinstance(gen2, MorDDtoDDGenerator):
+            return NotImplemented
+        assert gen1.parent.target == gen2.parent.source
+        if gen1.target != gen2.source:
+            return E0
+        result = E0
+        new_parent = MorDDtoDDComplex(
+            F2, gen1.parent.source, gen2.parent.target)
+        for gen, coeff in (gen1.coeff * gen2.coeff).items():
+            result += coeff * MorDDtoDDGenerator(
+                new_parent, gen1.source, gen, gen2.target)
+        return result
+
+    def diff(self, gen):
+        result = E0
+        rev_delta = self.source.getReverseDelta()
+        tensor_alg = TensorDGAlgebra(
+            (self.source.algebra1, self.source.algebra2))
+
+        # Differential of y in (x -> ay)
+        x, a, y = gen.source, gen.coeff, gen.target
+        ady = a * y.delta()
+        for (b1, b2, q), coeff in ady.items():
+            b = TensorGenerator((b1, b2), tensor_alg)
+            result += coeff * MorDDtoDDGenerator(self, x, b, q)
+        # Differential of a
+        for da_gen, coeff in a.diff().items():
+            result += coeff * MorDDtoDDGenerator(self, x, da_gen, y)
+        # Precompose by the differential.
+        # For each p such that (b1,b2)*x is in dp, add p->((b1,b2)*a)y
+        for (b1, b2, p), coeff1 in rev_delta[x]:
+            b = TensorGenerator((b1, b2), tensor_alg)
+            for ba_gen, coeff2 in (b*a).items():
+                result += coeff1 * coeff2 * MorDDtoDDGenerator(
+                    self, p, ba_gen, y)
+        return result
+
+    def getMappingCone(self, morphism):
+        """Returns the mapping cone of a morphism."""
+        result = SimpleDDStructure(
+            F2, self.source.algebra1, self.source.algebra2,
+            self.source.side1, self.source.side2)
+        gen_map = dict()
+        for gen in self.source.getGenerators():
+            gen_map[gen] = SimpleDDGenerator(
+                result, gen.idem1, gen.idem2, "S_%s" % gen.name)
+            result.addGenerator(gen_map[gen])
+        for gen in self.target.getGenerators():
+            gen_map[gen] = SimpleDDGenerator(
+                result, gen.idem1, gen.idem2, "T_%s" % gen.name)
+            result.addGenerator(gen_map[gen])
+
+        for x1 in self.source.getGenerators():
+            for (a1, a2, x2), coeff in x1.delta().items():
+                result.addDelta(gen_map[x1], gen_map[x2], a1, a2, coeff)
+        for y1 in self.target.getGenerators():
+            for (b1, b2, y2), coeff in y1.delta().items():
+                result.addDelta(gen_map[y1], gen_map[y2], b1, b2, coeff)
+        for gen, ring_coeff in morphism.items():
+            a1, a2 = gen.coeff
+            result.addDelta(
+                gen_map[gen.source], gen_map[gen.target], a1, a2, ring_coeff)
+        return result
 
 class DDStructure(FreeModule):
     """Represents a type DD structure. Note delta() returns an element in the
@@ -334,6 +421,9 @@ class SimpleDDStructure(DDStructure):
         cx = SimpleChainComplex(F2)
         genType = MorDDtoDDGenerator
 
+        # For computing differentials only
+        mor_cx = MorDDtoDDComplex(F2, self, other)
+
         # Prepare rev_delta for the last step in computing differentials
         rev_delta = self.getReverseDelta()
 
@@ -353,22 +443,9 @@ class SimpleDDStructure(DDStructure):
 
         # Get the differentials of type DD structure maps
         for gen in gens:
-            # Differential of y in (x -> ay)
-            x, a, y = gen.source, gen.coeff, gen.target
-            ady = a * y.delta()
-            for (b1, b2, q), coeff in ady.items():
-                b = TensorGenerator((b1, b2), tensor_alg)
-                cx.addDifferential(gen, genType(cx, x, b, q), coeff)
-            # Differential of a
-            for da_gen, coeff in a.diff().items():
-                cx.addDifferential(gen, genType(cx, x, da_gen, y), coeff)
-            # Precompose by the differential.
-            # For each p such that (b1,b2)*x is in dp, add p->((b1,b2)*a)y
-            for (b1, b2, p), coeff1 in rev_delta[x]:
-                b = TensorGenerator((b1, b2), tensor_alg)
-                for ba_gen, coeff2 in (b*a).items():
-                    cx.addDifferential(
-                        gen, genType(cx, p, ba_gen, y), coeff1*coeff2)
+            for term, coeff in mor_cx.diff(gen).items():
+                cx_term = genType(cx, term.source, term.coeff, term.target)
+                cx.addDifferential(gen, cx_term, coeff)
         return cx
 
     def hochschildCochains(self):
