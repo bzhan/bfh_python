@@ -51,6 +51,9 @@ class SimpleDDGenerator(DDGenerator, NamedObject):
     def __repr__(self):
         return str(self)
 
+    def __hash__(self):
+        return hash((self.parent, self.idem1, self.idem2, self.name))
+
     def toDGenerator(self, new_parent):
         """Convert to a generator of a type D structure over the bialgebra."""
         new_idem = TensorIdempotent((self.idem1, self.idem2))
