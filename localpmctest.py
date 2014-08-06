@@ -6,19 +6,24 @@ import unittest
 
 class LocalPMCTest(unittest.TestCase):
     def testLocalPMC(self):
+        # One piece: (0-1-2-3*), with 0 paired with 2. Appears in short
+        # underslide at bottom of full PMC.
         pmc1 = LocalPMC(4, [(0, 2),(1,)], [3])
         self.assertEqual(pmc1.num_pair, 2)
         self.assertEqual(pmc1.otherp, [2, 1, 0, -1])
         self.assertEqual(pmc1.pairid, [0, 1, 0, -1])
         self.assertEqual(pmc1.pairs, [(0, 2),(1,)])
 
+        # One piece: (0*-1-2-3), with 1 paired with 3. Appears in short
+        # underslide at top of full PMC.
         pmc2 = LocalPMC(4, [(1, 3),(2,)], [0])
         self.assertEqual(pmc2.num_pair, 2)
         self.assertEqual(pmc2.otherp, [-1, 3, 2, 1])
         self.assertEqual(pmc2.pairid, [-1, 0, 1, 0])
         self.assertEqual(pmc2.pairs, [(1, 3),(2,)])
 
-        # Two pieces: (0*-1-2-3*) (4*-5-6*), with 2 paired with 5
+        # Two pieces: (0*-1-2-3*) (4*-5-6*), with 2 paired with 5. Appears in
+        # general arcslides.
         pmc3 = LocalPMC(7, [(1,),(2, 5)], [0, 3, 4, 6])
         self.assertEqual(pmc3.num_pair, 2)
         self.assertEqual(pmc3.otherp, [-1, 1, 5, -1, -1, 2, -1])
@@ -26,6 +31,7 @@ class LocalPMCTest(unittest.TestCase):
         self.assertEqual(pmc3.pairs, [(1,),(2, 5)])
 
     def testGetLocalStrandDiagrams(self):
+        # Tests number of local strand diagrams.
         pmc1 = LocalPMC(4, [(0, 2),(1,)], [3])
         self.assertEqual(len(pmc1.getStrandDiagrams()), 17)
         pmc2 = LocalPMC(4, [(1, 3),(2,)], [0])
@@ -37,7 +43,8 @@ class LocalPMCTest(unittest.TestCase):
 
 class LocalStrandsTest(unittest.TestCase):
     def setUp(self):
-        # One piece: (0*-1-2-3-4*), with 1 paired with 3
+        # One piece: (0*-1-2-3-4*), with 1 paired with 3. Appears in short
+        # underslide in the middle of PMC.
         self.pmc1 = LocalPMC(5, [(1, 3),(2,)], [0, 4])
 
     def testConstructStrands(self):
