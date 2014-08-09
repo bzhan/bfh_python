@@ -1,8 +1,8 @@
 """Producing type DA structures for arcslides, using local actions."""
 
 from algebra import E0, TensorGenerator
-from dastructure import DAStructure, SimpleDAGenerator, SimpleDAStructure
-from extendbyid import ExtendedDAStructure
+from dastructure import DAStructure, SimpleDAGenerator
+from extendbyid import ExtendedDAStructure, LocalDAStructure
 from hdiagram import getArcslideDiagram
 from linalg import F2RowSystem
 from localpmc import LocalIdempotent, LocalStrandAlgebra, LocalStrandDiagram, \
@@ -188,7 +188,7 @@ class ArcslideDA(ExtendedDAStructure):
         """
         alg1 = LocalStrandAlgebra(F2, self.local_pmc1)
         alg2 = LocalStrandAlgebra(F2, self.local_pmc2)
-        local_dastr = SimpleDAStructure(F2, alg1, alg2)
+        local_dastr = LocalDAStructure(F2, alg1, alg2)
 
         # Mappings between local starting and ending PMC.
         slide = self.slide
@@ -223,6 +223,10 @@ class ArcslideDA(ExtendedDAStructure):
                 local_dastr, LocalIdempotent(self.local_pmc1, l_idem),
                 LocalIdempotent(self.local_pmc2, r_idem), "%d" % i))
         mod_gens = local_dastr.getGenerators()
+
+        # After having added all generators, create u_map:
+        local_dastr.auto_u_map()
+
         for coeffs_a in self.arrow_patterns.keys():
             if len(coeffs_a) == 0 or coeffs_a[0].isIdempotent():
                 continue

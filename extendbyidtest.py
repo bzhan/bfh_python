@@ -1,10 +1,10 @@
 """Unit test for extendbyid.py"""
 
 from extendbyid import *
-from dastructure import SimpleDAGenerator, SimpleDAStructure
+from dastructure import SimpleDAGenerator
 from localpmc import LocalIdempotent
 from pmc import Idempotent
-from pmc import splitPMC
+from pmc import linearPMC, splitPMC
 import unittest
 
 class ExtendedDAStructureTest(unittest.TestCase):
@@ -15,7 +15,7 @@ class ExtendedDAStructureTest(unittest.TestCase):
         outer_pmc = self.splitting.outer_pmc
 
         # Construct the local generators
-        local_da = SimpleDAStructure(
+        local_da = LocalDAStructure(
             F2, local_pmc.getAlgebra(), local_pmc.getAlgebra())
         idems = {"x1" : ([], []),
                  "x2" : ([0], [0]),
@@ -28,6 +28,8 @@ class ExtendedDAStructureTest(unittest.TestCase):
                 local_da, LocalIdempotent(local_pmc, l_idem),
                 LocalIdempotent(local_pmc, r_idem), name)
             local_da.addGenerator(gens[name])
+
+        local_da.auto_u_map()
 
         for name_from, name_to, algs_a, alg_d in [
                 # Example from _short_underslide_down_middle in arcslideda.py
@@ -86,6 +88,81 @@ class ExtendedDAStructureTest(unittest.TestCase):
         # Haven't stored such a local arrow
         self.assertFalse(self.extended_da.deltaPrefix(
             self.extended_gens["y4"], [self.pmc.sd([(1, 3), (4, 5)])]))
-        
+
+class AntiBraidTest(unittest.TestCase):
+    # A test of the local situation of anti-braid resolution, involving two
+    # unpaired points. Note this is a simple case before making an isotopy. It
+    # cannot be used in actual calculations because the DA action would be
+    # infinitely large.
+    def setUp(self):
+        self.pmc = linearPMC(2)
+        self.splitting = PMCSplitting(self.pmc, [(1, 4)])
+
+        # Correspondence between points in pmc and local / outer pmc:
+        #       pmc - 0      1 2 3 4      5 6 7
+        # local_pmc -     0* 1 2 3 4 5*
+        # outer_pmc - 0 1*             2* 3 4 5
+        local_pmc = self.splitting.local_pmc
+        outer_pmc = self.splitting.outer_pmc
+
+        # Construct the local generators. In local_pmc, idempotent 0 is (1, 4),
+        # idempotent 1 is (2,), idempotent 2 is (3,).
+        local_da = LocalDAStructure(
+            F2, local_pmc.getAlgebra(), local_pmc.getAlgebra(),
+            single_idems1 = [1, 2], single_idems2 = [1, 2])
+        idems = {"x1" : ([0], [1]),
+                 "x2" : ([0], [2]),
+                 "x3" : ([0, 2], [1, 2]),
+                 "x4" : ([0, 1], [1, 2])}
+        gens = {}
+        for name, (l_idem, r_idem) in idems.items():
+            gens[name] = SimpleDAGenerator(
+                local_da, LocalIdempotent(local_pmc, l_idem),
+                LocalIdempotent(local_pmc, r_idem), name)
+            local_da.addGenerator(gens[name])
+
+        local_da.auto_u_map()
+
+        for name_from, name_to, algs_a, alg_d in [
+            # Some examples of local DA actions
+            ("x4", "x3", [], [1, (2, 3)]),
+            ("x1", "x2", [[(2, 3)]], [1]),
+            ]:
+            local_da.addDelta(gens[name_from], gens[name_to],
+                              local_pmc.sd(alg_d),
+                              [local_pmc.sd(alg_a) for alg_a in algs_a], 1)
+
+        self.extended_da = ExtendedDAStructure(
+            local_da, self.splitting, self.splitting)
+        mod_gens = self.extended_da.getGenerators()
+        # Set up short names for the extended generators. Here y_i is the unique
+        # extension of x_i.
+        extended_idems = {"y1" : ([1, 3], [0, 3]),
+                          "y2" : ([1, 3], [2, 3]),
+                          "y3" : ([1, 2], [0, 2]),
+                          "y4" : ([0, 1], [0, 2])}
+        self.extended_gens = {}
+        for name, (l_idem, r_idem) in extended_idems.items():
+            for gen in mod_gens:
+                if gen.idem1 == Idempotent(self.pmc, l_idem) and \
+                   gen.idem2 == Idempotent(self.pmc, r_idem):
+                    self.extended_gens[name] = gen
+
+    def testGetGenerators(self):
+        self.assertEquals(len(self.extended_da.getGenerators()), 4)
+        self.assertEquals(len(self.extended_gens), 4)
+
+    def testDelta(self):
+        for x, algs_a, alg_d, y in [
+            ("y4", [], [1, (2, 3)], "y3"),
+            ("y1", [[5, (2, 3)]], [1, 5], "y2")]:
+            self.assertEquals(self.extended_da.delta(
+                    self.extended_gens[x], [self.pmc.sd(a) for a in algs_a]),
+                              self.pmc.sd(alg_d) * self.extended_gens[y])
+
+    def testDeltaPrefix(self):
+        # TODO: add test cases
+        pass
+
 if __name__ == "__main__":
     unittest.main()
