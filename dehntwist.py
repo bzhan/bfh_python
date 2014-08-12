@@ -2,12 +2,14 @@
 
 from algebra import TensorDGAlgebra, TensorGenerator
 from algebra import E0
-from ddstructure import MorDDtoDDComplex, MorDDtoDDGenerator
+from ddstructure import MorDDtoDDComplex, MorDDtoDDGenerator, \
+    SimpleDDGenerator, SimpleDDStructure
 from ddstructure import DDStrFromChords, identityDD
 from pmc import Idempotent, Strands, StrandDiagram
 from pmc import linearPMC
 from utility import memorize
 from utility import F2, NEG, POS
+import itertools
 
 class DehnTwist:
     """Represents a Dehn twist starting at linear PMC."""
@@ -191,16 +193,231 @@ class AntiBraid:
     @memorize
     def getDDStructure(self):
         """Returns the type DD structure corresponding to this dehn twist."""
-        self.all_idems = self._getIdems()
-        self.all_chords = []
+        all_idems = self._getIdems()
+        all_chords = []
         for chord_type in self._getChordsList():
-            chord_type()
+            all_chords.extend(chord_type())
+        all_chords = [self._StrandsFromChords(chord1, chord2)
+                      for chord1, chord2 in all_chords]
 
         alg1 = self.start_pmc.getAlgebra(mult_one = True)
         alg2 = alg1
-        ddstr = DDStrFromChords(alg1, alg2, self.all_idems, self.all_chords)
+        ddstr = DDStrFromChords(alg1, alg2, all_idems, all_chords)
         assert ddstr.testDelta()
         return ddstr
+
+    @memorize
+    def getAdmissibleDDStructure(self):
+        """Returns the type DD structure corresponding to the Heegaard diagram
+        created by a finger move of the beta circle to the right.
+
+        """
+        alg1 = self.start_pmc.getAlgebra(mult_one = True)
+        alg2 = alg1
+        ddstr = SimpleDDStructure(F2, alg1, alg2)
+
+        # Add generators for the non-admissible case - that is, those generators
+        # that do not contain the two intersections created by the finger move.
+        original_idems = self._getIdems()
+        for i in range(len(original_idems)):
+            left_idem, right_idem = original_idems[i]
+            ddstr.addGenerator(
+                SimpleDDGenerator(ddstr, left_idem, right_idem, "0_%d" % i))
+
+        # Now add the new generators. These just correspond to the complementary
+        # idempotents with c_pair on the left, repeated twice.
+        left_idems = [idem for idem in self.start_pmc.getIdempotents()
+                      if self.c_pair in idem]
+        for i in range(len(left_idems)):
+            left_idem = left_idems[i]
+            right_idem = left_idem.opp().comp()
+            ddstr.addGenerator(
+                SimpleDDGenerator(ddstr, left_idem, right_idem, "1_%d" % i))
+            ddstr.addGenerator(
+                SimpleDDGenerator(ddstr, left_idem, right_idem, "2_%d" % i))
+
+        gen_set = []
+        for i in range(3):
+            gen_set.append([gen for gen in ddstr.getGenerators()
+                            if gen.name[:1] == "%d" % i])
+
+        # Enumerate the non-special chords (those that do not dependent on the
+        # idempotent. See the functions themselves for the format of all_chords.
+        if self.is_degenerate:
+            all_chords = self._getAdmissibleNonSpecialChordsDegenerate()
+        else:
+            all_chords = self._getAdmissibleNonSpecialChords()
+        for i, j in itertools.product(range(3), range(3)):
+            all_chords[i][j] = [self._StrandsFromChords(chord1, chord2)
+                                for chord1, chord2 in all_chords[i][j]]
+
+        # Now we emulate the logic in ddstructure.DDStrFromChords, except we
+        # distinguish between ''classes'' of generators, by the first character
+        # of the name of the generator.
+        for i, j in itertools.product(range(3), range(3)):
+            for x, y in itertools.product(gen_set[i], gen_set[j]):
+                for l_chord, r_chord in all_chords[i][j]:
+                    if l_chord.idemCompatible(x.idem1, y.idem1) and \
+                            r_chord.idemCompatible(x.idem2, y.idem2):
+                        ddstr.addDelta(x, y,
+                                       StrandDiagram(alg1, x.idem1, l_chord),
+                                       StrandDiagram(alg2, x.idem2, r_chord), 1)
+
+        # Special handling for these. From class 2 to class 1, add only if the
+        # c-pair is occupied on the left side (and not on the right).
+        # Non-degenerate cases only.
+        sp_chords = []
+        if not self.is_degenerate:
+            for x in range(0, self.c1):
+                for y in range(self.c2+1, self.n):
+                    sp_chords.append(([(x, y)], [(x, self.u), (self.u, y)]))
+                    sp_chords.append(([(x, y)], [(x, self.d), (self.d, y)]))
+                    sp_chords.append(([(x, self.d), (self.u, y)],
+                                      [(x, self.d), (self.u, y)]))
+
+        sp_chords = [self._StrandsFromChords(chord1, chord2)
+                     for chord1, chord2 in sp_chords]
+        for x, y in itertools.product(gen_set[2], gen_set[1]):
+            for l_chord, r_chord in sp_chords:
+                if self.c_pair in x.idem1 and \
+                        l_chord.idemCompatible(x.idem1, y.idem1) and \
+                        r_chord.idemCompatible(x.idem2, y.idem2):
+                    assert self.c_pair not in x.idem2.opp() and \
+                        self.c_pair in y.idem1 and \
+                        self.c_pair not in y.idem2.opp()
+                    ddstr.addDelta(x, y,
+                                   StrandDiagram(alg1, x.idem1, l_chord),
+                                   StrandDiagram(alg2, x.idem2, r_chord), 1)
+
+        assert ddstr.testDelta()
+        return ddstr
+
+    def _getAdmissibleNonSpecialChordsDegenerate(self):
+        """Returns the non-special chords (those that do not depend on the
+        idempotent in the degenerate admissible case.
+
+        """
+        # Initialize all_chords to be a 3*3 matrix of lists, with each entry
+        # (i, j) containing the chord pairs from generators of class i to
+        # generators of class j.
+        all_chords = []
+        for i in range(3):
+            all_chords.append([])
+            for j in range(3):
+                all_chords[i].append([])
+
+        # Idempotent actions from 1 to 2.
+        all_chords[1][2].append(([], []))
+
+        # Basic chords.
+        all_chords[0][2].append(([], [(self.p, self.c2)]))
+        all_chords[1][0].append(([], [(self.c1, self.p)]))
+
+        # Incorporate the left side.
+        all_chords[0][0].append(([(self.c1, self.c2)], []))
+        all_chords[2][0].append(([(self.c1, self.c2)], [(self.c1, self.p)]))
+        all_chords[0][1].append(([(self.c1, self.c2)], [(self.p, self.c2)]))
+
+        # Identity away from the anti-braid.
+        for x in range(0, self.n):
+            for y in range(x+1, self.n):
+                if y < self.c1 or x > self.c2:
+                    for i in range(3):
+                        all_chords[i][i].append(([(x, y)], [(x, y)]))
+        return all_chords
+
+    def _getAdmissibleNonSpecialChords(self):
+        """Returns the non-special chords (those that do not depend on the
+        idempotent in the non-degenerate admissible case.
+
+        """
+        # Initialize all_chords to be a 3*3 matrix of lists, with each entry
+        # (i, j) containing the chord pairs from generators of class i to
+        # generators of class j.
+        all_chords = []
+        for i in range(3):
+            all_chords.append([])
+            for j in range(3):
+                all_chords[i].append([])
+
+        # Idempotent actions from 1 to 2.
+        all_chords[1][2].append(([], []))
+
+        # Basic chords.
+        all_chords[0][0].append(([], [(self.d, self.u)]))
+        all_chords[0][2].append(([], [(self.u, self.c2)]))
+        all_chords[1][0].append(([], [(self.c1, self.d)]))
+        all_chords[0][2].append(([], [(self.d, self.c2)]))
+        all_chords[1][0].append(([], [(self.c1, self.u)]))
+
+        # Incorporate the intervals (c1-1, c1) and (c2, c2+1).
+        for x in range(0, self.c1):
+            for y in range(self.c2+1, self.n):
+                all_chords[0][0].append(
+                    ([(x, self.c1), (self.c2, y)],
+                     [(x, self.c1), (self.c2, y)]))
+                all_chords[2][0].append(
+                    ([(x, self.c1), (self.c2, y)], [(x, self.u), (self.c2, y)]))
+                all_chords[2][0].append(
+                    ([(x, self.c1), (self.c2, y)], [(x, self.d), (self.c2, y)]))
+                all_chords[0][1].append(
+                    ([(x, self.c1), (self.c2, y)], [(x, self.c1), (self.u, y)]))
+                all_chords[0][1].append(
+                    ([(x, self.c1), (self.c2, y)], [(x, self.c1), (self.d, y)]))
+                for i in range(3):
+                    all_chords[i][i].append(
+                        ([(x, self.c1), (self.c2, y)], [(x, y)]))
+
+        # Incorporate the left side.
+        all_chords[0][0].extend(
+            [([(self.d, self.u)], []),
+             ([(self.c1, self.d), (self.u, self.c2)], []),
+             ([(self.c1, self.c2)], [])])
+        for i in (1, 2):
+            all_chords[i][i].append(([(self.d, self.u)], [(self.d, self.u)]))
+
+        all_chords[2][0].extend(
+            [([(self.c1, self.d), (self.u, self.c2)], [(self.c1, self.d)]),
+             ([(self.c1, self.c2)], [(self.c1, self.d)]),
+             ([(self.c1, self.d), (self.u, self.c2)], [(self.c1, self.u)]),
+             ([(self.c1, self.c2)], [(self.c1, self.u)])])
+
+        all_chords[0][1].extend(
+            [([(self.c1, self.d), (self.u, self.c2)], [(self.u, self.c2)]),
+             ([(self.c1, self.c2)], [(self.u, self.c2)]),
+             ([(self.c1, self.d), (self.u, self.c2)], [(self.d, self.c2)]),
+             ([(self.c1, self.c2)], [(self.d, self.c2)])])
+
+        # Again add intervals (c1-1, c1) and (c2, c2+1).
+        for x in range(0, self.c1):
+            for y in range(self.c2+1, self.n):
+                all_chords[0][0].extend(
+                    [([(x, y)], [(x, y)]),
+                     ([(x, y)], [(x, self.d), (self.u, y)]),
+                     ([(x, y)], [(x, self.c1), (self.c2, y)]),
+                     ([(x, self.c1), (self.c2, y)], [(x, self.d), (self.u, y)]),
+                     ([(x, self.d), (self.u, y)], [(x, self.c1), (self.c2, y)]),
+                     ([(x, self.d), (self.u, y)], [(x, y)])])
+
+                all_chords[2][0].extend(
+                    [([(x, y)], [(x, self.d), (self.c2, y)]),
+                     ([(x, y)], [(x, self.u), (self.c2, y)]),
+                     ([(x, self.d), (self.u, y)], [(x, self.d), (self.c2, y)]),
+                     ([(x, self.d), (self.u, y)], [(x, self.u), (self.c2, y)])])
+
+                all_chords[0][1].extend(
+                    [([(x, y)], [(x, self.c1), (self.u, y)]),
+                     ([(x, y)], [(x, self.c1), (self.d, y)]),
+                     ([(x, self.d), (self.u, y)], [(x, self.c1), (self.u, y)]),
+                     ([(x, self.d), (self.u, y)], [(x, self.c1), (self.d, y)])])
+
+        # Identity away from the anti-braid.
+        for x in range(0, self.n):
+            for y in range(x+1, self.n):
+                if y < self.c1 or x > self.c2:
+                    for i in range(3):
+                        all_chords[i][i].append(([(x, y)], [(x, y)]))
+        return all_chords
 
     def _getIdems(self):
         """Returns the set of possible idempotent-pairs for generators."""
@@ -223,57 +440,61 @@ class AntiBraid:
                     all_idems.append((idem, right_idem))
         return all_idems
 
-    def _addPair(self, data1, data2):
-        """Add this pair of chord data."""
-        chord_left = Strands(self.start_pmc, data1)
-        data2 = [(self.n-1-q, self.n-1-p) for p, q in data2]
-        chord_right = Strands(self.end_pmc.opp(), data2)
-        self.all_chords.append((chord_left, chord_right))
+    def _StrandsFromChords(self, chord1, chord2):
+        """Create strand objects from lists of chords. Points in chord2 are
+        reversed (refer to the opposite pmc).
+
+        """
+        chord_left = Strands(self.start_pmc, chord1)
+        chord2 = [(self.n-1-q, self.n-1-p) for p, q in chord2]
+        chord_right = Strands(self.end_pmc.opp(), chord2)
+        return (chord_left, chord_right)
 
     def _B1Chords(self):
-        for x in range(self.n):
-            for y in range(x+1, self.n):
+        return [([(x, y)], [(x, y)])
+                for x in range(self.n) for y in range(x+1, self.n)
                 if (x < self.c1 or x > self.c2) and \
-                        (y < self.c1 or y > self.c2):
-                    self._addPair([(x, y)], [(x, y)])
+                    (y < self.c1 or y > self.c2)]
 
     def _B2Chords(self):
-        self._addPair([(self.d, self.u)], [])
-        self._addPair([], [(self.d, self.u)])
+        return [([(self.d, self.u)], []), ([], [(self.d, self.u)])]
 
     def _B3Chords(self):
-        self._addPair([(self.c1, self.d), (self.u, self.c2)], [])
-        self._addPair([], [(self.c1, self.d), (self.u, self.c2)])
+        return [([(self.c1, self.d), (self.u, self.c2)], []),
+                ([], [(self.c1, self.d), (self.u, self.c2)])]
 
     def _B4Chords(self):
-        self._addPair([(self.c1, self.c2)], [])
-        self._addPair([], [(self.c1, self.c2)])
+        return [([(self.c1, self.c2)], []), ([], [(self.c1, self.c2)])]
 
     def _B5Chords(self):
+        result = []
         for x in range(0, self.c1):
             for y in range(self.c2+1, self.n):
-                self._addPair([(x, self.c1), (self.c2, y)], [(x, y)])
-                self._addPair([(x, y)], [(x, self.c1), (self.c2, y)])
+                result.append(([(x, self.c1), (self.c2, y)], [(x, y)]))
+                result.append(([(x, y)], [(x, self.c1), (self.c2, y)]))
+        return result
 
     def _B6Chords(self):
+        result = []
         for x in range(0, self.c1):
             for y in range(self.c2+1, self.n):
-                self._addPair([(x, self.d), (self.u, y)], [(x, y)])
-                self._addPair([(x, y)], [(x, self.d), (self.u, y)])
+                result.append(([(x, self.d), (self.u, y)], [(x, y)]))
+                result.append(([(x, y)], [(x, self.d), (self.u, y)]))
+        return result
 
     def _B7Chords(self):
-        for x in range(0, self.c1):
-            for y in range(self.c2+1, self.n):
-                self._addPair([(x, self.c1), (self.c2, y)],
-                              [(x, self.c1), (self.c2, y)])
+        return [([(x, self.c1), (self.c2, y)], [(x, self.c1), (self.c2, y)])
+                for x in range(0, self.c1) for y in range(self.c2+1, self.n)]
 
     def _B8Chords(self):
+        result = []
         for x in range(0, self.c1):
             for y in range(self.c2+1, self.n):
-                self._addPair([(x, self.d), (self.u, y)],
-                              [(x, self.c1), (self.c2, y)])
-                self._addPair([(x, self.c1), (self.c2, y)],
-                              [(x, self.d), (self.u, y)])
+                result.append(([(x, self.d), (self.u, y)],
+                               [(x, self.c1), (self.c2, y)]))
+                result.append(([(x, self.c1), (self.c2, y)],
+                               [(x, self.d), (self.u, y)]))
+        return result
 
     def _getChordsList(self):
         if self.is_degenerate:

@@ -14,6 +14,15 @@ class AntiBraidTest(unittest.TestCase):
             antibraid = AntiBraid(genus, c_pair)
             antibraid_dd = antibraid.getDDStructure()
 
+    def testAdmissibleAntiBraid(self):
+        for genus, c_pair in [(3, 1), (3, 2), (3, 0), (3, 5)]:
+            antibraid = AntiBraid(genus, c_pair)
+            antibraid_dd = antibraid.getAdmissibleDDStructure()
+
+            antibraid_dd.simplify()
+            self.assertTrue(
+                antibraid_dd.compareDDStructures(antibraid.getDDStructure()))
+
 class DehnSurgeryTest(unittest.TestCase):
     def testDehnSurgery(self):
         for genus, c_pair, orientation in [(3, 1, NEG), (3, 2, POS),
