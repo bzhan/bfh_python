@@ -36,9 +36,31 @@ class DehnSurgeryTest(unittest.TestCase):
         morphism = surgery.getMorphism()
         morphism_cx = morphism.getElt().parent
         mapping_cone = morphism_cx.getMappingCone(morphism)
+
         # Six generators in identity, four in anti-braid
         self.assertEqual(len(mapping_cone), 10)
         self.assertTrue(mapping_cone.testDelta())
+
+    def testAdmissibleDehnSurgery(self):
+        for genus, c_pair, orientation in [(3, 1, NEG), (3, 2, POS),
+                                           (3, 0, NEG), (3, 5, POS)]:
+            surgery = DehnSurgery(genus, c_pair, orientation)
+            morphism = surgery.getMorphism(is_admissible = True)
+            self.assertEqual(morphism.diff(), 0)
+
+            # Form mapping cone
+            morphism_cx = morphism.getElt().parent
+            mapping_cone = morphism_cx.getMappingCone(morphism)
+            self.assertTrue(mapping_cone.testDelta())
+
+            # Test that the simplified mapping cone agrees with the one from the
+            # non-admissible case.
+            mapping_cone.simplify()
+            ori_morphism = surgery.getMorphism()
+            ori_morphism_cx = ori_morphism.getElt().parent
+            ori_mapping_cone = ori_morphism_cx.getMappingCone(ori_morphism)
+            self.assertTrue(
+                mapping_cone.compareDDStructures(ori_mapping_cone))
 
 if __name__ == "__main__":
     unittest.main()

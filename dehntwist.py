@@ -258,7 +258,7 @@ class AntiBraid:
             for x, y in itertools.product(gen_set[i], gen_set[j]):
                 for l_chord, r_chord in all_chords[i][j]:
                     if l_chord.idemCompatible(x.idem1, y.idem1) and \
-                            r_chord.idemCompatible(x.idem2, y.idem2):
+                       r_chord.idemCompatible(x.idem2, y.idem2):
                         ddstr.addDelta(x, y,
                                        StrandDiagram(alg1, x.idem1, l_chord),
                                        StrandDiagram(alg2, x.idem2, r_chord), 1)
@@ -280,8 +280,8 @@ class AntiBraid:
         for x, y in itertools.product(gen_set[2], gen_set[1]):
             for l_chord, r_chord in sp_chords:
                 if self.c_pair in x.idem1 and \
-                        l_chord.idemCompatible(x.idem1, y.idem1) and \
-                        r_chord.idemCompatible(x.idem2, y.idem2):
+                   l_chord.idemCompatible(x.idem1, y.idem1) and \
+                   r_chord.idemCompatible(x.idem2, y.idem2):
                     assert self.c_pair not in x.idem2.opp() and \
                         self.c_pair in y.idem1 and \
                         self.c_pair not in y.idem2.opp()
@@ -531,18 +531,24 @@ class DehnSurgery:
             self.d = self.c1 + 1
             self.u = self.c1 + 2
 
-    def _addPair(self, data1, data2):
-        """Add this pair of chord data."""
-        chord_left = Strands(self.start_pmc, data1)
-        data2 = [(self.n-1-q, self.n-1-p) for p, q in data2]
-        chord_right = Strands(self.end_pmc.opp(), data2)
-        self.all_chords.append((chord_left, chord_right))
+    def _StrandsFromChords(self, chord1, chord2):
+        """Create strand objects from lists of chords. Points in chord2 are
+        reversed (refer to the opposite pmc).
+
+        """
+        chord_left = Strands(self.start_pmc, chord1)
+        chord2 = [(self.n-1-q, self.n-1-p) for p, q in chord2]
+        chord_right = Strands(self.end_pmc.opp(), chord2)
+        return (chord_left, chord_right)
 
     @memorize
-    def getMorphism(self):
+    def getMorphism(self, is_admissible = False):
         id_dd = identityDD(self.start_pmc)
         anti_braid = AntiBraid(self.genus, self.c_pair)
-        ab_dd = anti_braid.getDDStructure()
+        if not is_admissible:
+            ab_dd = anti_braid.getDDStructure()
+        else:
+            ab_dd = anti_braid.getAdmissibleDDStructure()
 
         if self.orientation == NEG:
             source = id_dd
@@ -553,9 +559,11 @@ class DehnSurgery:
 
         morphism_cx = MorDDtoDDComplex(F2, source, target)
 
-        self.all_chords = []
+        all_chords = []
         for chord_type in self._getChordsList():
-            chord_type()
+            all_chords.extend(chord_type())
+        all_chords = [self._StrandsFromChords(chord1, chord2) for
+                      chord1, chord2 in all_chords]
 
         morphism = E0
         alg = self.start_pmc.getAlgebra()
@@ -564,9 +572,72 @@ class DehnSurgery:
         # Similar to method in DDStrFromChords
         for x in source.getGenerators():
             for y in target.getGenerators():
-                for l_chord, r_chord in self.all_chords:
+                for l_chord, r_chord in all_chords:
                     if l_chord.idemCompatible(x.idem1, y.idem1) and \
-                            r_chord.idemCompatible(x.idem2, y.idem2):
+                       r_chord.idemCompatible(x.idem2, y.idem2):
+                        a1 = StrandDiagram(alg, x.idem1, l_chord)
+                        a2 = StrandDiagram(alg, x.idem2, r_chord)
+                        coeff = TensorGenerator((a1, a2), tensor_alg)
+                        morphism += 1*MorDDtoDDGenerator(
+                            morphism_cx, x, coeff, y)
+
+        if not is_admissible:
+            return morphism
+
+        # Additional chords to / from the new generators in the admissible
+        # case.
+        new_chords = []
+        for i in range(2):
+            new_chords.append([])
+
+        if self.orientation == NEG:
+            new_chords[0].append(
+                ([(self.c2-1, self.c2)], [(self.c2-1, self.c2)]))
+            if not self.is_degenerate:
+                new_chords[0].append(
+                    ([(self.c2-2, self.c2)], [(self.c2-2, self.c2)]))
+            for y in range(self.c2+1, self.n):
+                new_chords[0].append(([(self.c2-1, y)], [(self.c2-1, y)]))
+                if not self.is_degenerate:
+                    new_chords[0].append(([(self.c2-2, y)], [(self.c2-2, y)]))
+                for x in range(0, self.c1):
+                    new_chords[0].append(
+                        ([(x, self.c1), (self.c2, y)], [(x, y)]))
+            for x in range(0, self.c1):
+                new_chords[1].append(([(x, self.c1)], [(x, self.c2)]))
+        else:  # self.orientation == POS
+            new_chords[1].append(
+                ([(self.c1, self.c1+1)], [(self.c1, self.c1+1)]))
+            if not self.is_degenerate:
+                new_chords[1].append(
+                    ([(self.c1, self.c1+2)], [(self.c1, self.c1+2)]))
+            for x in range(0, self.c1):
+                new_chords[1].append(([(x, self.c1+1)], [(x, self.c1+1)]))
+                if not self.is_degenerate:
+                    new_chords[1].append(([(x, self.c1+2)], [(x, self.c1+2)]))
+                for y in range(self.c2+1, self.n):
+                    new_chords[1].append(
+                        ([(x, self.c1), (self.c2, y)], [(x, y)]))
+            for x in range(self.c2+1, self.n):
+                new_chords[0].append(([(self.c2, x)], [(self.c1, x)]))
+
+        for i in range(2):
+            new_chords[i] = [self._StrandsFromChords(chord1, chord2) for
+                             chord1, chord2 in new_chords[i]]
+            if self.orientation == NEG:
+                source_gen = source.getGenerators()
+                target_gen = [gen for gen in target.getGenerators()
+                              if gen.name[0] == "%d" % (i+1)]
+            else:  # self.orientation == POS
+                source_gen = [gen for gen in source.getGenerators()
+                              if gen.name[0] == "%d" % (i+1)]
+                target_gen = target.getGenerators()
+            for x, y in itertools.product(source_gen, target_gen):
+                if self.orientation == NEG and self.c_pair not in y.idem1:
+                    continue
+                for l_chord, r_chord in new_chords[i]:
+                    if l_chord.idemCompatible(x.idem1, y.idem1) and \
+                       r_chord.idemCompatible(x.idem2, y.idem2):
                         a1 = StrandDiagram(alg, x.idem1, l_chord)
                         a2 = StrandDiagram(alg, x.idem2, r_chord)
                         coeff = TensorGenerator((a1, a2), tensor_alg)
@@ -575,44 +646,34 @@ class DehnSurgery:
         return morphism
 
     def _N1Chords(self):
-        self._addPair([(self.c2-1, self.c2)], [])
-        self._addPair([], [(self.c1, self.c1+1)])
+        return [([(self.c2-1, self.c2)], []), ([], [(self.c1, self.c1+1)])]
 
     def _N2Chords(self):
-        for x in range(self.c2+1, self.n):
-            self._addPair([(self.c2-1, x)], [(self.c2, x)])
-        for x in range(0, self.c1):
-            self._addPair([(x, self.c1)], [(x, self.c1+1)])
+        return [([(x, self.c1)], [(x, self.c1+1)]) for x in range(self.c1)] + \
+            [([(self.c2-1, x)], [(self.c2, x)])
+             for x in range(self.c2+1, self.n)]
 
     def _N3Chords(self):
-        self._addPair([(self.d, self.c2)], [])
-        self._addPair([], [(self.c1, self.u)])
+        return [([(self.d, self.c2)], []), ([], [(self.c1, self.u)])]
 
     def _N4Chords(self):
-        for x in range(self.c2+1, self.n):
-            self._addPair([(self.d, x)], [(self.c2, x)])
-        for x in range(0, self.c1):
-            self._addPair([(x, self.c1)], [(x, self.u)])
+        return [([(x, self.c1)], [(x, self.u)]) for x in range(self.c1)] + \
+            [([(self.d, x)], [(self.c2, x)]) for x in range(self.c2+1, self.n)]
 
     def _P1Chords(self):
-        self._addPair([(self.c1, self.c1+1)], [])
-        self._addPair([], [(self.c2-1, self.c2)])
+        return [([(self.c1, self.c1+1)], []), ([], [(self.c2-1, self.c2)])]
 
     def _P2Chords(self):
-        for x in range(0, self.c1):
-            self._addPair([(x, self.c1+1)], [(x, self.c1)])
-        for x in range(self.c2+1, self.n):
-            self._addPair([(self.c2, x)], [(self.c2-1, x)])
+        return [([(x, self.c1+1)], [(x, self.c1)]) for x in range(self.c1)] + \
+            [([(self.c2, x)], [(self.c2-1, x)])
+             for x in range(self.c2+1, self.n)]
 
     def _P3Chords(self):
-        self._addPair([(self.c1, self.u)], [])
-        self._addPair([], [(self.d, self.c2)])
+        return [([(self.c1, self.u)], []), ([], [(self.d, self.c2)])]
 
     def _P4Chords(self):
-        for x in range(0, self.c1):
-            self._addPair([(x, self.u)], [(x, self.c1)])
-        for x in range(self.c2+1, self.n):
-            self._addPair([(self.c2, x)], [(self.d, x)])
+        return [([(x, self.u)], [(x, self.c1)]) for x in range(0, self.c1)] + \
+            [([(self.c2, x)], [(self.d, x)]) for x in range(self.c2+1, self.n)]
 
     def _getChordsList(self):
         if self.orientation == NEG:
