@@ -2,6 +2,7 @@
 
 from arcslideda import *
 from arcslide import Arcslide
+from autocompleteda import AutoCompleteDAStructure
 from dstructure import zeroTypeD
 from latex import beginDoc, endDoc, showArrow
 from pmc import PMC
@@ -219,7 +220,7 @@ class ArcslideDATest(unittest.TestCase):
                         # seed for this round
                         arrows_new.append((coeff_d, coeffs_a))
                 # Triggers assert failure if it does not succeed
-                arrows_to_extend = ArcslideDA.autoCompleteByLinAlg(
+                arrows_to_extend = AutoCompleteDAStructure.autoCompleteByLinAlg(
                     arrows_base, arrows_new, single_idems,
                     local_dastr.getGenerators())
 

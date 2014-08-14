@@ -95,6 +95,23 @@ class DAStructure(FreeModule):
         self.AtensorM.rmultiply = _mul_A_AtensorM
         self.AtensorM.diff = _diff_AtensorM
 
+    @staticmethod
+    def idemMatchDA(x, y, coeff_d, coeffs_a):
+        """Tests whether idempotent matches in the potential arrow
+        x * coeffs_a -> coeff_d * y.
+
+        """
+        if x.idem1 != coeff_d.left_idem or y.idem1 != coeff_d.right_idem:
+            return False
+        if len(coeffs_a) == 0:
+            return x.idem2 == y.idem2
+        else:
+            for i in range(len(coeffs_a)-1):
+                if coeffs_a[i].right_idem != coeffs_a[i+1].left_idem:
+                    return False
+            return x.idem2 == coeffs_a[0].left_idem and \
+                y.idem2 == coeffs_a[-1].right_idem
+
     def delta(self, MGen, algGens):
         """algGens = (a_1, ..., a_n) is an element of TensorAlgebra. Evaluates
         the type DA operation delta^1(MGen; a_1, ..., a_n).
@@ -315,16 +332,7 @@ class SimpleDAStructure(DAStructure):
 
         """
         assert gen_from.parent == self and gen_to.parent == self
-        assert coeff_d.getRightIdem() == gen_to.idem1
-        assert coeff_d.getLeftIdem() == gen_from.idem1
-        if len(coeffs_a) == 0:
-            assert gen_from.idem2 == gen_to.idem2
-        else:
-            assert gen_from.idem2 == coeffs_a[0].getLeftIdem()
-            for i in range(len(coeffs_a)-1):
-                assert coeffs_a[i].getRightIdem() == \
-                    coeffs_a[i+1].getLeftIdem()
-            assert coeffs_a[-1].getRightIdem() == gen_to.idem2
+        assert DAStructure.idemMatchDA(gen_from, gen_to, coeff_d, coeffs_a)
         coeffs_a = tuple(coeffs_a)
         target_gen = TensorGenerator((coeff_d, gen_to), self.AtensorM)
         if (gen_from, coeffs_a) not in self.da_action:

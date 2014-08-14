@@ -1,17 +1,14 @@
 """Producing type DA structures for arcslides, using local actions."""
 
-from algebra import E0, TensorGenerator
+from algebra import TensorGenerator
 from dastructure import DAStructure, SimpleDAGenerator
 from extendbyid import ExtendedDAStructure, LocalDAStructure
 from hdiagram import getArcslideDiagram
-from linalg import F2RowSystem
-from localpmc import LocalIdempotent, LocalStrandAlgebra, LocalStrandDiagram, \
-    PMCSplitting
+from localpmc import LocalIdempotent, LocalStrandAlgebra, PMCSplitting
 from pmc import Strands, StrandDiagram
 from utility import memorize, subset
 from utility import ACTION_LEFT, ACTION_RIGHT, F2
 import itertools
-from Queue import Queue
 
 class ArcslideDA(ExtendedDAStructure):
     """Responsible for producing a type DA structure for an arcslide, using
@@ -146,14 +143,6 @@ class ArcslideDA(ExtendedDAStructure):
                 self.arrow_patterns[key] = []
             self.arrow_patterns[key].append(self.local_pmc1.sd(pattern[-1]))
 
-        # Produce the set of possible strict prefixes
-        self.strict_prefix_set = set()
-        for pattern in self.arrow_patterns:
-            for prefix_len in range(len(pattern)):  # excludes full pattern
-                self.strict_prefix_set.add(
-                    tuple([coeff.removeSingleHor()
-                           for coeff in pattern[:prefix_len]]))
-
         # Initiate the ExtendedDAStructure
         ExtendedDAStructure.__init__(
             self, self.getLocalDAStructure(), self.splitting1, self.splitting2)
@@ -164,28 +153,11 @@ class ArcslideDA(ExtendedDAStructure):
             break
         self.registerHDiagram(getArcslideDiagram(self.slide), base_gen)
 
-    @staticmethod
-    def idemMatchDA(x, y, coeff_d, coeffs_a):
-        """Tests whether idempotent matches in the potential arrow
-        x * coeffs_a -> coeff_d * y.
-
-        """
-        if x.idem1 != coeff_d.left_idem or y.idem1 != coeff_d.right_idem:
-            return False
-        if len(coeffs_a) == 0:
-            return x.idem2 == y.idem2
-        else:
-            return x.idem2 == coeffs_a[0].left_idem and \
-                y.idem2 == coeffs_a[-1].right_idem
-
     def getGenerators(self):
         return list(self.generators)
 
     def getLocalDAStructure(self):
-        """Returns the local type DA structure associated to slide. Mainly for
-        testing (that it satisfies the type DA structure equations.
-
-        """
+        """Returns the local type DA structure associated to slide. """
         alg1 = LocalStrandAlgebra(F2, self.local_pmc1)
         alg2 = LocalStrandAlgebra(F2, self.local_pmc2)
         local_dastr = LocalDAStructure(F2, alg1, alg2)
@@ -208,7 +180,9 @@ class ArcslideDA(ExtendedDAStructure):
         b_pair1 = self.local_pmc1.pairid[local_b1]
         c_pair1 = self.local_pmc1.pairid[local_c1]
 
-        da_idems = []
+        # Compute the set of local generators. This includes all
+        # (l_idem, r_idem) where l_idem = r_idem (under the usual identification
+        # of pairs), or where l_idem has the c_pair and r_idem has the b_pair.
         num_pair = self.local_pmc1.num_pair
         for idem in subset(range(num_pair)):
             da_idems.append((list(idem), [local_pair_to_r[p] for p in idem]))
@@ -227,33 +201,14 @@ class ArcslideDA(ExtendedDAStructure):
         # After having added all generators, create u_map:
         local_dastr.auto_u_map()
 
+        # Add arrows according to self.arrow_pattern.
         for coeffs_a in self.arrow_patterns.keys():
-            if len(coeffs_a) == 0 or coeffs_a[0].isIdempotent():
+            if len(coeffs_a) == 1 and coeffs_a[0].isIdempotent():
                 continue
             for coeff_d in self.arrow_patterns[coeffs_a]:
-                arrow_used = False
                 for x, y in itertools.product(mod_gens, mod_gens):
-                    if ArcslideDA.idemMatchDA(x, y, coeff_d, coeffs_a):
+                    if DAStructure.idemMatchDA(x, y, coeff_d, coeffs_a):
                         local_dastr.addDelta(x, y, coeff_d, coeffs_a, 1)
-                        arrow_used = True
-                if not arrow_used:
-                    print "Warning: unused arrow: ", coeffs_a, coeff_d
-                    pass
-        # Now add the arrows with no A-side inputs.
-        local_short_chord = [tuple(sorted([local_b1, local_c1]))]
-        empty_idems = [i for i in range(self.local_pmc1.num_pair)
-                       if i != b_pair1 and i != c_pair1]
-        for idems_to_add in subset(empty_idems):
-            # Starting pair of the short chord
-            if b1 > c1:
-                start_pair = c_pair1
-            else:
-                start_pair = b_pair1
-            alg_d = LocalStrandDiagram(alg1, [start_pair] + list(idems_to_add),
-                                       local_short_chord)
-            for x, y in itertools.product(mod_gens, mod_gens):
-                if ArcslideDA.idemMatchDA(x, y, alg_d, []):
-                    local_dastr.addDelta(x, y, alg_d, [], 1)
         return local_dastr
 
     @staticmethod
@@ -941,212 +896,3 @@ class ArcslideDA(ExtendedDAStructure):
             ([(4, 5), (5, 6)], [(1, 3)], [(0, 2)], [(0, 2), (3, 4), (5, 6)]),
         ]
         return patterns_raw
-
-    @staticmethod
-    def getDerivedTwoStepArrows(arrows_base, arrow_new, mod_gens):
-        """Find all ways of deriving two-step arrows from arrow_new, including
-        by combining it with elements of arrows_base.
-
-        """
-        result = []
-        coeff_d, coeffs_a = arrow_new
-        if len(coeffs_a) > 0 and coeffs_a[0].isIdempotent():
-            return result
-        # Take anti-differential of one of coeffs_a
-        for i in range(len(coeffs_a)):
-            for anti_da, coeff in coeffs_a[i].antiDiff().items():
-                result.append(
-                    (coeff_d, coeffs_a[:i] + (anti_da,) + coeffs_a[i+1:]))
-            for (a, b), coeff in coeffs_a[i].factor().items():
-                if a.isIdempotent() or b.isIdempotent():
-                    continue
-                result.append((coeff_d, coeffs_a[:i] + (a, b) + coeffs_a[i+1:]))
-        # Take differential of coeff_d
-        for dd, coeff in coeff_d.diff().items():
-            result.append((dd, coeffs_a))
-        # Multiply two together
-        for coeff_d2, coeffs_a2 in arrows_base:
-            if len(coeffs_a2) > 0 and coeffs_a2[0].isIdempotent():
-                continue
-            # One direction
-            if coeff_d * coeff_d2 != E0:
-                if any([ArcslideDA.idemMatchDA(x, y, coeff_d, coeffs_a) and
-                        ArcslideDA.idemMatchDA(y, z, coeff_d2, coeffs_a2)
-                        for x, y, z in itertools.product(
-                                mod_gens, mod_gens, mod_gens)]):
-                    result.append(((coeff_d * coeff_d2).getElt(),
-                                   coeffs_a + coeffs_a2))
-            # Other direction
-            if coeff_d2 * coeff_d != E0:
-                if any([ArcslideDA.idemMatchDA(x, y, coeff_d2, coeffs_a2) and
-                        ArcslideDA.idemMatchDA(y, z, coeff_d, coeffs_a)
-                        for x, y, z in itertools.product(
-                                mod_gens, mod_gens, mod_gens)]):
-                    result.append(((coeff_d2 * coeff_d).getElt(),
-                                   coeffs_a2 + coeffs_a))
-        return result
-
-    @staticmethod
-    def getAltFactorizations(arrows_base, arrow_new, mod_gens):
-        result = []
-        coeff_d, coeffs_a = arrow_new
-        # Take differential of one of coeffs_a
-        for i in range(len(coeffs_a)):
-            for da, coeff in coeffs_a[i].diff().items():
-                result.append((coeff_d, coeffs_a[:i] + (da,) + coeffs_a[i+1:]))
-            if i > 0 and coeffs_a[i-1] * coeffs_a[i] != E0:
-                result.append((coeff_d, coeffs_a[:i-1] +
-                               ((coeffs_a[i-1] * coeffs_a[i]).getElt(),) +
-                               coeffs_a[i+1:]))
-        # Take anti-differential of coeff_d
-        for anti_dd, coeff in coeff_d.antiDiff().items():
-            result.append((anti_dd, coeffs_a))
-        # Split into two sequences
-        for (a, b), coeff in coeff_d.factor().items():
-            # Number of A-inputs in the first sequence
-            for i in range(len(coeffs_a)):
-                if (a, coeffs_a[:i]) in arrows_base:
-                    arrow_used = False
-                    for x, y in itertools.product(mod_gens, mod_gens):
-                        if ArcslideDA.idemMatchDA(x, y, a, coeffs_a[:i]):
-                            arrow_used = True
-                    if arrow_used:
-                        result.append((b, coeffs_a[i:]))
-                if (b, coeffs_a[i:]) in arrows_base:
-                    result.append((a, coeffs_a[:i]))
-        return result
-
-    @staticmethod
-    def getAltIdempotents(arrows, single_idems):
-        """Arrows is a list of tuples (coeff_d, coeffs_a).
-        single_idems is a list of tuples (idem_d, idem_a), specifying the ID of
-        single idempotents on the D-side and A-side.
-        Returns a list of arrows that are different from those in the input by
-        only the single idempotents.
-
-        """
-        def uses_idempotent(alg_gen, idem):
-            return idem in alg_gen.left_idem or idem in alg_gen.right_idem
-
-        def has_singlehor(alg_gen, idem):
-            return idem in alg_gen.single_hor
-
-        def add_singlehor(alg_gen, idem):
-            return LocalStrandDiagram(
-                alg_gen.parent, [idem] + list(alg_gen.left_idem),
-                alg_gen.strands)
-
-        def remove_singlehor(alg_gen, idem):
-            return LocalStrandDiagram(
-                alg_gen.parent, [i for i in alg_gen.left_idem if i != idem],
-                alg_gen.strands)
-
-        results = []
-        for idem_d, idem_a in single_idems:
-            for coeff_d, coeffs_a in results + arrows:
-                if has_singlehor(coeff_d, idem_d) and \
-                   all([has_singlehor(coeff, idem_a) for coeff in coeffs_a]):
-                    new_arrow = (remove_singlehor(coeff_d, idem_d),
-                                 tuple([remove_singlehor(coeff, idem_a)
-                                        for coeff in coeffs_a]))
-                    if not new_arrow in results + arrows:
-                        results.append(new_arrow)
-                if (not uses_idempotent(coeff_d, idem_d)) and \
-                   all([not uses_idempotent(coeff, idem_a)
-                        for coeff in coeffs_a]):
-                    new_arrow = (add_singlehor(coeff_d, idem_d),
-                                 tuple([add_singlehor(coeff, idem_a)
-                                        for coeff in coeffs_a]))
-                    if not new_arrow in results + arrows:
-                        results.append(new_arrow)
-        return results
-
-    @staticmethod
-    def autoCompleteByLinAlg(arrows_base, arrows_new, single_idems, mod_gens):
-        """Auto-complete arrows by solving a system of linear equations mod 2.
-        Use only when it is clear that no two added arrows can be composed
-        together.
-
-        Returns the list of suggested arrows.
-
-        """
-        # First step: find all possible arrows, and all possible two-step
-        # arrows.
-        one_step_arrows = set()
-        two_step_arrows = set()
-        one_step_arrows_queue = Queue()
-        two_step_arrows_queue = Queue()
-        for arrow in arrows_new:
-            one_step_arrows_queue.put(arrow)
-            one_step_arrows.add(arrow)
-
-        while not one_step_arrows_queue.empty() or \
-              not two_step_arrows_queue.empty():
-            if not one_step_arrows_queue.empty():
-                cur_arrow = one_step_arrows_queue.get()
-                for arrow in ArcslideDA.getDerivedTwoStepArrows(
-                        arrows_base, cur_arrow, mod_gens):
-                    if arrow not in two_step_arrows:
-                        two_step_arrows.add(arrow)
-                        two_step_arrows_queue.put(arrow)
-                for arrow in ArcslideDA.getAltIdempotents(
-                        [cur_arrow], single_idems):
-                    if arrow not in one_step_arrows:
-                        one_step_arrows.add(arrow)
-                        one_step_arrows_queue.put(arrow)
-            else:
-                cur_arrow = two_step_arrows_queue.get()
-                for arrow in ArcslideDA.getAltFactorizations(
-                        arrows_base, cur_arrow, mod_gens):
-                    if arrow not in one_step_arrows:
-                        one_step_arrows.add(arrow)
-                        one_step_arrows_queue.put(arrow)
-
-        # Combine some of the one-step arrows
-        combined_one_step_arrows = []  # list of lists of arrows
-        while len(one_step_arrows) != 0:
-            arrow = one_step_arrows.pop()
-            coeff_d, coeffs_a = arrow
-            valid = True
-            for idem_d, idem_a in single_idems:
-                if idem_a in coeff_d.single_hor and \
-                   not all(
-                       idem_d in coeff_a.single_hor for coeff_a in coeffs_a):
-                    valid = False
-                    break
-            if not valid:
-                continue
-
-            alt_idems = ArcslideDA.getAltIdempotents([arrow], single_idems)
-            for alt_idem in alt_idems:
-                one_step_arrows.remove(alt_idem)
-            combined_one_step_arrows.append([arrow] + alt_idems)
-
-        # Generate the matrix mapping from one-step arrows to two-step arrows
-        two_step_arrows = list(two_step_arrows)
-        matrix_map = [[0] * len(two_step_arrows)
-                      for i in range(len(combined_one_step_arrows))]
-        target_vec = [0] * len(two_step_arrows)
-        for i in range(len(combined_one_step_arrows)):
-            for one_step_arrow in combined_one_step_arrows[i]:
-                derived_two_steps = ArcslideDA.getDerivedTwoStepArrows(
-                    arrows_base, one_step_arrow, mod_gens)
-                for j in range(len(two_step_arrows)):
-                    if two_step_arrows[j] in derived_two_steps:
-                        if one_step_arrow in arrows_new:
-                            target_vec[j] += 1
-                            target_vec[j] %= 2
-                        else:
-                            matrix_map[i][j] += 1
-                            matrix_map[i][j] %= 2
-
-        lin_sys = F2RowSystem(matrix_map)
-        comb = lin_sys.getComb(target_vec)
-        assert comb is not None
-
-        result = []
-        for i in range(len(combined_one_step_arrows)):
-            if comb[i] != 0 and \
-               combined_one_step_arrows[i][0] not in arrows_new:
-                result.extend(combined_one_step_arrows[i])
-        return result
