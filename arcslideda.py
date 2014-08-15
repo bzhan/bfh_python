@@ -22,9 +22,8 @@ class ArcslideDA(ExtendedDAStructure):
         outer_pmc1, outer_mapping1 - complement of slide in starting pmc.
         local_pmc2, mapping2, outer_pmc2, outer_mapping2
           - same, but for ending pmc.
-        arrow_patterns - key is tuple of LocalStrandDiagram specifying what the
-          A-side inputs look like in the local PMC. Value is a list of possible
-          local D-side outputs.
+        Moreover, find pattern_fun and translator as appropriate for the case at
+        hand.
 
         """
         self.slide = slide
@@ -41,7 +40,7 @@ class ArcslideDA(ExtendedDAStructure):
         if b1 == c1 + 1:  # downward
             if c2 == c1 + 2:  # short underslide downward
                 local_cut1, local_cut2 = ([(c1, c2)], [(c1p, c2p)])
-                patterns_base = ArcslideDA._short_underslide_down_middle()
+                patterns_fun = ArcslideDA._short_underslide_down
                 if c1 == 0:
                     translator = ([-1, 0, 1, 2, 3], [-1, 0, 1, 2, 3])
                 elif c2 == n - 1:
@@ -51,7 +50,7 @@ class ArcslideDA(ExtendedDAStructure):
             elif c2 > c1:  # general underslide downward
                 local_cut1, local_cut2 = (
                     [(c1, b1), (c2, c2)], [(c1p, c1p), (b1p, c2p)])
-                patterns_base = ArcslideDA._general_underslide_down_middle()
+                patterns_fun = ArcslideDA._general_underslide_down
                 if c1 == 0:
                     translator = ([-1, 0, 1, 2, 3, 4, 5],
                                   [-1, 0, 1, 2, 3, 4, 5])
@@ -63,7 +62,7 @@ class ArcslideDA(ExtendedDAStructure):
             else:  # c2 < c1, general overslide downward
                 local_cut1, local_cut2 = (
                     [(c2, c2), (c1, b1)], [(b1p, c2p), (c1p, c1p)])
-                patterns_base = ArcslideDA._general_underslide_down_middle()
+                patterns_fun = ArcslideDA._general_underslide_down
                 if c2 == 0 and b1 == n - 1:
                     translator = ([2, 3, 4, -1, -1, 0, 1],
                                   [3, 4, -1, -1, 0, 1, 2])
@@ -78,7 +77,7 @@ class ArcslideDA(ExtendedDAStructure):
         elif b1 == c1 - 1:  # upward
             if c2 == c1 - 2:  # short underslide upward
                 local_cut1, local_cut2 = ([(c2, c1)], [(c2p, c1p)])
-                patterns_base = ArcslideDA._short_underslide_up_middle()
+                patterns_fun = ArcslideDA._short_underslide_up
                 if c2 == 0:
                     translator = ([-1, 0, 1, 2, 3], [-1, 0, 1, 2, 3])
                 elif c1 == n - 1:
@@ -88,7 +87,7 @@ class ArcslideDA(ExtendedDAStructure):
             elif c2 < c1:  # general underslide upward
                 local_cut1, local_cut2 = (
                     [(c2, c2), (b1, c1)], [(c2p, b1p), (c1p, c1p)])
-                patterns_base = ArcslideDA._general_underslide_up_middle()
+                patterns_fun = ArcslideDA._general_underslide_up
                 if c2 == 0:
                     translator = ([-1, 0, 1, 2, 3, 4, 5],
                                   [-1, 0, 1, 2, 3, 4, 5])
@@ -100,7 +99,7 @@ class ArcslideDA(ExtendedDAStructure):
             else:  # c2 > c1, general overslide upward
                 local_cut1, local_cut2 = (
                     [(b1, c1), (c2, c2)], [(c1p, c1p), (c2p, b1p)])
-                patterns_base = ArcslideDA._general_underslide_up_middle()
+                patterns_fun = ArcslideDA._general_underslide_up
                 if b1 == 0 and c2 == n - 1:
                     translator = ([3, 4, -1, -1, 0, 1, 2],
                                   [2, 3, 4, -1, -1, 0, 1])
@@ -113,14 +112,12 @@ class ArcslideDA(ExtendedDAStructure):
                 else:
                     translator = ([4, 5, 6, 0, 1, 2, 3], [3, 4, 5, 6, 0, 1, 2])
         else:
+            # All cases are covered. Should not happen.
             raise NotImplementedError(
                 "This slide pattern is not yet implemented.")
 
-        if translator is None:
-            patterns_raw = patterns_base
-        else:
-            patterns_raw = ArcslideDA._restrict_local_arrows(
-                patterns_base, translator[0], translator[1])
+        self.patterns_fun = patterns_fun
+        self.translator = translator
 
         self.splitting1 = PMCSplitting(self.pmc1, local_cut1)
         self.splitting2 = PMCSplitting(self.pmc2, local_cut2)
@@ -132,17 +129,6 @@ class ArcslideDA(ExtendedDAStructure):
         # Required so the left to right transition on the outside can proceed.
         assert self.splitting1.outer_pmc == self.splitting2.outer_pmc
 
-        # Compute the set of arrow patterns
-        self.arrow_patterns = {}
-        for pattern in patterns_raw:
-            key = []
-            for i in range(len(pattern)-1):
-                key.append(self.local_pmc2.sd(pattern[i]))
-            key = tuple(key)
-            if key not in self.arrow_patterns:
-                self.arrow_patterns[key] = []
-            self.arrow_patterns[key].append(self.local_pmc1.sd(pattern[-1]))
-
         # Initiate the ExtendedDAStructure
         ExtendedDAStructure.__init__(
             self, self.getLocalDAStructure(), self.splitting1, self.splitting2)
@@ -153,11 +139,30 @@ class ArcslideDA(ExtendedDAStructure):
             break
         self.registerHDiagram(getArcslideDiagram(self.slide), base_gen)
 
-    def getGenerators(self):
-        return list(self.generators)
+    def getLocalDAStructure(self, seeds_only = False):
+        """Returns the local type DA structure associated to slide. If
+        seeds_only is set to True, get a local DA structure with incomplete
+        da_action, that can be completed using the autocompleteda module.
 
-    def getLocalDAStructure(self):
-        """Returns the local type DA structure associated to slide. """
+        """
+
+        # Compute the set of arrow patterns
+        patterns_raw = self.patterns_fun(seeds_only = seeds_only)
+        if self.translator is not None:
+            patterns_raw = ArcslideDA._restrict_local_arrows(
+                patterns_raw, self.translator[0], self.translator[1])
+
+        arrow_patterns = {}
+        for pattern in patterns_raw:
+            coeffs_a = []
+            for i in range(len(pattern)-1):
+                coeffs_a.append(self.local_pmc2.sd(pattern[i]))
+            coeffs_a = tuple(coeffs_a)
+            if coeffs_a not in arrow_patterns:
+                arrow_patterns[coeffs_a] = []
+            arrow_patterns[coeffs_a].append(self.local_pmc1.sd(pattern[-1]))
+
+        # Now start construction of the local DA structure.
         alg1 = LocalStrandAlgebra(F2, self.local_pmc1)
         alg2 = LocalStrandAlgebra(F2, self.local_pmc2)
         local_dastr = LocalDAStructure(F2, alg1, alg2)
@@ -202,11 +207,11 @@ class ArcslideDA(ExtendedDAStructure):
         # After having added all generators, create u_map:
         local_dastr.auto_u_map()
 
-        # Add arrows according to self.arrow_pattern.
-        for coeffs_a in self.arrow_patterns.keys():
+        # Add arrows according to arrow_pattern.
+        for coeffs_a in arrow_patterns.keys():
             if len(coeffs_a) == 1 and coeffs_a[0].isIdempotent():
                 continue
-            for coeff_d in self.arrow_patterns[coeffs_a]:
+            for coeff_d in arrow_patterns[coeffs_a]:
                 for x, y in itertools.product(mod_gens, mod_gens):
                     if DAStructure.idemMatchDA(x, y, coeff_d, coeffs_a):
                         local_dastr.addDelta(x, y, coeff_d, coeffs_a, 1)
@@ -260,7 +265,7 @@ class ArcslideDA(ExtendedDAStructure):
     # element of the tuple is a list to be passed to the sd() function of the
     # D-side local PMC, specifying the D-side output.
     @staticmethod
-    def _short_underslide_down_middle():
+    def _short_underslide_down(seeds_only = False):
         """Short underslide going down, in the middle of PMC."""
         # Local PMC is 0*-1-2-3-4*, with 1 and 3 paired.
         patterns_raw = [
@@ -274,11 +279,18 @@ class ArcslideDA(ExtendedDAStructure):
             ([(1, 2),(2, 3)], [(1, 2),(2, 3)]),
             ([(2, 3)], [(1, 2)], [(2, 3)]),
             ([(2, 3)], [(1, 3)], [(2, 3)]),
-
-            #### Seed for top
+            #### Seeds for top
             ([(3, 4)], [(3, 4)]),
             ([2, (3, 4)], [2, (3, 4)]),
-            # Linear algebra produces
+            #### Seeds for bottom
+            ([(0, 1)], [(0, 1)]),
+            ([2, (0, 1)], [2, (0, 1)]),
+        ]
+        if seeds_only:
+            return patterns_raw
+
+        patterns_raw += [
+            # From seeds for top
             ([(2, 3), (3, 4)], [(1, 3)], [(2, 3), (3, 4)]),
             ([(2, 3), (3, 4)], [(1, 2)], [(2, 3)], [1, (2, 4)]),
             ([2, (1, 4)], [2, (1, 4)]),
@@ -290,10 +302,7 @@ class ArcslideDA(ExtendedDAStructure):
             ([(2, 3), (3, 4)], [(1, 2)], [(1, 2), (2, 4)]),
             ([(2, 3)], [(1, 4)], [(2, 4)]),
 
-            #### Seed for bottom
-            ([(0, 1)], [(0, 1)]),
-            ([2, (0, 1)], [2, (0, 1)]),
-            # Linear algebra produces
+            # From seeds for bottom
             ([1, 2, (0, 4)], [1, 2, (0, 4)]),
             ([1, (0, 4)], [1, (0, 4)]),
             ([(1, 2), (2, 4)], [2, (0, 1)], [1, (0, 2), (2, 4)]),
@@ -358,7 +367,7 @@ class ArcslideDA(ExtendedDAStructure):
         return patterns_raw
 
     @staticmethod
-    def _general_underslide_down_middle():
+    def _general_underslide_down(seeds_only = False):
         """Underslide of length >= 3 going down, in the middle of PMC."""
         # Local PMC at left (D-side) is 0*-1-2-3*, 4*-5-6*, with 1 and 5 paired.
         # Local PMC at right (A-side) is 0*-1-2*, 3*-4-5-6*, with 1 and 5
@@ -368,17 +377,25 @@ class ArcslideDA(ExtendedDAStructure):
             ([(1, 2)],),
             ([], []), ([1], [1]), ([4], [2]), ([4], [1]), ([1, 4], [1, 2]),
             ([(4, 5)], [1]),
-
-            #### Seed for top
+            #### Seeds for top
             ([(5, 6)], [(5, 6)]),
             ([4, (5, 6)], [2, (5, 6)]),
-            # Linear algebra produces
-            ([(4, 6)], [(5, 6)]),
-
-            #### Seed for bottom
+            #### Seeds for bottom
             ([(0, 1)], [(0, 1)]),
             ([4, (0, 1)], [2, (0, 1)]),
-            # Linear algebra produces
+            #### Seeds for upper middle
+            ([(3, 4)], [(4, 5)]),
+            #### Seeds for lower middle
+            ([4, (1, 2)], [1, (2, 3)]),
+        ]
+        if seeds_only:
+            return patterns_raw
+
+        patterns_raw += [
+            # From seeds for top
+            ([(4, 6)], [(5, 6)]),
+
+            # From seeds for bottom
             ([4, (0, 1)], [4, (5, 6)], [(0, 1), (5, 6)]),
             ([4, (0, 1)], [(4, 5), (5, 6)], [(0, 1), (5, 6)]),
             ([(0, 1), (5, 6)], [(0, 1), (5, 6)]),
@@ -386,9 +403,7 @@ class ArcslideDA(ExtendedDAStructure):
             ([(0, 1), (4, 6)], [(0, 1), (5, 6)]),
             ([4, (0, 1)], [1, (0, 2)]),
 
-            #### Seed for upper middle
-            ([(3, 4)], [(4, 5)]),
-            # Linear algebra produces
+            # From seed for upper middle
             ([(3, 4), (4, 6)], [(4, 5), (5, 6)]),
             ([1, (3, 4)], [(4, 5), (5, 6)], [1, (4, 6)]),
             ([(3, 4), (5, 6)], [4, (0, 1)], [1, (0, 2), (4, 6)]),
@@ -424,9 +439,7 @@ class ArcslideDA(ExtendedDAStructure):
             ([4, (3, 5)], [2, (4, 5)]),
             ([(3, 5)], [(4, 5)]),
 
-            #### Seed for lower middle
-            ([4, (1, 2)], [1, (2, 3)]),
-            # Linear algebra produces
+            # From seed for lower middle
             ([4, (1, 2), (3, 6)], [2, (1, 3), (4, 6)]),
             ([(1, 2), (3, 6)], [(1, 3), (4, 6)]),
             ([4, (0, 1), (1, 2)], [4, (5, 6)], [2, (0, 3), (5, 6)]),
@@ -585,7 +598,7 @@ class ArcslideDA(ExtendedDAStructure):
         return patterns_raw
 
     @staticmethod
-    def _short_underslide_up_middle():
+    def _short_underslide_up(seeds_only = False):
         """Short underslide going up, in the middle of PMC."""
         # Local PMC is 0*-1-2-3-4*, with 1 and 3 paired.
         patterns_raw = [
@@ -599,11 +612,18 @@ class ArcslideDA(ExtendedDAStructure):
             ([(1, 2),(2, 3)], [(1, 2),(2, 3)]),
             ([(2, 3)], [(1, 2)], [(1, 2)]),
             ([(1, 3)], [(1, 2)], [(1, 2)]),
-
-            #### Seed for top
+            #### Seeds for top
             ([(3, 4)], [(3, 4)]),
             ([2, (3, 4)], [2, (3, 4)]),
-            # Linear algebra produces
+            #### Seeds for bottom
+            ([(0, 1)], [(0, 1)]),
+            ([2, (0, 1)], [2, (0, 1)]),
+        ]
+        if seeds_only:
+            return patterns_raw
+
+        patterns_raw += [
+            # From seeds for top
             ([(1, 4)], [(1, 4)]),
             ([2, (1, 4)], [2, (1, 4)]),
             ([(2, 4)], [(1, 4)]),
@@ -611,10 +631,7 @@ class ArcslideDA(ExtendedDAStructure):
             ([(2, 3), (3, 4)], [(1, 2)], [(1, 2), (2, 4)]),
             ([(1, 2), (2, 4)], [(1, 2), (2, 4)]),
 
-            #### Seed for bottom
-            ([(0, 1)], [(0, 1)]),
-            ([2, (0, 1)], [2, (0, 1)]),
-            # Linear algebra produces
+            # From seeds for bottom
             ([(1, 2), (2, 4)], [2, (0, 1)], [1, (0, 2), (2, 4)]),
             ([2, (0, 1)], [1, (2, 4)], [1, (0, 4)]),
             ([2, (0, 1)], [(2, 3), (3, 4)], [(0, 3), (3, 4)]),
@@ -678,7 +695,7 @@ class ArcslideDA(ExtendedDAStructure):
         return patterns_raw
 
     @staticmethod
-    def _general_underslide_up_middle():
+    def _general_underslide_up(seeds_only = False):
         """Underslide of length >= 3 going up, in the middle of PMC."""
         # Local PMC at left (D-side) is 0*-1-2*, 3*-4-5-6*, with 1 and 5 paired.
         # Local PMC at right (A-side) is 0*-1-2-3*, 4*-5-6*, with 1 and 5
@@ -688,17 +705,25 @@ class ArcslideDA(ExtendedDAStructure):
             ([(4, 5)],),
             ([], []), ([1], [1]), ([2], [4]), ([2], [1]), ([1, 2], [1, 4]),
             ([(1, 2)], [1]),
-
-            #### Seed for top
+            #### Seeds for top
             ([(5, 6)], [(5, 6)]),
             ([2, (5, 6)], [4, (5, 6)]),
-            # Linear algebra produces
-            ([2, (5, 6)], [1, (4, 6)]),
-
-            #### Seed for bottom
+            #### Seeds for bottom
             ([(0, 1)], [(0, 1)]),
             ([2, (0, 1)], [4, (0, 1)]),
-            # Linear algebra produces
+            #### Seed for upper middle
+            ([2, (4, 5)], [1, (3, 4)]),
+            #### Seed for lower middle
+            ([(2, 3)], [(1, 2)]),
+        ]
+        if seeds_only:
+            return patterns_raw
+
+        patterns_raw += [
+            # From seeds for top
+            ([2, (5, 6)], [1, (4, 6)]),
+
+            # From seeds for bottom
             ([2, (0, 1), (5, 6)], [4, (0, 1), (5, 6)]),
             ([(0, 1), (5, 6)], [(0, 1), (5, 6)]),
             ([2, (0, 1)], [2, (5, 6)], [(0, 1), (5, 6)]),
@@ -706,9 +731,7 @@ class ArcslideDA(ExtendedDAStructure):
             ([(0, 1), (1, 2)], [2, (5, 6)], [(0, 1), (5, 6)]),
             ([(0, 2), (5, 6)], [(0, 1), (5, 6)]),
 
-            #### Seed for upper middle
-            ([2, (4, 5)], [1, (3, 4)]),
-            # Linear algebra produces
+            # From seed for upper middle
             ([(1, 2), (4, 5)], [1, (3, 4)]),
             ([1, 2, (4, 6)], [1, 4, (3, 6)]),
             ([1, (4, 6)], [1, (3, 6)]),
@@ -737,9 +760,7 @@ class ArcslideDA(ExtendedDAStructure):
             ([(0, 2), (4, 5)], [(0, 1), (3, 4)]),
             ([(1, 2), (4, 6)], [1, (3, 6)]),
 
-            # Seed for lower middle
-            ([(2, 3)], [(1, 2)]),
-            # Linear algebra produces
+            # From seed for lower middle
             ([2, (0, 3)], [4, (0, 2)]),
             ([(0, 3)], [(0, 2)]),
             ([(4, 5), (5, 6)], [(0, 1), (1, 2)], [(1, 2), (2, 3)], [(0, 2), (3, 4), (5, 6)]),

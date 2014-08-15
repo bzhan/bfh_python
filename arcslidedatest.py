@@ -195,67 +195,17 @@ class ArcslideDATest(unittest.TestCase):
             self.assertTrue(local_dastr.testDelta())
 
     def testAutoCompleteArcslide(self):
-        def run_test(slide, d_side_order, intervals, single_idems):
-            local_dastr = ArcslideDA(slide).getLocalDAStructure()
-
-            # Recover list of arrows.
-            arrows = []
-            patterns = ArcslideDA(slide).arrow_patterns
-            for coeffs_a, lst_d in patterns.items():
-                for coeff_d in lst_d:
-                    arrows.append((coeff_d, coeffs_a))
-
-            # Auto-complete by linear algebra proceeds stages as specified by
-            # d_side_order.
-            for i in range(len(d_side_order)):
-                arrows_base, arrows_new, arrows_expected = [], [], []
-                int_d, int_a = intervals[i]
-                for coeff_d, coeffs_a in arrows:
-                    if all([coeff_d.multiplicity[p] == 0
-                            for p in d_side_order[i:]]):
-                        # already exists
-                        arrows_base.append((coeff_d, coeffs_a))
-                    elif coeff_d.strands == (int_d,) and \
-                         len(coeffs_a) == 1 and coeffs_a[0].strands == (int_a,):
-                        # seed for this round
-                        arrows_new.append((coeff_d, coeffs_a))
-                # Triggers assert failure if it does not succeed
-                arrows_to_extend = AutoCompleteDAStructure.autoCompleteByLinAlg(
-                    arrows_base, arrows_new, single_idems,
-                    local_dastr.getGenerators())
-
-                # Uncomment the following to see the added arrows.
-                # print "Added at this stage:", len(arrows_to_extend)
-                # for coeff_d, coeffs_a in arrows_to_extend:
-                #     print "(%s)," % ", ".join(
-                #         coeff.inputForm()
-                #         for coeff in list(coeffs_a) + [coeff_d])
-
-        # Short underslide down
-        run_test(slide = Arcslide(splitPMC(2), 2, 1),
-                 d_side_order = (3, 0),
-                 intervals = [((3, 4), (3, 4)), ((0, 1), (0, 1))],
-                 single_idems = [(1, 1)])
-
-        # General underslide down
-        run_test(slide = Arcslide(PMC([(0, 3), (1, 6), (2, 4), (5, 7)]), 2, 1),
-                 d_side_order = (5, 0, 4, 2),
-                 intervals = [((5, 6), (5, 6)), ((0, 1), (0, 1)),
-                              ((4, 5), (3, 4)), ((2, 3), (1, 2))],
-                 single_idems = [(1, 1)])
-
-        # Short underslide up
-        run_test(slide = Arcslide(splitPMC(2), 2, 3),
-                 d_side_order = (3, 0),
-                 intervals = [((3, 4), (3, 4)), ((0, 1), (0, 1))],
-                 single_idems = [(1, 1)])
-
-        # General underslide up
-        run_test(slide = Arcslide(PMC([(0, 3), (1, 6), (2, 4), (5, 7)]), 5, 6),
-                 d_side_order = (5, 0, 3, 1),
-                 intervals = [((5, 6), (5, 6)), ((0, 1), (0, 1)),
-                              ((3, 4), (4, 5)), ((1, 2), (2, 3))],
-                 single_idems = [(1, 1)])
+        for slide, d_side_order in [
+                (Arcslide(splitPMC(2), 2, 1), (3, 0)),
+                (Arcslide(PMC([(0, 3), (1, 6), (2, 4), (5, 7)]), 2, 1),
+                 (5, 0, 4, 2)),
+                (Arcslide(splitPMC(2), 2, 3), (3, 0)),
+                (Arcslide(PMC([(0, 3), (1, 6), (2, 4), (5, 7)]), 5, 6),
+                 (5, 0, 3, 1))]:
+            print slide, d_side_order
+            raw_da = ArcslideDA(slide).getLocalDAStructure(seeds_only = True)
+            auto = AutoCompleteDAStructure(raw_da, d_side_order)
+            auto.complete()
 
     def testGrading(self):
         slides_to_test = [
