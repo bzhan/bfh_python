@@ -183,6 +183,7 @@ class ArcslideDA(ExtendedDAStructure):
         # Compute the set of local generators. This includes all
         # (l_idem, r_idem) where l_idem = r_idem (under the usual identification
         # of pairs), or where l_idem has the c_pair and r_idem has the b_pair.
+        da_idems = []
         num_pair = self.local_pmc1.num_pair
         for idem in subset(range(num_pair)):
             da_idems.append((list(idem), [local_pair_to_r[p] for p in idem]))
