@@ -734,7 +734,9 @@ class CobarAlgebra(TensorStar, DGAlgebra):
             return NotImplemented
         assert gen1.parent == self and gen2.parent == self, \
             "Algebra not compatible."
-        return 1*TensorStarGenerator(tuple(gen1)+tuple(gen2), self)
+        # Pass gen2.right_idem in case both gen1 and gen2 have length zero.
+        return 1*TensorStarGenerator(tuple(gen1)+tuple(gen2), self,
+                                     gen2.right_idem)
 
 def simplifyComplex(arrows, default_coeff = 0, find_homology_basis = False):
     """Simplify complex using the cancellation lemma.
@@ -864,7 +866,11 @@ def simplifyComplex(arrows, default_coeff = 0, find_homology_basis = False):
     while cancel_list:
         degree, x, y = heapq.heappop(cancel_list)
         if x in arrows and y in arrows[x] and arrows[x][y].invertible():
-            cancelEdge(x, y)
+            new_degree = (len(arrows[x])-1)*(len(rev_arrows[y])-1)
+            if new_degree > degree * 2:  # add back
+                tryAddEdge(x, y)
+            else:
+                cancelEdge(x, y)
 
     return arrows
 
@@ -885,3 +891,49 @@ def findRankOverF2(num_row, num_col, entries):
     cancelled = num_row + num_col - len(arrows)
     assert cancelled % 2 == 0
     return cancelled / 2
+
+class _MatrixGenerator(SimpleGenerator):
+    """A generator of a chain complex coming from a matrix over F2. """
+    def __init__(self, parent, gen_type, index):
+        SimpleGenerator.__init__(self, parent, (gen_type, index))
+
+class _MatrixComplex(SimpleChainComplex):
+    """Represents a chain complex coming from a matrix over F2. """
+    def __init__(self):
+        SimpleChainComplex.__init__(self, F2)
+
+def solveOverF2(num_row, num_col, entries, vec):
+    """Find a linear combination of rows that equals vec. entries has the same
+    format as in findRankOverF2. vec is a list of numbers v, 0 <= v < num_col,
+    that specifies where the combination need to have 1's.
+
+    If there is no such combination, return None.
+
+    """
+    arrows = dict()
+    cx = _MatrixComplex()
+    def to_gen(gen_type, index):
+        return _MatrixGenerator(cx, gen_type, index)
+
+    for i in range(num_row):
+        arrows[to_gen("R", i)] = dict()
+    arrows[to_gen("R", -1)] = dict()  # represents vec
+    for i in range(num_col):
+        arrows[to_gen("C", i)] = dict()
+    for i, j in entries:
+        arrows[to_gen("R", i)][to_gen("C", j)] = F2.one
+    for j in vec:
+        arrows[to_gen("R", -1)][to_gen("C", j)] = F2.one
+    arrows = simplifyComplex(arrows, find_homology_basis = True)
+    for gen in arrows:
+        if gen.prev_meaning.getElt().name[0] == "R":
+            found = False
+            for prev_gen in gen.prev_meaning:
+                assert prev_gen.name[0] == "R"
+                if prev_gen.name[1] == -1:
+                    found = True
+            if found:
+                return list(sorted(
+                    [prev_gen.name[1] for prev_gen in gen.prev_meaning
+                     if prev_gen.name[1] != -1]))
+    return None

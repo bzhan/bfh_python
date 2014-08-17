@@ -64,5 +64,24 @@ class TensorStarTest(unittest.TestCase):
         self.assertEqual(gen4.diff(), 0)
         self.assertEqual(gen5.diff(), 0)
 
+class SolveF2SystemTest(unittest.TestCase):
+    def testSolveF2System(self):
+        # Represents the matrix:
+        # [[1,1,0,0,0],
+        #  [0,0,1,1,0],
+        #  [0,0,0,0,1],
+        #  [0,0,1,0,0]]
+        num_row, num_col = 4, 5
+        entries = [(0, 0), (0, 1), (1, 2), (1, 3), (2, 4), (3, 2)]
+        for vec, solution in [
+                ([], []),
+                ([0,1,2,3,4], [0,1,2]),
+                ([0,1,4], [0,2]),
+                ([0,1,2,4], [0,2,3]),
+                ([0,1,3,4], [0,1,2,3]),
+                ([0], None),]:
+            self.assertEqual(solveOverF2(num_row, num_col, entries, vec),
+                             solution)
+
 if __name__ == "__main__":
     unittest.main()
