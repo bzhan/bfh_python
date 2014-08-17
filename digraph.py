@@ -4,7 +4,8 @@ from algebra import Generator, SimpleChainComplex
 from algebra import E0
 from dstructure import DGenerator, SimpleDStructure
 from ddstructure import DDGenerator, SimpleDDStructure
-from dastructure import DATensorDGenerator, SimpleDAGenerator, SimpleDAStructure
+from dastructure import DATensorDGenerator, DATensorDDGenerator, \
+    SimpleDAGenerator, SimpleDAStructure
 from grading import GeneralGradingSet, GeneralGradingSetElement
 from identityaa import homotopyMap
 from pmc import Strands, StrandDiagram
@@ -343,22 +344,6 @@ class ATensorDDGenerator(DGenerator, tuple):
         """
         # Note tuple initialization is automatic
         DGenerator.__init__(self, parent, gen_right.idem2)
-
-class DATensorDDGenerator(DDGenerator, tuple):
-    """Generator of a type DD structure formed by tensoring a type DA structure
-    and a type DD structure (actually, the result of tensoring
-    DD * CFAA(Id) * DD).
-
-    """
-    def __new__(cls, parent, gen_left, gen_right):
-        return tuple.__new__(cls, (gen_left, gen_right))
-
-    def __init__(self, parent, gen_left, gen_right):
-        """Specify generators on two sides of the tensor (both DD generators).
-
-        """
-        # Note tuple initialization is automatic
-        DDGenerator.__init__(self, parent, gen_left.idem1, gen_right.idem2)
 
 class TypeAAGraph(DiGraph):
     """Digraph used for simplifying a type AA structure. Nodes correspond to

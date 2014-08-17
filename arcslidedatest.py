@@ -4,6 +4,7 @@ from arcslideda import *
 from arcslide import Arcslide
 from autocompleteda import AutoCompleteDAStructure
 from dstructure import zeroTypeD
+from ddstructure import identityDD
 from latex import beginDoc, endDoc, showArrow
 from pmc import PMC
 from pmc import antipodalPMC, linearPMC, splitPMC
@@ -193,6 +194,62 @@ class ArcslideDATest(unittest.TestCase):
         for slide in slides_to_test:
             local_dastr = ArcslideDA(slide).getLocalDAStructure()
             self.assertTrue(local_dastr.testDelta())
+
+    def testUnderslideAgreesWithDD(self):
+        slides_to_test = [
+            # Short underslides down
+            Arcslide(splitPMC(1), 1, 0),
+            Arcslide(linearPMC(2), 6, 5),
+            Arcslide(PMC([(0, 2), (1, 6), (3, 5), (4, 7)]), 1, 0),
+            # General underslides down
+            Arcslide(antipodalPMC(2), 1, 0),
+            Arcslide(PMC([(0, 2), (1, 4), (3, 6), (5, 7)]), 4, 3),
+            # Short underslides up
+            Arcslide(splitPMC(1), 1, 2),
+            Arcslide(linearPMC(2), 1, 2),
+            Arcslide(PMC([(0, 2), (1, 6), (3, 5), (4, 7)]), 4, 5),
+            # General underslides up
+            Arcslide(antipodalPMC(2), 6, 7),
+            Arcslide(PMC([(0, 3), (1, 6), (2, 4), (5, 7)]), 2, 3),
+        ]
+        for slide in slides_to_test:
+            dastr = ArcslideDA(slide)
+            ddstr = dastr.tensorDD(identityDD(slide.end_pmc))
+            ori_ddstr = slide.getDDStructure()
+            self.assertTrue(ddstr.compareDDStructures(ori_ddstr))
+
+    def testOverslideAgreesWithDD(self):
+        # This is not guaranteed (since there is choice involved in type DD for
+        # overslides, but appears to work
+        slides_to_test = [
+            # General overslides down
+            Arcslide(splitPMC(1), 3, 2),
+            Arcslide(splitPMC(2), 3, 2),
+            Arcslide(splitPMC(2), 4, 3),
+            Arcslide(splitPMC(2), 7, 6),
+            Arcslide(linearPMC(2), 3, 2),
+            Arcslide(linearPMC(2), 5, 4),
+            Arcslide(linearPMC(2), 7, 6),
+            Arcslide(antipodalPMC(2), 5, 4),
+            Arcslide(antipodalPMC(2), 6, 5),
+            Arcslide(antipodalPMC(2), 7, 6),
+            # General overslides up
+            Arcslide(splitPMC(1), 0, 1),
+            Arcslide(splitPMC(2), 0, 1),
+            Arcslide(splitPMC(2), 3, 4),
+            Arcslide(splitPMC(2), 4, 5),
+            Arcslide(linearPMC(2), 0, 1),
+            Arcslide(linearPMC(2), 2, 3),
+            Arcslide(linearPMC(2), 4, 5),
+            Arcslide(antipodalPMC(2), 0, 1),
+            Arcslide(antipodalPMC(2), 1, 2),
+            Arcslide(antipodalPMC(2), 2, 3),
+        ]
+        for slide in slides_to_test:
+            dastr = ArcslideDA(slide)
+            ddstr = dastr.tensorDD(identityDD(slide.end_pmc))
+            ori_ddstr = slide.getDDStructure()
+            self.assertTrue(ddstr.compareDDStructures(ori_ddstr))
 
     def testAutoCompleteArcslide(self):
         for slide, d_side_order in [

@@ -4,7 +4,7 @@ from algebra import CobarAlgebra, DGAlgebra, FreeModule, Generator, Tensor, \
     TensorGenerator, TensorStarGenerator
 from algebra import E0
 from dstructure import DGenerator, SimpleDStructure
-from ddstructure import SimpleDDGenerator, SimpleDDStructure
+from ddstructure import DDGenerator, SimpleDDGenerator, SimpleDDStructure
 from grading import GeneralGradingSet, GeneralGradingSetElement, \
     SimpleDbGradingSetElement
 from hdiagram import getIdentityDiagram
@@ -55,11 +55,35 @@ class DATensorDGenerator(DGenerator, tuple):
         return tuple.__new__(cls, (gen_left, gen_right))
 
     def __init__(self, parent, gen_left, gen_right):
-        """Specify generators on two sides of the tensor (DD and D generators).
+        """Specify generators on two sides of the tensor (DA/DD and D
+        generators).
 
         """
         # Note tuple initialization is automatic
         DGenerator.__init__(self, parent, gen_left.idem1)
+
+class DATensorDDGenerator(DDGenerator, tuple):
+    """Generator of a type DD structure formed by tensoring a type DA structure
+    and a type DD structure. Also serves as the generator of the type DD
+    structure formed by tensoring DD * CFAA(Id) * DD, with the generator of
+    CFAA(Id) implicit from the idempotents.
+
+    gen_left is a generator of either a type DA structure (DA * DD
+    interpretation) or a type DD structure (DA * CFAA(Id) * DD interpretation).
+
+    gen_right is a generator of a type DD structure.
+
+    """
+    def __new__(cls, parent, gen_left, gen_right):
+        return tuple.__new__(cls, (gen_left, gen_right))
+
+    def __init__(self, parent, gen_left, gen_right):
+        """Specify generators on two sides of the tensor (DA/DD and DD
+        generators).
+
+        """
+        # Note tuple initialization is automatic
+        DDGenerator.__init__(self, parent, gen_left.idem1, gen_right.idem2)
 
 class DAStructure(FreeModule):
     """Represents a type DA structure. delta() takes a generator and a sequence
@@ -250,6 +274,59 @@ class DAStructure(FreeModule):
                     dstr_result.gr_set, dagen, dgen)
 
         return dstr_result
+
+    def tensorDD(self, ddstr):
+        """Compute the box tensor product DA * DD of this bimodule with the
+        given type DD structure. Returns the resulting type DD structure. Uses
+        delta() and deltaPrefix() functions of this type DA structure.
+
+        """
+        ddstr_result = SimpleDDStructure(F2, self.algebra1, ddstr.algebra2)
+        # Compute list of generators in the box tensor product
+        for gen_left in self.getGenerators():
+            for gen_right in ddstr.getGenerators():
+                if gen_left.idem2 == gen_right.idem1:
+                    ddstr_result.addGenerator(DATensorDDGenerator(
+                        ddstr_result, gen_left, gen_right))
+
+        def search(start_gen, cur_ddgen, cur_algd, cur_coeffs_a):
+            """Searching for an arrow in the box tensor product.
+            - start_gen: starting generator in the box tensor product. The
+              resulting arrow will start from here.
+            - cur_ddgen: current location in the type DD structure.
+            - cur_algd: current product algebra outputs on the right side of the
+              DD structure.
+            - cur_coeffs_a: current list of A-side inputs to the type DA
+              structure (or alternatively, list of algebra outputs on the left
+              side of the DD structure).
+
+            """
+            start_dagen, start_dgen = start_gen
+            cur_delta = self.delta(start_dagen, cur_coeffs_a)
+            for (coeff_d, gen_to), ring_coeff in cur_delta.items():
+                ddstr_result.addDelta(start_gen, DATensorDDGenerator(
+                    ddstr_result, gen_to, cur_ddgen), coeff_d, cur_algd, 1)
+            if self.deltaPrefix(start_dagen, cur_coeffs_a):
+                for (coeff_out1, coeff_out2, dgen_to), ring_coeff in \
+                    ddstr.delta(cur_ddgen).items():
+                    new_algd = cur_algd * coeff_out2
+                    if new_algd != E0:
+                        search(start_gen, dgen_to, new_algd.getElt(),
+                               cur_coeffs_a + (coeff_out1,))
+
+        for x in ddstr_result.getGenerators():
+            dagen, ddgen = x
+            search(x, ddgen, ddgen.idem2.toAlgElt(ddstr.algebra2), ())
+            # Add arrows coming from idempotent output on the left DD-side
+            for (coeff_out1, coeff_out2, dgen_to), ring_coeff in \
+                ddstr.delta(ddgen).items():
+                if coeff_out1.isIdempotent():
+                    ddstr_result.addDelta(
+                        x, DATensorDDGenerator(ddstr_result, dagen, dgen_to),
+                        dagen.idem1.toAlgElt(self.algebra1), coeff_out2, 1)
+
+        # Grading is omitted.
+        return ddstr_result
 
     def registerHDiagram(self, diagram, base_gen, base_gr = None):
         """Associate the given diagram as the Heegaard diagram from which this

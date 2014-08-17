@@ -119,6 +119,7 @@ class ArcslideDA(ExtendedDAStructure):
         self.patterns_fun = patterns_fun
         self.translator = translator
 
+        # Necesssary to get local DA structure.
         self.splitting1 = PMCSplitting(self.pmc1, local_cut1)
         self.splitting2 = PMCSplitting(self.pmc2, local_cut2)
         self.local_pmc1 = self.splitting1.local_pmc
