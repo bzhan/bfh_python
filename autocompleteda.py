@@ -6,6 +6,7 @@ arcslides, in arcslidedatest.py.
 
 """
 
+from algebra import solveOverF2
 from algebra import E0
 from dastructure import DAStructure
 from extendbyid import LocalDAStructure
@@ -74,7 +75,8 @@ class AutoCompleteDAStructure:
                     (coeff_d2 * coeff_d).getElt(), coeffs_a2 + coeffs_a, x2, y))
         return result
 
-    def _getAltFactorizations(self, arrows_base, arrow_new):
+    def _getAltFactorizations(self, arrows_base_map1, arrows_base_map2,
+                              arrow_new):
         result = []
         coeff_d, coeffs_a, x, y = arrow_new
         # Take differential of one of coeffs_a
@@ -94,10 +96,11 @@ class AutoCompleteDAStructure:
         for (a, b), coeff in coeff_d.factor().items():
             # Number of A-inputs in the first sequence
             for i in range(len(coeffs_a)):
-                for z in self.mod_gens:  # intermediate generator
-                    if (a, coeffs_a[:i], x, z) in arrows_base:
+                if (a, coeffs_a[:i], x) in arrows_base_map1:
+                    for z in arrows_base_map1[(a, coeffs_a[:i], x)]:
                         result.append(_DAArrow(b, coeffs_a[i:], z, y))
-                    if (b, coeffs_a[i:], z, y) in arrows_base:
+                if (b, coeffs_a[i:], y) in arrows_base_map2:
+                    for z in arrows_base_map2[(b, coeffs_a[i:], y)]:
                         result.append(_DAArrow(a, coeffs_a[:i], x, z))
         return result
 
@@ -129,8 +132,11 @@ class AutoCompleteDAStructure:
         for i in range(len(self.single_idems)):
             idem_d, idem_a = self.single_idems[i]
             for coeff_d, coeffs_a, x, y in results + arrows:
-                if has_singlehor(coeff_d, idem_d) and \
-                   all([has_singlehor(coeff, idem_a) for coeff in coeffs_a]):
+                if x in self.raw_da.u_maps[i] and \
+                   y in self.raw_da.u_maps[i] and \
+                   has_singlehor(coeff_d, idem_d) and \
+                   all([has_singlehor(coeff, idem_a)
+                        for coeff in coeffs_a]):
                     new_arrow = _DAArrow(
                         remove_singlehor(coeff_d, idem_d),
                         tuple([remove_singlehor(coeff, idem_a)
@@ -138,9 +144,11 @@ class AutoCompleteDAStructure:
                         self.raw_da.u_maps[i][x], self.raw_da.u_maps[i][y])
                     if not new_arrow in results + arrows:
                         results.append(new_arrow)
-                if (not uses_idempotent(coeff_d, idem_d)) and \
-                   all([not uses_idempotent(coeff, idem_a)
-                        for coeff in coeffs_a]):
+                if (x in self.raw_da.uinv_maps[i] and \
+                    y in self.raw_da.uinv_maps[i] and \
+                    (not uses_idempotent(coeff_d, idem_d)) and \
+                    all([not uses_idempotent(coeff, idem_a)
+                         for coeff in coeffs_a])):
                     new_arrow = _DAArrow(
                         add_singlehor(coeff_d, idem_d),
                         tuple([add_singlehor(coeff, idem_a)
@@ -168,6 +176,19 @@ class AutoCompleteDAStructure:
         for arrow in arrows_new:
             one_step_arrows_queue.put(arrow)
             one_step_arrows.add(arrow)
+        # Form the arrow base maps for faster computation in
+        # _getAltFactorizations.
+        arrows_base_map1 = dict()
+        arrows_base_map2 = dict()
+        for coeff_d, coeffs_a, source, target in arrows_base:
+            key1 = (coeff_d, coeffs_a, source)
+            if key1 not in arrows_base_map1:
+                arrows_base_map1[key1] = []
+            arrows_base_map1[key1].append(target)
+            key2 = (coeff_d, coeffs_a, target)
+            if key2 not in arrows_base_map2:
+                arrows_base_map2[key2] = []
+            arrows_base_map2[key2].append(source)
 
         while not one_step_arrows_queue.empty() or \
               not two_step_arrows_queue.empty():
@@ -184,7 +205,17 @@ class AutoCompleteDAStructure:
                         one_step_arrows_queue.put(arrow)
             else:
                 cur_arrow = two_step_arrows_queue.get()
-                for arrow in self._getAltFactorizations(arrows_base, cur_arrow):
+                for arrow in self._getAltFactorizations(
+                        arrows_base_map1, arrows_base_map2, cur_arrow):
+                    coeff_d, coeffs_a, x, y = arrow
+                    # HACK - it appears considering one_step_arrows with at most
+                    # four algebra inputs is sufficient. In the autocompletion
+                    # for the anti-braid case, there are infinitely many
+                    # reachable one_step_arrows, so we place this limit.
+                    # Can change to 2 or 3 to see if simpler arrows are
+                    # possible.
+                    if len(coeffs_a) > 4:
+                        continue
                     if arrow not in one_step_arrows:
                         one_step_arrows.add(arrow)
                         one_step_arrows_queue.put(arrow)
@@ -211,32 +242,40 @@ class AutoCompleteDAStructure:
             combined_one_step_arrows.append([arrow] + alt_idems)
 
         # Generate the matrix mapping from one-step arrows to two-step arrows
+        num_row, num_col = len(combined_one_step_arrows), len(two_step_arrows)
+        matrix_entries = set()
+        target_vec = set()
+
+        two_step_arrows_dict = dict()  # index the two step arrows.
         two_step_arrows = list(two_step_arrows)
-        matrix_map = [[0] * len(two_step_arrows)
-                      for i in range(len(combined_one_step_arrows))]
-        target_vec = [0] * len(two_step_arrows)
+        for i in range(len(two_step_arrows)):
+            two_step_arrows_dict[two_step_arrows[i]] = i
+
         for i in range(len(combined_one_step_arrows)):
             for one_step_arrow in combined_one_step_arrows[i]:
                 derived_two_steps = self._getDerivedTwoStepArrows(
                     arrows_base, one_step_arrow)
-                for j in range(len(two_step_arrows)):
-                    if two_step_arrows[j] in derived_two_steps:
-                        if one_step_arrow in arrows_new:
-                            target_vec[j] += 1
-                            target_vec[j] %= 2
+                for two_step_arrow in derived_two_steps:
+                    j = two_step_arrows_dict[two_step_arrow]
+                    if one_step_arrow in arrows_new:
+                        if j in target_vec:
+                            target_vec.remove(j)
                         else:
-                            matrix_map[i][j] += 1
-                            matrix_map[i][j] %= 2
+                            target_vec.add(j)
+                    else:
+                        if (i, j) in matrix_entries:
+                            matrix_entries.remove((i, j))
+                        else:
+                            matrix_entries.add((i, j))
 
-        lin_sys = F2RowSystem(matrix_map)
-        comb = lin_sys.getComb(target_vec)
+        comb = solveOverF2(num_row, num_col, list(matrix_entries),
+                           list(target_vec))
         assert comb is not None
 
         result = []
-        for i in range(len(combined_one_step_arrows)):
-            if comb[i] != 0 and \
-               combined_one_step_arrows[i][0] not in arrows_new:
-                result.extend(combined_one_step_arrows[i])
+        for term in comb:
+            if combined_one_step_arrows[term][0] not in arrows_new:
+                result.extend(combined_one_step_arrows[term])
         return result
 
     def complete(self):
@@ -268,5 +307,17 @@ class AutoCompleteDAStructure:
             for coeff_d, coeffs_a, gen_from, gen_to in arrows_new:
                 self.raw_da.addDelta(gen_from, gen_to, coeff_d, coeffs_a, 1)
 
+            ### Uncomment to see the added arrows.
+            # print "New arrows"
+            # output_strs = set()  # remove duplicates
+            # for coeff_d, coeffs_a, gen_from, gen_to in arrows_new:
+            #     output_strs.add("(%c, %c, %s)," % (
+            #         gen_from.name[0], gen_to.name[0], ", ".join(
+            #             coeff.inputForm()
+            #             for coeff in list(coeffs_a) + [coeff_d])))
+            # for string in output_strs:
+            #     print string
+
+        # Final check
         assert self.raw_da.testDelta()
         return self.raw_da

@@ -126,10 +126,10 @@ class ExtendedDAStructure(DAStructure):
         assert self.local_pmc1 == splitting1.local_pmc
         assert self.local_pmc2 == splitting2.local_pmc
 
-        mapping1 = splitting1.local_mapping
-        mapping2 = splitting2.local_mapping
-        outer_mapping1 = splitting1.outer_mapping
-        outer_mapping2 = splitting2.outer_mapping
+        self.mapping1 = splitting1.local_mapping
+        self.mapping2 = splitting2.local_mapping
+        self.outer_mapping1 = splitting1.outer_mapping
+        self.outer_mapping2 = splitting2.outer_mapping
 
         self.idem_size1 = self.pmc1.genus
         self.idem_size2 = self.pmc2.genus
@@ -157,20 +157,20 @@ class ExtendedDAStructure(DAStructure):
             single_pt1 = self.local_pmc1.pairs[single_idems1][0]
             single_pt2 = self.local_pmc2.pairs[single_idems2][0]
             for p in range(self.pmc1.n):
-                if p in mapping1 and mapping1[p] == single_pt1:
+                if p in self.mapping1 and self.mapping1[p] == single_pt1:
                     self.smeared_idems1.append(self.pmc1.pairid[p])
                     q = self.pmc1.otherp[p]
-                    assert q in outer_mapping1
-                    q_outer = outer_mapping1[q]
+                    assert q in self.outer_mapping1
+                    q_outer = self.outer_mapping1[q]
                     self.single_pts_outer.append(q_outer)
                     self.single_idems_outer.append(
                         self.outer_pmc.pairid[q_outer])
             for p in range(self.pmc2.n):
-                if p in mapping2 and mapping2[p] == single_pt2:
+                if p in self.mapping2 and self.mapping2[p] == single_pt2:
                     self.smeared_idems2.append(self.pmc2.pairid[p])
                     q = self.pmc2.otherp[p]
-                    assert q in outer_mapping2
-                    assert self.single_pts_outer[-1] == outer_mapping2[q]
+                    assert q in self.outer_mapping2
+                    assert self.single_pts_outer[-1] == self.outer_mapping2[q]
                     
         # Initiate the DA structure
         DAStructure.__init__(self, F2, algebra1 = self.pmc1.getAlgebra(),
