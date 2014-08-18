@@ -917,23 +917,41 @@ def solveOverF2(num_row, num_col, entries, vec):
 
     for i in range(num_row):
         arrows[to_gen("R", i)] = dict()
-    arrows[to_gen("R", -1)] = dict()  # represents vec
+    vec_gen = to_gen("R", -1)
+    arrows[vec_gen] = dict()  # represents vec
     for i in range(num_col):
         arrows[to_gen("C", i)] = dict()
     for i, j in entries:
         arrows[to_gen("R", i)][to_gen("C", j)] = F2.one
     for j in vec:
-        arrows[to_gen("R", -1)][to_gen("C", j)] = F2.one
+        arrows[vec_gen][to_gen("C", j)] = F2.one
     arrows = simplifyComplex(arrows, find_homology_basis = True)
-    for gen in arrows:
-        if gen.prev_meaning.getElt().name[0] == "R":
-            found = False
-            for prev_gen in gen.prev_meaning:
-                assert prev_gen.name[0] == "R"
-                if prev_gen.name[1] == -1:
-                    found = True
-            if found:
-                return list(sorted(
-                    [prev_gen.name[1] for prev_gen in gen.prev_meaning
-                     if prev_gen.name[1] != -1]))
-    return None
+
+    kernel_gens = [gen.prev_meaning for gen in arrows if
+                   gen.prev_meaning.getElt().name[0] == "R"]
+    seed_index = -1
+    for i in range(len(kernel_gens)):
+        cur_gen = kernel_gens[i]
+        assert all(term.name[0] == "R" for term in cur_gen)
+        if vec_gen in cur_gen:
+            seed_index = i
+            break
+    if seed_index == -1:
+        print "System cannot be solved."
+        return None
+    else:
+        # Try to find a short vector to return
+        kernel_gens[0], kernel_gens[i] = kernel_gens[i], kernel_gens[0]
+        for i in range(1, len(kernel_gens)):
+            if vec_gen in kernel_gens[i]:
+                kernel_gens[i] += kernel_gens[0]
+                assert vec_gen not in kernel_gens[i]
+        shortened = True
+        while shortened:
+            shortened = False
+            for i in range(1, len(kernel_gens)):
+                if len(kernel_gens[0] + kernel_gens[i]) < len(kernel_gens[0]):
+                    kernel_gens[0] += kernel_gens[i]
+                    shortened = True
+        return list(sorted([term.name[1] for term in kernel_gens[0]
+                            if term.name[1] != -1]))

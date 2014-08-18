@@ -160,7 +160,6 @@ class AntiBraidDA(ExtendedDAStructure):
     def _get_patterns_middle(self):
         """Returns the local patterns."""
         # Local PMC is 0*-1-2-3-4-5*, with 1 and 4 paired.
-        # Alternative: antibraid_arrows2.data
         input_patterns = open("antibraid_arrows.data", "r")
         patterns_raw = ast.literal_eval(input_patterns.read())
         return patterns_raw
@@ -180,18 +179,14 @@ class AntiBraidDA(ExtendedDAStructure):
             (0, 0, [(0, 2)]),
 
             # Added for the middle regions
-            (1, 1, [(0, 2)], [(0, 2)], [(0, 2)]),
-            (2, 0, [(0, 2)], [(0, 1)], [(0, 2)]),
-            (0, 1, [(1, 2)], [(0, 2)], [(0, 2)]),
-            (1, 1, [1, (0, 2)], [1, (0, 2)], [1, (0, 2)]),
-            (2, 1, [(0, 1)], [(1, 2)], [(0, 2)]),
-            (2, 2, [1, (0, 2)], [1, (0, 2)], [1, (0, 2)]),
+            (2, 2, [(0, 2)]),
+            (2, 2, [(0, 1), (1, 2)], [(0, 1), (1, 2)]),
+            (1, 1, [(0, 2)]),
+            (1, 1, [1, (0, 2)]),
             (1, 2, [(0, 1), (1, 2)], [(0, 1), (1, 2)], [(0, 1), (1, 2)]),
-            (2, 0, [(0, 1)], [(0, 2)]),
-            (2, 2, [(0, 1), (1, 2)], [1, (0, 2)], [(0, 1), (1, 2)]),
-            (1, 1, [1, (0, 2)], [(0, 1), (1, 2)], [(0, 1), (1, 2)]),
-            (0, 1, [(1, 2)], [(0, 2)]),
-            (2, 2, [(0, 2)], [(0, 2)], [(0, 2)]),
+            (2, 1, [(0, 1), (1, 2)]),
+            (1, 1, [(0, 1), (1, 2)], [(0, 1), (1, 2)]),
+            (2, 2, [1, (0, 2)]),
         ]
         return patterns_raw
 

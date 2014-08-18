@@ -308,15 +308,31 @@ class AutoCompleteDAStructure:
                 self.raw_da.addDelta(gen_from, gen_to, coeff_d, coeffs_a, 1)
 
             ### Uncomment to see the added arrows.
-            # print "New arrows"
-            # output_strs = set()  # remove duplicates
-            # for coeff_d, coeffs_a, gen_from, gen_to in arrows_new:
-            #     output_strs.add("(%c, %c, %s)," % (
-            #         gen_from.name[0], gen_to.name[0], ", ".join(
-            #             coeff.inputForm()
-            #             for coeff in list(coeffs_a) + [coeff_d])))
-            # for string in output_strs:
-            #     print string
+            # def print_arrows(arrow_set):
+            #     output_strs = set()  # remove duplicates
+            #     for coeff_d, coeffs_a, gen_from, gen_to in arrow_set:
+            #         if '_' in gen_from.name[0]:
+            #             output_strs.add("(%c, %c, %s)," % (
+            #                 gen_from.name[0], gen_to.name[0], ", ".join(
+            #                     coeff.inputForm()
+            #                     for coeff in list(coeffs_a) + [coeff_d])))
+            #         else:
+            #             output_strs.add("(%s)," % ", ".join(
+            #                 coeff.inputForm()
+            #                 for coeff in list(coeffs_a) + [coeff_d]))
+            #     for string in output_strs:
+            #         print string
+            # if i == 0:
+            #     print "# Initial patterns:"
+            #     print_arrows(arrows_base)
+            #     print
+            # print "# Step %d, D side position %d:" % \
+            #     (i+1, self.d_side_order[i])
+            # print "# Seed arrows:"
+            # print_arrows(arrows_seed)
+            # print "# New arrows"
+            # print_arrows(arrows_new)
+            # print
 
         # Final check
         assert self.raw_da.testDelta()
