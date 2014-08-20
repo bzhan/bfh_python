@@ -695,8 +695,20 @@ class CobarAlgebra(TensorStar, DGAlgebra):
     def __init__(self, baseAlgebra):
         """Specifies the base algebra A. """
         assert isinstance(baseAlgebra, DGAlgebra)
+        self.baseAlgebra = baseAlgebra
         TensorStar.__init__(self, baseAlgebra)
         DGAlgebra.__init__(self, baseAlgebra.ring)
+
+    def __eq__(self, other):
+        if not isinstance(other, CobarAlgebra):
+            return False
+        return self.baseAlgebra == other.baseAlgebra
+
+    def __ne__(self, other):
+        return not (self == other)
+
+    def __hash__(self, other):
+        return hash(("CobarAlgebra", self.baseAlgebra))
 
     def _singleDiff(self, gen):
         """Compute the differential, in the cobar-algebra, of the generator
@@ -738,7 +750,8 @@ class CobarAlgebra(TensorStar, DGAlgebra):
         return 1*TensorStarGenerator(tuple(gen1)+tuple(gen2), self,
                                      gen2.right_idem)
 
-def simplifyComplex(arrows, default_coeff = 0, find_homology_basis = False):
+def simplifyComplex(arrows, default_coeff = 0, find_homology_basis = False,
+                    cancellation_constraint = None):
     """Simplify complex using the cancellation lemma.
 
     ``arrows`` specify the complex to be simplified. It is a dictionary whose
@@ -769,6 +782,11 @@ def simplifyComplex(arrows, default_coeff = 0, find_homology_basis = False):
     each generator as a linear combination of generators of the original
     complex.
 
+    ``cancellation_constraint`` is a function taking two generators as
+    arguments, and returns a boolean stating whether this pair of generators may
+    be cancelled. If None, then any pair of generators can be cancelled. This is
+    usually used to specify some condition on filtrations of generators.
+
     This implementation uses two optimizations. First, a rev_arrows dictionary
     is generated and updated along with arrows, keeping for each generator y,
     the list of arrows going into y. This speeds up the query for the list of
@@ -798,6 +816,9 @@ def simplifyComplex(arrows, default_coeff = 0, find_homology_basis = False):
         (a heap), along with its degree.
 
         """
+        if cancellation_constraint is not None:
+            if not cancellation_constraint(x, y):
+                return
         coeff = arrows[x][y]
         if coeff.invertible():
             cur_degree = (len(arrows[x])-1)*(len(rev_arrows[y])-1)

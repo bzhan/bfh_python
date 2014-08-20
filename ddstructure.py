@@ -161,10 +161,16 @@ class MorDDtoDDComplex(ChainComplex):
         for gen in self.source.getGenerators():
             gen_map[gen] = SimpleDDGenerator(
                 result, gen.idem1, gen.idem2, "S_%s" % gen.name)
+            gen_map[gen].filtration = [0]
+            if hasattr(gen, "filtration"):
+                gen_map[gen] += gen.filtration
             result.addGenerator(gen_map[gen])
         for gen in self.target.getGenerators():
             gen_map[gen] = SimpleDDGenerator(
                 result, gen.idem1, gen.idem2, "T_%s" % gen.name)
+            gen_map[gen].filtration = [1]
+            if hasattr(gen, "filtration"):
+                gen_map[gen] += gen.filtration
             result.addGenerator(gen_map[gen])
 
         for x1 in self.source.getGenerators():
@@ -459,8 +465,13 @@ class SimpleDDStructure(DDStructure):
         dd_id = identityDD(self.algebra1.pmc, self.algebra1.idem_size)
         return dd_id.morToDD(self)
 
-    def simplify(self):
-        """Simplify a type DD structure using cancellation lemma."""
+    def simplify(self, cancellation_constraint = None):
+        """Simplify a type DD structure using cancellation lemma.
+
+        cancellation_constraint is a function from two generators to boolean,
+        stating whether they can be cancelled.
+
+        """
         # Simplification is best done in terms of coefficients
         # Build dictionary of coefficients
         arrows = dict()
@@ -474,7 +485,9 @@ class SimpleDDStructure(DDStructure):
                 arrows[gen][MGen] += TensorGenerator(
                     (AGen1, AGen2), bialgebra) * coeff
 
-        arrows = simplifyComplex(arrows, E0)
+        arrows = simplifyComplex(
+            arrows, default_coeff = E0,
+            cancellation_constraint = cancellation_constraint)
 
         # Now rebuild the type DD structure
         self.generators = set()

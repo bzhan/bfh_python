@@ -2,7 +2,7 @@
 
 from arcslideda import *
 from arcslide import Arcslide
-from autocompleteda import AutoCompleteDAStructure
+from autocompleteda import autoCompleteDA
 from dstructure import zeroTypeD
 from ddstructure import identityDD
 from latex import beginDoc, endDoc, showArrow
@@ -261,8 +261,7 @@ class ArcslideDATest(unittest.TestCase):
                  (5, 0, 3, 1))]:
             print slide, d_side_order
             raw_da = ArcslideDA(slide).getLocalDAStructure(seeds_only = True)
-            auto = AutoCompleteDAStructure(raw_da, d_side_order)
-            auto.complete()
+            autoCompleteDA(raw_da, d_side_order)
 
     def testGrading(self):
         slides_to_test = [

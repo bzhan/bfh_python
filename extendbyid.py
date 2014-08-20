@@ -2,8 +2,8 @@
 
 from algebra import TensorGenerator
 from algebra import E0
-from dastructure import DAGenerator, DAStructure, SimpleDAGenerator, \
-    SimpleDAStructure
+from dastructure import DAGenerator, DAStructure, MorDAtoDAComplex, \
+    SimpleDAGenerator, SimpleDAStructure
 from localpmc import LocalStrandAlgebra, PMCSplitting
 from utility import ACTION_LEFT, ACTION_RIGHT, F2
 
@@ -96,6 +96,65 @@ class LocalDAStructure(SimpleDAStructure):
                     assert len(target_gen) == 1, "Cannot autocomplete u-map"
                     self.add_u_map(i, local_gen, target_gen[0])
 
+class LocalMorDAtoDAComplex(MorDAtoDAComplex):
+    """Represents the complex of type DA morphisms between two local type DA
+    structures.
+
+    """
+    def __init__(self, ring, source, target):
+        assert isinstance(source, LocalDAStructure)
+        assert isinstance(target, LocalDAStructure)
+        MorDAtoDAComplex.__init__(self, ring, source, target)
+
+    def getMappingCone(self, morphism):
+        """In addition to what is done in the parent class, need to set up the
+        u_map.
+
+        """
+        result = LocalDAStructure(
+            F2, self.source.algebra1, self.source.algebra2,
+            self.source.side1, self.source.side2,
+            self.source.single_idems1, self.source.single_idems2)
+        gen_map = dict()
+        for gen in self.source.getGenerators():
+            gen_map[gen] = SimpleDAGenerator(
+                result, gen.idem1, gen.idem2, "S_%s" % gen.name)
+            gen_map[gen].filtration = [0]
+            if hasattr(gen, "filtration"):
+                gen_map[gen] += gen.filtration
+            result.addGenerator(gen_map[gen])
+        for gen in self.target.getGenerators():
+            gen_map[gen] = SimpleDAGenerator(
+                result, gen.idem1, gen.idem2, "T_%s" % gen.name)
+            gen_map[gen].filtration = [1]
+            if hasattr(gen, "filtration"):
+                gen_map[gen] += gen.filtration
+            result.addGenerator(gen_map[gen])
+
+        for (x1, coeffs_a), target in self.source.da_action.items():
+            for (coeff_d, x2), ring_coeff in target.items():
+                result.addDelta(
+                    gen_map[x1], gen_map[x2], coeff_d, coeffs_a, ring_coeff)
+        for (y1, coeffs_a), target in self.target.da_action.items():
+            for (coeff_d, y2), ring_coeff in target.items():
+                result.addDelta(
+                    gen_map[y1], gen_map[y2], coeff_d, coeffs_a, ring_coeff)
+        for gen, ring_coeff in morphism.items():
+            # coeffs_a is a tuple of A-side inputs
+            coeff_d, coeffs_a = gen.coeff
+            result.addDelta(gen_map[gen.source], gen_map[gen.target],
+                            coeff_d, tuple(coeffs_a), ring_coeff)
+
+        # Set up u_map
+        num_single_idems = len(self.source.single_idems1)
+        for idem_id in range(num_single_idems):
+            for x, u_x in self.source.u_maps[idem_id].items():
+                result.add_u_map(idem_id, gen_map[x], gen_map[u_x])
+            for y, u_y in self.target.u_maps[idem_id].items():
+                result.add_u_map(idem_id, gen_map[y], gen_map[u_y])
+
+        return result
+
 class ExtendedDAStructure(DAStructure):
     """Type DA structure obtained by extension by identity from a local type DA
     structure.
@@ -186,14 +245,22 @@ class ExtendedDAStructure(DAStructure):
                               single_idem_outer in self.single_idems_outer)]
         self.gen_index = dict()
         for local_gen in local_gens:
+            cur_count = 0  # number of generators so far with local_gen
             for outer_idem in outer_idems:
                 if len(local_gen.idem1) + len(outer_idem) != self.idem_size1:
                     continue
                 assert len(local_gen.idem2) + len(outer_idem) == self.idem_size2
-                cur_gen = ExtendedDAGenerator(self, local_gen, outer_idem,
-                                              "%d" % len(self.generators))
+                cur_gen = ExtendedDAGenerator(
+                    self, local_gen, outer_idem,
+                    "%s%%%d" % (local_gen.name, cur_count))
+                cur_count += 1
+                if hasattr(local_gen, "filtration"):
+                    cur_gen.filtration = local_gen.filtration
                 self.generators.append(cur_gen)
                 self.gen_index[(local_gen, outer_idem)] = cur_gen
+
+    def __len__(self):
+        return len(self.generators)
 
     def getGenerators(self):
         return self.generators
@@ -418,3 +485,29 @@ class ExtendedDAStructure(DAStructure):
 
         return any(testWithAssignment(assignment)
                    for assignment in all_assignments)
+
+def identityDALocal(local_pmc):
+    """Returns the identity type DA structure for a given local PMC.
+
+    Actually the same as the non-local case, except we don't have Heegaard
+    diagrams.
+
+    """
+    alg = local_pmc.getAlgebra()
+    single_idems = local_pmc.getSingleIdems()
+    dastr = LocalDAStructure(F2, alg, alg, single_idems1 = single_idems,
+                             single_idems2 = single_idems)
+    idems = local_pmc.getIdempotents()
+    idem_to_gen_map = {}
+    for i in range(len(idems)):
+        cur_gen = SimpleDAGenerator(dastr, idems[i], idems[i], i)
+        idem_to_gen_map[idems[i]] = cur_gen
+        dastr.addGenerator(cur_gen)
+    alg_gen = alg.getGenerators()
+    for gen in alg_gen:
+        if not gen.isIdempotent():
+            gen_from = idem_to_gen_map[gen.getLeftIdem()]
+            gen_to = idem_to_gen_map[gen.getRightIdem()]
+            dastr.addDelta(gen_from, gen_to, gen, (gen,), 1)
+    dastr.auto_u_map()
+    return dastr

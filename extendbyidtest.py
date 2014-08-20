@@ -2,6 +2,7 @@
 
 from extendbyid import *
 from dastructure import SimpleDAGenerator
+from ddstructure import identityDD
 from localpmc import LocalIdempotent
 from pmc import Idempotent
 from pmc import linearPMC, splitPMC
@@ -163,6 +164,15 @@ class AntiBraidTest(unittest.TestCase):
     def testDeltaPrefix(self):
         # TODO: add test cases
         pass
+
+class IdentityDDLocalTest(unittest.TestCase):
+    def testIdentityDDLocal(self):
+        splitting = PMCSplitting(linearPMC(2), [(1, 4)])
+        local_pmc = splitting.local_pmc
+        id_local = identityDALocal(local_pmc)
+        extended_id = ExtendedDAStructure(id_local, splitting, splitting)
+        id_dd = extended_id.tensorDD(identityDD(linearPMC(2)))
+        self.assertTrue(id_dd.compareDDStructures(identityDD(linearPMC(2))))
 
 if __name__ == "__main__":
     unittest.main()

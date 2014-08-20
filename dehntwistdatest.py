@@ -1,7 +1,7 @@
 """Unit test for dehntwistda.py"""
 
 from ddstructure import identityDD
-from dehntwist import AntiBraid
+from dehntwist import AntiBraid, DehnSurgery
 from dehntwistda import *
 import unittest
 
@@ -39,6 +39,64 @@ class AntiBraidDATest(unittest.TestCase):
             ddstr = dastr.tensorDD(identityDD(dastr.pmc))
             ddstr.simplify()
             ori_ddstr = AntiBraid(genus, c_pair).getDDStructure()
+            self.assertTrue(ddstr.compareDDStructures(ori_ddstr))
+
+class DehnSurgeryDATest(unittest.TestCase):
+    def testLocalDA(self):
+        for genus, c_pair, orientation in [(2, 1, NEG), (2, 1, POS)]:
+            ds = DehnSurgeryDA(genus, c_pair, orientation)
+            morphism = ds.getLocalMorphism()
+            self.assertEquals(ds.getLocalMorphism().diff(), 0)
+            self.assertTrue(ds.getLocalMappingCone().testDelta())
+
+    def testDehnSurgeryDA(self):
+        for genus, c_pair, orientation in [(2, 1, NEG), (2, 1, POS)]:
+            ds = DehnSurgeryDA(genus, c_pair, orientation)
+            self.assertTrue(
+                ds.getMappingCone().toSimpleDAStructure().testDelta())
+
+    def testDehnSurgeryAgreesWithDD(self):
+        for genus, c_pair, orientation in [(2, 1, NEG), (2, 1, POS)]:
+            ds = DehnSurgeryDA(genus, c_pair, orientation)
+            dastr = ds.getMappingCone()
+            ddstr = dastr.tensorDD(identityDD(dastr.algebra1.pmc))
+            ddstr.simplify(
+                cancellation_constraint = lambda x, y: (
+                    x.filtration == y.filtration))
+
+            ori_mor = DehnSurgery(genus, c_pair, orientation).getMorphism()
+            ori_mor_cx = ori_mor.getElt().parent
+            ori_ddstr = ori_mor_cx.getMappingCone(ori_mor)
+            self.assertTrue(ddstr.compareDDStructures(ori_ddstr))
+
+    def testLocalDAShort(self):
+        for genus, c_pair, orientation in [
+                (2, 0, NEG), (2, 0, POS), (2, 3, POS)]:
+            ds = DehnSurgeryDA(genus, c_pair, orientation)
+            morphism = ds.getLocalMorphism()
+            self.assertEquals(ds.getLocalMorphism().diff(), 0)
+            self.assertTrue(ds.getLocalMappingCone().testDelta())
+
+    def testDehnSurgeryDAShort(self):
+        for genus, c_pair, orientation in [
+                (2, 0, NEG), (2, 0, POS), (2, 3, POS)]:
+            ds = DehnSurgeryDA(genus, c_pair, orientation)
+            self.assertTrue(
+                ds.getMappingCone().toSimpleDAStructure().testDelta())
+
+    def testDehnSurgeryAgreesWithDDShort(self):
+        for genus, c_pair, orientation in [
+                (2, 0, NEG), (2, 0, POS), (2, 3, POS)]:
+            ds = DehnSurgeryDA(genus, c_pair, orientation)
+            dastr = ds.getMappingCone()
+            ddstr = dastr.tensorDD(identityDD(dastr.algebra1.pmc))
+            ddstr.simplify(
+                cancellation_constraint = lambda x, y: (
+                    x.filtration == y.filtration))
+
+            ori_mor = DehnSurgery(genus, c_pair, orientation).getMorphism()
+            ori_mor_cx = ori_mor.getElt().parent
+            ori_ddstr = ori_mor_cx.getMappingCone(ori_mor)
             self.assertTrue(ddstr.compareDDStructures(ori_ddstr))
 
 if __name__ == "__main__":

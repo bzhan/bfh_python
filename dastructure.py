@@ -2,14 +2,14 @@
 
 from algebra import CobarAlgebra, DGAlgebra, FreeModule, Generator, Tensor, \
     TensorGenerator, TensorStarGenerator
-from algebra import E0
+from algebra import ChainComplex, E0, TensorDGAlgebra
 from dstructure import DGenerator, SimpleDStructure
 from ddstructure import DDGenerator, SimpleDDGenerator, SimpleDDStructure
 from grading import GeneralGradingSet, GeneralGradingSetElement, \
     SimpleDbGradingSetElement
 from hdiagram import getIdentityDiagram
 from pmc import StrandDiagram
-from utility import NamedObject
+from utility import MorObject, NamedObject
 from utility import sumColumns
 from utility import ACTION_LEFT, ACTION_RIGHT, F2
 
@@ -34,7 +34,7 @@ class SimpleDAGenerator(DAGenerator, NamedObject):
         NamedObject.__init__(self, name)
 
     def __str__(self):
-        return "%s,%s" % (str(self.idem1), str(self.idem2))
+        return "%s:%s,%s" % (self.name, self.idem1, self.idem2)
 
     def __repr__(self):
         return str(self)
@@ -61,6 +61,15 @@ class DATensorDGenerator(DGenerator, tuple):
         """
         # Note tuple initialization is automatic
         DGenerator.__init__(self, parent, gen_left.idem1)
+        self.gen_left = gen_left
+        self.gen_right = gen_right
+        filt = []
+        if hasattr(gen_left, "filtration"):
+            filt += gen_left.filtration
+        if hasattr(gen_right, "filtration"):
+            filt += gen_right.filtration
+        if filt != []:
+            self.filtration = filt
 
 class DATensorDDGenerator(DDGenerator, tuple):
     """Generator of a type DD structure formed by tensoring a type DA structure
@@ -84,6 +93,133 @@ class DATensorDDGenerator(DDGenerator, tuple):
         """
         # Note tuple initialization is automatic
         DDGenerator.__init__(self, parent, gen_left.idem1, gen_right.idem2)
+        self.gen_left = gen_left
+        self.gen_right = gen_right
+        filt = []
+        if hasattr(gen_left, "filtration"):
+            filt += gen_left.filtration
+        if hasattr(gen_right, "filtration"):
+            filt += gen_right.filtration
+        if filt != []:
+            self.filtration = filt
+
+class MorDAtoDAGenerator(Generator, MorObject):
+    """Represents a generator of the chain complex of bimodule morphisms from a
+    type DA structure to a type DA structure.
+
+    """
+    def __init__(self, parent, coeff_d, coeffs_a, source, target):
+        """Specifies the morphism m(source, coeffs_a) -> coeff_d * target.
+        source and target are generators in two type DA bimodules with same
+        algebra actions. If the bimodules have left type D action by algebra1
+        and right type A action by algebra2, then as a MorObject coeff is of
+        type TensorDGAlgebra(algebra1, CobarAlgebra(algebra2)).
+
+        """
+        Generator.__init__(self, parent)
+        self.coeff_d, self.coeffs_a = coeff_d, coeffs_a
+        cobar_alg = CobarAlgebra(source.parent.algebra2)
+        tensor_alg = TensorDGAlgebra((source.parent.algebra1, cobar_alg))
+        coeff = TensorGenerator(
+            (coeff_d, TensorStarGenerator(coeffs_a, cobar_alg, source.idem2)),
+            tensor_alg)
+        MorObject.__init__(self, source, coeff, target)
+
+    def __str__(self):
+        coeff_d, coeffs_a = self.coeff
+        return "m(%s:%s; %s) = %s*%s:%s" % \
+            (self.source.name, self.source, coeffs_a, coeff_d,
+             self.target.name, self.target)
+
+class MorDAtoDAComplex(ChainComplex):
+    """Represents the complex of type DA morphisms between two type DA
+    structures.
+
+    """
+    def __init__(self, ring, source, target):
+        """Specifies the source and target DA structures."""
+        ChainComplex.__init__(self, ring)
+        assert source.algebra1 == target.algebra1 and \
+            source.algebra2 == target.algebra2
+        assert source.side1 == target.side1 and source.side2 == target.side2
+        self.source = source
+        self.target = target
+
+    def __eq__(self, other):
+        # Unlike other structures, MorDDtoDDComplex is distinguished by its
+        # source and target
+        return self.source == other.source and self.target == other.target
+
+    def __ne__(self, other):
+        return not (self == other)
+
+    def __hash__(self, other):
+        return hash(tuple((self.source, self.target)))
+
+    def diff(self, gen):
+        result = E0
+        x, c, y = gen.source, gen.coeff, gen.target
+        c_d, cs_a = gen.coeff  # D-side output and list of A-side inputs
+
+        # Differential of coefficient
+        for dc, ring_coeff in c.diff().items():
+            coeff_d, coeffs_a = dc
+            result += ring_coeff * MorDAtoDAGenerator(
+                self, coeff_d, coeffs_a, x, y)
+
+        # Pre-compose with differential in source
+        for (x1, coeffs_a), target in self.source.da_action.items():
+            for (coeff_d, x2), ring_coeff in target.items():
+                if x == x2 and coeff_d * c_d != E0:
+                    result += 1*MorDAtoDAGenerator(
+                        self, (coeff_d * c_d).getElt(), coeffs_a + cs_a, x1, y)
+
+        # Post-compose with differential in target
+        for (y1, coeffs_a), target in self.target.da_action.items():
+            for (coeff_d, y2), ring_coeff in target.items():
+                if y == y1 and c_d * coeff_d != E0:
+                    result += 1*MorDAtoDAGenerator(
+                        self, (c_d * coeff_d).getElt(), cs_a + coeffs_a, x, y2)
+        return result
+
+    def getMappingCone(self, morphism):
+        """Returns the mapping cone of a morphism. This is broadly similar to
+        that for DDStructures.
+
+        """
+        result = SimpleDAStructure(
+            F2, self.source.algebra1, self.source.algebra2,
+            self.source.side1, self.source.side2)
+        gen_map = dict()
+        for gen in self.source.getGenerators():
+            gen_map[gen] = SimpleDAGenerator(
+                result, gen.idem1, gen.idem2, "S_%s" % gen.name)
+            gen_map[gen].filtration = [0]
+            if hasattr(gen, "filtration"):
+                gen_map[gen] += gen.filtration
+            result.addGenerator(gen_map[gen])
+        for gen in self.target.getGenerators():
+            gen_map[gen] = SimpleDAGenerator(
+                result, gen.idem1, gen.idem2, "T_%s" % gen.name)
+            gen_map[gen].filtration = [1]
+            if hasattr(gen, "filtration"):
+                gen_map[gen] += gen.filtration
+            result.addGenerator(gen_map[gen])
+
+        for (x1, coeffs_a), target in self.source.da_action.items():
+            for (coeff_d, x2), ring_coeff in target.items():
+                result.addDelta(
+                    gen_map[x1], gen_map[x2], coeff_d, coeffs_a, ring_coeff)
+        for (y1, coeffs_a), target in self.target.da_action.items():
+            for (coeff_d, y2), ring_coeff in target.items():
+                result.addDelta(
+                    gen_map[y1], gen_map[y2], coeff_d, coeffs_a, ring_coeff)
+        for gen, ring_coeff in morphism.items():
+            # coeffs_a is a tuple of A-side inputs
+            coeff_d, coeffs_a = gen.coeff
+            result.addDelta(gen_map[gen.source], gen_map[gen.target],
+                            coeff_d, tuple(coeffs_a), ring_coeff)
+        return result
 
 class DAStructure(FreeModule):
     """Represents a type DA structure. delta() takes a generator and a sequence
