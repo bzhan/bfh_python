@@ -3,11 +3,12 @@
 import sys
 from arcslide import Arcslide
 from arcslideda import ArcslideDA
+from dehntwistda import DehnSurgeryDA
 from digraph import computeATensorD, computeATensorDD, computeDATensorD
 from dstructure import infTypeD, platTypeD
 from pmc import linearPMC, splitPMC
 from utility import memorize
-from utility import PRINT_PROGRESS
+from utility import NEG, POS, PRINT_PROGRESS
 
 class Braid():
     """Represents a braid with a fix number of strands. Each braid generator is
@@ -268,6 +269,84 @@ class BridgePresentation:
         cx.checkDifferential()
         cx.simplify()
         return cx
+
+    def addStrandsAtRight(self):
+        """Return a bridge presentation for the same knot, with two more strands
+        at right that are not involved in any crossings. The new bridge
+        presentation will always be acceptable to getSpecSeq below.
+
+        """
+        n = self.num_strands
+        new_start = self.start + [n+2, n+1]
+        new_end = self.end + [-1, -1]
+        for i in range(len(new_end)):
+            if new_end[i] == n:
+            # Strand i+1 is matched with n+2
+                new_end[i] = n+2
+                new_end[n+1] = i+1
+        # Strand n matched with n+1 (note indices are 0-based).
+        new_end[n-1] = n+1
+        new_end[n] = n
+        return BridgePresentation(
+            self.name, new_start, self.braid_word, new_end)
+
+    def getSpecSeq(self):
+        """Compute the spectral sequence from Khovanov homology to HF of
+        branched double cover, using local type DA structures for Dehn twists
+        (as mapping cone between identity and anti-braid).
+
+        Returns a list of lists. The first list contains counts of filtration
+        gradings of generators in the Khovanov homology, starting from the one
+        with lowest to the one with the highest filtration grading. The next
+        list contains counts of filtration gradings in the E_3 page, etc, until
+        the pages have stabilized.
+
+        """
+        if self.num_strands-2 in self.braid_word:
+            return self.addStrandsAtRight().getSpecSeq()
+
+        start_d = BraidCap(self.start).getHandlebodyByLocalDA()
+        genus = self.num_strands/2 - 1
+        for twist in self.braid_word:
+            print "%d" % len(start_d),
+            sys.stdout.flush()
+            abs_twist = abs(twist)
+            assert 1 <= abs_twist <= self.num_strands-2
+            # Choice of orientation for the knot
+            if twist < 0:
+                surgery = DehnSurgeryDA(genus, abs_twist-1, POS)
+            else:
+                surgery = DehnSurgeryDA(genus, abs_twist-1, NEG)
+            surgery_da = surgery.getMappingCone()
+            start_d = surgery_da.tensorD(start_d)
+            start_d.reindex()
+            # Must be done in two steps
+            start_d.simplify(cancellation_constraint = lambda x, y: (
+                sum(x.filtration) == sum(y.filtration)))
+            start_d.simplify(cancellation_constraint = lambda x, y: (
+                sum(x.filtration) + 1 >= sum(y.filtration)))
+        # Limited by genus, no infinity issues
+        end_d = BraidCap(self.end).getHandlebodyByLocalDA()
+        print " -> %d, %d" % (len(start_d), len(end_d))
+        cx = start_d.morToD(end_d)
+        cx.reindex()
+        cx.checkDifferential()
+        cx.simplify(cancellation_constraint = lambda x, y: (
+            sum(x.filtration) == sum(y.filtration)))
+
+        result = []
+        filt_diff = 1
+        while any(x.diff() != 0 for x in cx.getGenerators()):
+            cx.simplify(cancellation_constraint = lambda x, y: (
+                sum(x.filtration) + filt_diff >= sum(y.filtration)))
+            filt_grs = [sum(gen.filtration) for gen in cx.getGenerators()]
+            if filt_diff == 1:
+                # Find minimum and maximum at the second page
+                min_filt, max_filt = min(filt_grs), max(filt_grs)
+            result.append([filt_grs.count(i)
+                           for i in range(min_filt, max_filt+1)])
+            filt_diff += 1
+        return result
 
     def __str__(self):
         return str(self.name)

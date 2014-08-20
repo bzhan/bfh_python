@@ -4,6 +4,8 @@ from fractions import gcd
 from braid import *
 import unittest
 import time  # benchmarking
+import cProfile
+import pstats
 
 class BraidTest(unittest.TestCase):
     def testGetArcslide(self):
@@ -123,6 +125,42 @@ class HFTest(unittest.TestCase):
                     cx = cur_br.getHFByLocalDA()
                     print cx.getGradingInfo()
                     print "Time elapsed (s): ", time.time() - start_time
+
+    def testGetSpecSeq(self):
+        to_test = ["3_1", "4_1",
+                   "11n_9", "11n_12", "11n_19", # 3-bridge
+                   "12n_0475", # four pages
+                   "12n_0553", # 4-bridge
+        ]
+        with open('data/input_12_FL.txt', 'r') as input_file:
+            with open('data/output_12_sseq.txt', 'r') as check_file:
+                while True:
+                    # Read input
+                    line = input_file.readline()
+                    if len(line) == 0:
+                        break
+                    cur_br = readBridgePresentation(line)
+                    # Read expected output
+                    output_header = check_file.readline().split()
+                    output_header[0] == cur_br.name
+                    num_pages = int(output_header[1])
+                    output_lines = [check_file.readline()
+                                    for i in range(num_pages)]
+                    if cur_br.name in to_test:
+                        print "Testing: %s (genus %d)" % \
+                            (cur_br.name, cur_br.num_strands / 2 - 1)
+                        start_time = time.time()
+                        filt_grs = cur_br.getSpecSeq()
+                        self.assertEqual(len(filt_grs), len(output_lines))
+                        for i in range(len(output_lines)):
+                            self.assertEqual(filt_grs[i], [
+                                int(s) for s in output_lines[i].split()])
+                        print "Time elapsed (s): ", time.time() - start_time
+
+    def testGetSpecSeqProfile(self):
+        cProfile.runctx('self.testGetSpecSeq()', globals(), locals(), 'restats')
+        p = pstats.Stats('restats')
+        p.sort_stats('cumulative').print_stats(50)
 
 if __name__ == "__main__":
     unittest.main()

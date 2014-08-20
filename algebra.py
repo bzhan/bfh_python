@@ -290,7 +290,8 @@ class SimpleChainComplex(ChainComplex):
         assert gen_from.parent == self and gen_to.parent == self
         self.differential[gen_from] += coeff * gen_to
 
-    def simplify(self, find_homology_basis = False):
+    def simplify(self, find_homology_basis = False,
+                 cancellation_constraint = None):
         """Simplify a chain complex using cancellation lemma."""
         # Build dictionary of coefficients
         arrows = dict()
@@ -300,7 +301,9 @@ class SimpleChainComplex(ChainComplex):
             for y, coeff in self.differential[x].items():
                 arrows[x][y] = coeff
 
-        arrows = simplifyComplex(arrows, F2.zero, find_homology_basis)
+        arrows = simplifyComplex(
+            arrows, F2.zero, find_homology_basis,
+            cancellation_constraint = cancellation_constraint)
 
         # Now rebuild the chain complex
         self.generators = set(arrows.keys())

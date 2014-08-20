@@ -247,6 +247,17 @@ class DehnSurgeryDA:
         self.splitting = PMCSplitting(self.start_pmc, [(self.c1, self.c2)])
         self.local_pmc = self.splitting.local_pmc
 
+    def __eq__(self, other):
+        return self.genus == other.genus and self.c_pair == other.c_pair and \
+            self.orientation == other.orientation
+
+    def __ne__(self, other):
+        return not (self == other)
+
+    def __hash__(self):
+        return hash(("DehnSurgeryDA", self.genus, self.c_pair,
+                     self.orientation))
+
     @memorize
     def getMappingCone(self):
         return ExtendedDAStructure(

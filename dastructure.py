@@ -552,9 +552,8 @@ class SimpleDAStructure(DAStructure):
             self.da_action[(gen_from, coeffs_a)] = E0
         self.da_action[(gen_from, coeffs_a)] += target_gen.elt(ring_coeff)
         # Clean out the zero maps
-        for source, target in self.da_action.items():
-            if target == 0:
-                del self.da_action[source]
+        if self.da_action[(gen_from, coeffs_a)] == 0:
+            del self.da_action[(gen_from, coeffs_a)]
 
     def delta(self, MGen, algGens):
         if len(algGens) == 1 and algGens[0].isIdempotent() and \

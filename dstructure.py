@@ -52,6 +52,13 @@ class MorDtoDGenerator(Generator, MorObject):
         """Specifies the morphism source -> coeff * target."""
         Generator.__init__(self, parent)
         MorObject.__init__(self, source, coeff, target)
+        filt = []
+        if hasattr(source, "filtration"):
+            filt += [1-x for x in source.filtration]
+        if hasattr(target, "filtration"):
+            filt += target.filtration
+        if filt != []:
+            self.filtration = filt
 
 class DStructure(FreeModule):
     """Represents a type D structure. Note delta() returns an element in the
@@ -247,7 +254,7 @@ class SimpleDStructure(DStructure):
                                              gen.source, gen.coeff, gen.target)
         return cx
 
-    def simplify(self):
+    def simplify(self, cancellation_constraint = None):
         """Simplify a type D structure using cancellation lemma."""
         # Simplification is best done in terms of coefficients
         # Build dictionary of coefficients
@@ -260,7 +267,9 @@ class SimpleDStructure(DStructure):
                     arrows[gen][MGen] = E0
                 arrows[gen][MGen] += AGen * coeff
 
-        arrows = simplifyComplex(arrows, E0)
+        arrows = simplifyComplex(
+            arrows, E0,
+            cancellation_constraint = cancellation_constraint)
 
         # Now rebuild the type D structure
         self.generators = set()
