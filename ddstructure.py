@@ -25,6 +25,14 @@ class DDGenerator(Generator):
         Generator.__init__(self, parent)
         self.idem1, self.idem2 = idem1, idem2
 
+    def toDGenerator(self, new_parent):
+        """Convert to a generator of a type D structure over the bialgebra."""
+        new_idem = TensorIdempotent((self.idem1, self.idem2))
+        new_gen = DGenerator(new_parent, new_idem)
+        new_gen.__dict__.update(self.__dict__)
+        new_gen.parent, new_gen.idem = new_parent, new_idem
+        return new_gen
+
     def toSimpleDDGenerator(self, name):
         """Convert to a SimpleDDGenerator with the given name. All fields are
         preserved, except ``name`` which is overwritten, and _hash_val which is
@@ -55,7 +63,7 @@ class SimpleDDGenerator(DDGenerator, NamedObject):
         return hash((self.parent, self.idem1, self.idem2, self.name))
 
     def toDGenerator(self, new_parent):
-        """Convert to a generator of a type D structure over the bialgebra."""
+        # Overloaded in order to convert to SimpleDGenerator
         new_idem = TensorIdempotent((self.idem1, self.idem2))
         new_gen = SimpleDGenerator(new_parent, new_idem, self.name)
         new_gen.__dict__.update(self.__dict__)
@@ -597,28 +605,7 @@ class SimpleDDStructure(DDStructure):
 
     def compareDDStructures(self, other):
         """Compare two type DD structures, print out any differences."""
-        # Some basic tests:
-        if len(self) != len(other):
-            print "Different number of generators."""
-            return False
-        if (self.algebra1, self.algebra2) != (other.algebra1, other.algebra2):
-            print "Different algebra action."
-            return False
-        gen_map = dict()
-        for gen1 in self.generators:
-            for gen2 in other.generators:
-                if (gen1.idem1, gen1.idem2) == (gen2.idem1, gen2.idem2):
-                    gen_map[gen1] = gen2
-                    break
-        for gen1 in self.generators:
-            for gen2 in self.generators:
-                coeff1 = self.deltaCoeff(gen1, gen2)
-                coeff2 = other.deltaCoeff(gen_map[gen1], gen_map[gen2])
-                if coeff1 != coeff2:
-                    print "Different coefficient at %s->%s" % (gen1, gen2)
-                    print "%s vs %s" % (coeff1, coeff2)
-                    return False
-        return True
+        return self.toDStructure().compareDStructures(other.toDStructure())
 
 def DDStrFromChords(alg1, alg2, idem_pairs, chord_pairs):
     """Construct type DD structure from list of idempotent pairs and chord

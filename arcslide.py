@@ -73,7 +73,7 @@ class Arcslide:
     def __ne__(self, other):
         return not (self == other)
 
-    def __hash__(self, other):
+    def __hash__(self):
         return hash((self.start_pmc, self.b1, self.c1, "Arcslide"))
 
     def __str__(self):

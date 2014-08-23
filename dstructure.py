@@ -353,6 +353,31 @@ class SimpleDStructure(DStructure):
                 gr_y = self.grading[y]
                 assert gr_x - 1 == gr_y * [a.getGrading()]
 
+    def compareDStructures(self, other):
+        """Compare two type D structures, print out any differences."""
+        # Some basic tests:
+        if len(self) != len(other):
+            print "Different number of generators."""
+            return False
+        if self.algebra != other.algebra:
+            print "Different algebra action."
+            return False
+        gen_map = dict()
+        for gen1 in self.generators:
+            for gen2 in other.generators:
+                if gen1.idem == gen2.idem:
+                    gen_map[gen1] = gen2
+                    break
+        for gen1 in self.generators:
+            for gen2 in self.generators:
+                coeff1 = self.deltaCoeff(gen1, gen2)
+                coeff2 = other.deltaCoeff(gen_map[gen1], gen_map[gen2])
+                if coeff1 != coeff2:
+                    print "Different coefficient at %s->%s" % (gen1, gen2)
+                    print "%s vs %s" % (coeff1, coeff2)
+                    return False
+        return True
+
 def connectSumTypeD(dstr1, dstr2):
     """Form the connect sum of two type D structures."""
     algebra1, algebra2 = dstr1.algebra, dstr2.algebra
