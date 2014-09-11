@@ -119,7 +119,18 @@ class Cobordism:
 
     @memorize
     def _getIdems(self):
-        """Returns the set of possible idempotent-pairs for generators."""
+        """Returns the set of possible idempotent-pairs for generators.
+
+        In the non-degenerate case: the c-pair must be on the right, and at most
+        one of u and d-pairs are on the right. The left idempotent is the
+        complement of the right idempotent, under the mapping given by
+        self.pair_to_l.
+
+        In the degenerate case: the c-pair must be on the right, and the p-pair
+        must not be on the right. The left idempotent is again the complement
+        of the right idempotent.
+
+        """
         assert self.side == RIGHT
         all_idems = []
 
