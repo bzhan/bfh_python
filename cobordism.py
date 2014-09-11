@@ -20,62 +20,60 @@ class Cobordism:
         self.c_pair = c_pair
         self.side = side  # LEFT or RIGHT
 
-        if side == LEFT:
-            # Just keep the dual cobordism and use it for everything.
-            self.dual_cobordism = Cobordism(genus, c_pair, RIGHT)
-            self.start_pmc = linearPMC(self.genus)
-            self.end_pmc = linearPMC(self.genus-1)
-            return
-
-        assert side == RIGHT
         if c_pair == 0 or c_pair == 2*self.genus-1:
             self.is_degenerate = True
         else:
             self.is_degenerate = False
 
-        self.start_pmc = linearPMC(self.genus-1)
-        self.end_pmc = linearPMC(self.genus)
+        self.large_pmc = linearPMC(self.genus)
+        self.small_pmc = linearPMC(self.genus-1)
 
         # Some special points and pairs
-        self.c1, self.c2 = self.end_pmc.pairs[self.c_pair]
+        self.c1, self.c2 = self.large_pmc.pairs[self.c_pair]
         if self.is_degenerate:
             assert self.c2 == self.c1 + 2
             self.p = self.c1 + 1
-            self.p_pair = self.end_pmc.pairid[self.p]
+            self.p_pair = self.large_pmc.pairid[self.p]
         else:
             assert self.c2 == self.c1 + 3
             self.d, self.u = self.c1 + 1, self.c1 + 2
-            self.d_pair = self.end_pmc.pairid[self.d]
-            self.u_pair = self.end_pmc.pairid[self.u]
+            self.d_pair = self.large_pmc.pairid[self.d]
+            self.u_pair = self.large_pmc.pairid[self.u]
 
-        # Construct the to_l dictionary. Keys are points on the right that match
-        # points on the left. Value is the point that it matches.
-        self.to_l = dict()
+        # Construct the to_s dictionary. Keys are points on the large PMC that
+        # match points on the small PMC. Value is the point that it matches.
+        self.to_s = dict()
         cur_pt = 0
         for i in range(self.n):
             if self.is_degenerate:
-                pair_i = self.end_pmc.pairid[i]
+                pair_i = self.large_pmc.pairid[i]
                 if pair_i == self.c_pair or pair_i == self.p_pair:
                     continue
             else:
                 if self.c1 <= i <= self.c2:
                     continue
-            self.to_l[i] = cur_pt
+            self.to_s[i] = cur_pt
             cur_pt += 1
 
-        # The pair_to_l dictionary is similar, but for pairs. The c-pair does
+        # The pair_to_s dictionary is similar, but for pairs. The c-pair does
         # not match to anything. In the non-degenerate case, the u and d pairs
         # both match the (u',d') pair on the left. In the degenerate case, the
         # p-pair also does not match anything.
-        self.pair_to_l = dict()
+        self.pair_to_s = dict()
         for i in range(self.n/2):
-            for p in self.end_pmc.pairs[i]:  # the larger PMC
-                if p in self.to_l:
-                    self.pair_to_l[i] = self.start_pmc.pairid[self.to_l[p]]
+            for p in self.large_pmc.pairs[i]:
+                if p in self.to_s:
+                    self.pair_to_s[i] = self.small_pmc.pairid[self.to_s[p]]
 
         if not self.is_degenerate:
-            self.du_pair = self.pair_to_l[self.d_pair]  # special pair at left
-            assert self.du_pair == self.pair_to_l[self.u_pair]
+            # Special pair on the small PMC
+            self.du_pair = self.pair_to_s[self.d_pair]
+            assert self.du_pair == self.pair_to_s[self.u_pair]
+
+        if self.side == LEFT:
+            self.start_pmc, self.end_pmc = self.large_pmc, self.small_pmc
+        else:
+            self.start_pmc, self.end_pmc = self.small_pmc, self.large_pmc
 
     def __eq__(self, other):
         return self.genus == other.genus and self.c_pair == other.c_pair and \
@@ -90,10 +88,6 @@ class Cobordism:
     @memorize
     def getDDStructure(self):
         """Returns the type DD structure corresponding to this cobordism."""
-        if self.side == LEFT:
-            return self.dual_cobordism.getDDStructure().dual()
-
-        assert self.side == RIGHT
         all_idems = self._getIdems()
         all_chords = self._getChords()
         all_chords = [self._StrandsFromChords(chord1, chord2)
@@ -110,12 +104,14 @@ class Cobordism:
         reversed (refer to the opposite pmc).
 
         """
-        assert self.side == RIGHT
-        chord1 = [(self.to_l[p], self.to_l[q]) for p, q in chord1]
-        chord_left = Strands(self.start_pmc, chord1)
-        chord2 = [(self.n-1-q, self.n-1-p) for p, q in chord2]
-        chord_right = Strands(self.end_pmc, chord2)
-        return (chord_left, chord_right)
+        chord1 = [(self.to_s[p], self.to_s[q]) for p, q in chord1]
+        chord_small = Strands(self.small_pmc, chord1)
+        chord2 = [(p, q) for p, q in chord2]
+        chord_large = Strands(self.large_pmc, chord2)
+        if self.side == LEFT:
+            return (chord_large, chord_small.opp())
+        else:
+            return (chord_small, chord_large.opp())
 
     @memorize
     def _getIdems(self):
@@ -124,41 +120,45 @@ class Cobordism:
         In the non-degenerate case: the c-pair must be on the right, and at most
         one of u and d-pairs are on the right. The left idempotent is the
         complement of the right idempotent, under the mapping given by
-        self.pair_to_l.
+        self.pair_to_s.
 
         In the degenerate case: the c-pair must be on the right, and the p-pair
         must not be on the right. The left idempotent is again the complement
         of the right idempotent.
 
         """
-        assert self.side == RIGHT
         all_idems = []
 
-        right_idems = self.end_pmc.getIdempotents()
-        for right_idem in right_idems:
-            if self.c_pair not in right_idem:
+        large_idems = self.large_pmc.getIdempotents()
+        for large_idem in large_idems:
+            if self.c_pair not in large_idem:
                 continue
             if self.is_degenerate:
-                if self.p_pair in right_idem:
+                if self.p_pair in large_idem:
                     continue
             else:
-                if self.u_pair in right_idem and self.d_pair in right_idem:
+                if self.u_pair in large_idem and self.d_pair in large_idem:
                     continue
-            left_idem_comp = Idempotent(
-                self.start_pmc,
-                [self.pair_to_l[i] for i in right_idem if i != self.c_pair])
-            left_idem = left_idem_comp.comp()
-            all_idems.append((left_idem, right_idem.opp()))
+            small_idem_comp = Idempotent(
+                self.small_pmc,
+                [self.pair_to_s[i] for i in large_idem if i != self.c_pair])
+            small_idem = small_idem_comp.comp()
+            if self.side == LEFT:
+                all_idems.append((large_idem, small_idem.opp()))
+            else:
+                all_idems.append((small_idem, large_idem.opp()))
 
         return all_idems
 
     def _getChords(self):
-        """Returns the chords in the RIGHT case."""
-        assert self.side == RIGHT
+        """Returns the chords in the RIGHT case. The chords in the LEFT case are
+        formed by switching the components of the pair.
+
+        """
         all_chords = []
         for x in range(self.n):
             for y in range(x+1, self.n):
-                if x in self.to_l and y in self.to_l:
+                if x in self.to_s and y in self.to_s:
                     all_chords.append(([(x, y)], [(x, y)]))
 
         all_chords.append(([], [(self.c1, self.c2)]))
