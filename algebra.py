@@ -414,12 +414,18 @@ class DGAlgebra(ChainComplex):
         """
         factorMap = {}
         gen_list = self.getGenerators()
+        gen_list_by_left_idem = dict()
+        for gen in gen_list:
+            if gen.left_idem not in gen_list_by_left_idem:
+                gen_list_by_left_idem[gen.left_idem] = []
+            gen_list_by_left_idem[gen.left_idem].append(gen)
+
         for gen in gen_list:
             factorMap[gen] = E0
         # Resulting element lies in the tensor product of A with itself
         parent = Tensor((self, self))
         for gen1 in gen_list:
-            for gen2 in gen_list:
+            for gen2 in gen_list_by_left_idem[gen1.right_idem]:
                 for prod, coeff in (gen1*gen2).items():
                     tensor_gen = TensorGenerator((gen1, gen2), parent)
                     factorMap[prod] += coeff * tensor_gen

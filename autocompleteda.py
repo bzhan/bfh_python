@@ -167,6 +167,16 @@ class _AutoCompleteDAStructure:
         Returns the list of suggested arrows.
 
         """
+        # Complete arrows_new with alternative idempotents.
+        arrows_new_set = set(arrows_new)
+        init_alt_idems = []
+        for arrow in arrows_new:
+            for arrow_alt in self._getAltIdempotents([arrow]):
+                if arrow_alt not in arrows_new_set:
+                    arrows_new_set.add(arrow_alt)
+                    init_alt_idems.append(arrow_alt)
+        arrows_new = list(arrows_new_set)
+
         # First step: find all possible arrows, and all possible two-step
         # arrows.
         one_step_arrows = set()
@@ -273,7 +283,7 @@ class _AutoCompleteDAStructure:
                            list(target_vec))
         assert comb is not None
 
-        result = []
+        result = init_alt_idems
         for term in comb:
             if combined_one_step_arrows[term][0] not in arrows_new:
                 result.extend(combined_one_step_arrows[term])
@@ -342,9 +352,8 @@ class _AutoCompleteDAStructure:
             # if i == 0:
             #     print "# Initial patterns: %s\n" % \
             #         self._arrows_to_string(arrows_base)
-            # print "# Step %d, D side position %d:" % \
-            #     (i+1, self.d_side_order[i])
-            # print "# Seed arrows: %s\n# New arrows %s\n" % \
+            # print "# Step %d, D side position %d:" % (i+1, d_side_order[i])
+            # print "# Seed arrows:\n%s\n# New arrows:\n%s\n" % \
             #     (self._arrows_to_string(arrows_seed),
             #      self._arrows_to_string(arrows_new))
 

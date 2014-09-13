@@ -59,8 +59,7 @@ class AntiBraidDA(ExtendedDAStructure):
         self.local_da = self.getLocalDAStructure()
 
         ### Uncomment to use autocompleteda to construct arrows from seeds.
-        # auto = AutoCompleteDAStructure(self.local_da, ([]))
-        # self.local_da = auto.complete()
+        # autoCompleteDA(self.local_da, ([]))
 
         # Initiate the ExtendedDAStructure
         ExtendedDAStructure.__init__(self, self.local_da,
