@@ -659,6 +659,42 @@ class SimpleDAStructure(DAStructure):
                     self.gr_set, [gr_y1, gr_y2])
                 assert new_gr_x - (1-len(coeffs_a)) == new_gr_y
 
+class ComposedDAStructure(DAStructure):
+    """Type DA structure specified as a boxed tensor product of several DA
+    structures. The only available functions are tensorD and tensorDD, which are
+    defined by applying tensorD and tensorDD of component DA structures in
+    reversed order.
+
+    """
+    def __init__(self, da_list):
+        """da_list gives the list of component type DA structures. Must be
+        non-empty.
+
+        """
+        assert len(da_list) > 0
+        for da in da_list:
+            assert da.side1 == ACTION_LEFT and da.side2 == ACTION_RIGHT
+        for i in range(len(da_list)-1):
+            assert da_list[i].algebra2 == da_list[i+1].algebra1
+            assert da_list[i].ring == da_list[i+1].ring
+
+        self.da_list = da_list
+        DAStructure.__init__(
+            self, da_list[0].ring, da_list[0].algebra1, da_list[-1].algebra2,
+            ACTION_LEFT, ACTION_RIGHT)
+
+    def tensorD(self, dstr):
+        for da in reversed(self.da_list):
+            dstr = da.tensorD(dstr)
+            dstr.simplify()
+        return dstr
+
+    def tensorDD(self, ddstr):
+        for da in reversed(self.da_list):
+            ddstr = da.tensorDD(ddstr)
+            ddstr.simplify()
+        return ddstr
+
 def identityDA(pmc):
     """Returns the identity type DA structure for a given PMC."""
     alg = pmc.getAlgebra()

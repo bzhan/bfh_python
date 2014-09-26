@@ -11,7 +11,7 @@ LEFT, RIGHT = 0, 1
 class Cobordism:
     """Represents a cobordism."""
     def __init__(self, genus, c_pair, side):
-        """Specifies the genus of the starting (linear PMC), the c-pair at which
+        """Specifies the genus of the larger (linear PMC), the c-pair at which
         the cobordism occurred, and the side of the larger PMC (LEFT or RIGHT).
 
         """
