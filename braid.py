@@ -3,9 +3,12 @@
 import sys
 from arcslide import Arcslide
 from arcslideda import ArcslideDA
+from cobordism import Cobordism
+from cobordism import LEFT, RIGHT
+from cobordismda import CobordismDALeft, CobordismDARight
 from dehntwistda import DehnSurgeryDA
 from digraph import computeATensorD, computeATensorDD, computeDATensorD
-from dstructure import infTypeD, platTypeD
+from dstructure import infTypeD, platTypeD, zeroTypeD
 from pmc import linearPMC, splitPMC
 from utility import memorize
 from utility import NEG, POS, PRINT_PROGRESS
@@ -106,7 +109,10 @@ class BraidCap:
         self.matching = tuple(matching)
         self.num_strands = len(self.matching)
         self.genus = (len(self.matching) - 2)/2
-        self.fix = self.ends[self.matching]
+        if self.matching in self.ends:
+            self.fix = self.ends[self.matching]
+        else:
+            self.fix = None
 
     def __eq__(self, other):
         return self.matching == other.matching
@@ -145,6 +151,87 @@ class BraidCap:
             dstr.reindex()
             dstr.simplify()
         return dstr
+
+    @memorize
+    def getCobordismSequence(self):
+        """Returns a sequence of cobordisms that will close off this braid cap
+        to two strands (genus-0). The cobordisms are labeled 0-based starting
+        from the left. The right-most cobordism is never used.
+
+        For example:
+        (4, 3, 2, 1) --> [1]
+        (2, 1, 4, 3) --> [0]
+        (6, 5, 4, 3, 2, 1) --> [2, 1]
+        (6, 3, 2, 5, 4, 1) --> [1, 1]
+        (2, 1, 6, 5, 4, 3) --> [0, 1]
+
+        """
+        if self.genus == 0:
+            return []
+
+        # At each step, find the left-most ending point of a matching.
+        for i in range(len(self.matching)):
+            if self.matching[i] <= i+1:
+                assert self.matching[i] == i
+                cur_move = i-1
+                new_matching = []
+                for n in self.matching[:i-1] + self.matching[i+1:]:
+                    assert n != i and n != i+1
+                    if n < i:
+                        new_matching.append(n)
+                    else:
+                        new_matching.append(n-2)
+                new_cap = BraidCap(new_matching)
+                return [cur_move] + new_cap.getCobordismSequence()
+
+    @memorize
+    def openCap(self):
+        """Returns the type D structure corresponding to this handlebody by
+        tensoring type DA bimodules with the genus-1 handlebody.
+
+        """
+        cob_seq = list(reversed(self.getCobordismSequence()))
+        assert len(cob_seq) > 0
+        if cob_seq[0] == 0:
+            dstr = zeroTypeD(1)
+        else:
+            dstr = infTypeD(1)
+        for i in range(1, len(cob_seq)):
+            cur_da = CobordismDALeft(Cobordism(i+1, cob_seq[i], LEFT))
+            dstr = cur_da.tensorD(dstr)
+            dstr.simplify()
+            dstr.reindex()
+        return dstr
+
+    @memorize
+    def closeCap(self, dstr, cancellation_constraint = None):
+        """Computes the chain complex obtained by closing off this cap on dstr.
+        That is, compute the box tensor product of the type A module
+        corresponding to this cap with dstr.
+
+        This is obtained by tensoring dstr with a sequence of right-side
+        cobordisms, and finishing off by computing morToD with either
+        zeroTypeD(1) or infTypeD(1).
+
+        """
+        cob_seq = self.getCobordismSequence()
+        assert len(cob_seq) > 0
+        assert len(cob_seq) == self.genus
+        for i in range(len(cob_seq)-1):
+            cur_da = CobordismDARight(
+                Cobordism(self.genus-i, cob_seq[i], RIGHT))
+            dstr = cur_da.tensorD(
+                dstr, cancellation_constraint = cancellation_constraint)
+            dstr.reindex()
+            dstr.simplify(cancellation_constraint = cancellation_constraint)
+
+        if cob_seq[-1] == 0:
+            cx = dstr.morToD(zeroTypeD(1))
+        else:
+            cx = dstr.morToD(infTypeD(1))
+        cx.reindex()
+        cx.simplify(cancellation_constraint = cancellation_constraint)
+        return cx
 
     ends = {
         # Genus 3
@@ -212,7 +299,6 @@ class BraidCap:
                         cur_match[j] = pt1
             assert matching == tuple(cur_match)
 
-
 class BridgePresentation:
     """Represents a bridge presentation of a knot. Computes HF of branched
     double cover from bridge presentation.
@@ -248,7 +334,7 @@ class BridgePresentation:
         for arcslides.
 
         """
-        start_d = BraidCap(self.start).getHandlebodyByLocalDA()
+        start_d = BraidCap(self.start).openCap()
         slides = Braid(self.num_strands).getArcslides(self.braid_word)
         slides = [slide.inverse() for slide in slides]
         for slide in slides:
@@ -256,18 +342,9 @@ class BridgePresentation:
             sys.stdout.flush(),
             start_d = ArcslideDA(slide).tensorD(start_d)
             start_d.reindex()
-            # assert start_d.testDelta()  # remove this when more confident
             start_d.simplify()
-        # First way - limited by genus. No infinity issues.
-        # end_d = BraidCap(self.end).getHandlebodyByLocalDA()
-        # cx = start_d.morToD(end_d)
-        # Second way - has infinity issues when diagram is not admissible
-        end_d = BraidCap(self.end).getHandlebodyByLocalDA().dual()
-        print " -> %d, %d" % (len(start_d), len(end_d))
-        cx = computeATensorD(end_d, start_d)
-        cx.reindex()
-        cx.checkDifferential()
-        cx.simplify()
+        # Close off using cobordisms
+        cx = BraidCap(self.end).closeCap(start_d)
         return cx
 
     def addStrandsAtRight(self):
@@ -305,7 +382,7 @@ class BridgePresentation:
         if self.num_strands-2 in self.braid_word:
             return self.addStrandsAtRight().getSpecSeq()
 
-        start_d = BraidCap(self.start).getHandlebodyByLocalDA()
+        start_d = BraidCap(self.start).openCap()
         genus = self.num_strands/2 - 1
         for twist in self.braid_word:
             print "%d" % len(start_d),
@@ -325,10 +402,10 @@ class BridgePresentation:
                 sum(x.filtration) == sum(y.filtration)))
             start_d.simplify(cancellation_constraint = lambda x, y: (
                 sum(x.filtration) + 1 >= sum(y.filtration)))
-        # Limited by genus, no infinity issues
-        end_d = BraidCap(self.end).getHandlebodyByLocalDA()
-        print " -> %d, %d" % (len(start_d), len(end_d))
-        cx = start_d.morToD(end_d)
+        # Must not simplify everything immediately.
+        cx = BraidCap(self.end).closeCap(
+            start_d, cancellation_constraint = lambda x, y: (
+                sum(x.filtration) == sum(y.filtration)))
         cx.reindex()
         cx.checkDifferential()
         cx.simplify(cancellation_constraint = lambda x, y: (

@@ -683,16 +683,18 @@ class ComposedDAStructure(DAStructure):
             self, da_list[0].ring, da_list[0].algebra1, da_list[-1].algebra2,
             ACTION_LEFT, ACTION_RIGHT)
 
-    def tensorD(self, dstr):
+    def tensorD(self, dstr, cancellation_constraint = None):
         for da in reversed(self.da_list):
             dstr = da.tensorD(dstr)
-            dstr.simplify()
+            dstr.reindex()
+            dstr.simplify(cancellation_constraint = cancellation_constraint)
         return dstr
 
-    def tensorDD(self, ddstr):
+    def tensorDD(self, ddstr, cancellation_constraint = None):
         for da in reversed(self.da_list):
             ddstr = da.tensorDD(ddstr)
-            ddstr.simplify()
+            ddstr.reindex()
+            ddstr.simplify(cancellation_constraint = cancellation_constraint)
         return ddstr
 
 def identityDA(pmc):

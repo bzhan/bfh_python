@@ -57,6 +57,30 @@ class BraidCapTest(unittest.TestCase):
                 total_gen += len(algs[end3][end3to])
         self.assertEqual(total_gen, 52)
 
+    def testGetCobordismSequence(self):
+        for matching, result in [
+                ((2, 1), []), ((4, 3, 2, 1), [1]), ((2, 1, 4, 3), [0]),
+                ((6, 5, 4, 3, 2, 1), [2, 1]),
+                ((6, 3, 2, 5, 4, 1), [1, 1]),
+                ((2, 1, 6, 5, 4, 3), [0, 1]),
+                ((10, 3, 2, 7, 6, 5, 4, 9, 8, 1), [1, 2, 1, 1])]:
+            self.assertEquals(
+                BraidCap(matching).getCobordismSequence(), result)
+
+    def testCobordisms(self):
+        # 6 strands (genus 2)
+        ends3 = reversed(sorted(
+                [end for end in BraidCap.ends if len(end) == 6]))
+        dcap_len = [len(BraidCap(end).openCap()) for end in ends3]
+        self.assertEqual(dcap_len, [2, 1, 2, 1, 1])
+
+        # 8 strands (genus 3)
+        ends4 = reversed(sorted(
+                [end for end in BraidCap.ends if len(end) == 8]))
+        dcap_len = [len(BraidCap(end).getHandlebodyByLocalDA())
+                    for end in ends4]
+        self.assertEqual(dcap_len, [4, 3, 2, 2, 1, 4, 3, 2, 2, 2, 1, 2, 1, 1])
+
 class HFTest(unittest.TestCase):
     def testHFPretzel(self):
         std_cap = [6,3,2,5,4,1]
@@ -87,7 +111,8 @@ class HFTest(unittest.TestCase):
                         start_time = time.time()
                         cx = cur_br.getHFByLocalDA()
                         # cx = cur_br.getHF()
-                        print cx.getGradingInfo()
+                        if hasattr(cx, "grading"):
+                            print cx.getGradingInfo()
                         self.assertEqual(len(cx), expected_hf)
                         print "Time elapsed (s): ", time.time() - start_time
 
