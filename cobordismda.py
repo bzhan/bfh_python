@@ -7,6 +7,7 @@ from cobordism import Cobordism
 from cobordism import LEFT, RIGHT
 from dastructure import ComposedDAStructure, DAStructure, SimpleDAGenerator
 from extendbyid import ExtendedDAStructure, LocalDAStructure
+from hdiagram import getCobordismDiagramLeft, getSimpleCobordismDiagram
 from localpmc import LocalIdempotent, LocalStrandAlgebra, PMCSplitting
 from pmc import PMC
 from pmc import linearPMC
@@ -101,6 +102,12 @@ class CobordismDALeft(ExtendedDAStructure):
         # Initiate the ExtendedDAStructure
         ExtendedDAStructure.__init__(
             self, self.local_da, self.splitting1, self.splitting2)
+
+        # With generators set, add grading. Any generator can serve as base_gen
+        for gen in self.generators:
+            base_gen = gen
+            break
+        self.registerHDiagram(getCobordismDiagramLeft(self.cob), base_gen)
 
     def getLocalDAStructure(self):
         """Returns the local type DA structure associated to this cobordism."""
@@ -284,6 +291,15 @@ class SimpleCobordismDA(ExtendedDAStructure):
         # Initiate the ExtendedDAStructure
         ExtendedDAStructure.__init__(
             self, self.local_da, self.splitting1, self.splitting2)
+
+        # With generators set, add grading. Choose a generator of class zero as
+        # base generator.
+        for gen in self.generators:
+            if gen.name[0] == "0":
+                base_gen = gen
+                break
+        self.registerHDiagram(
+            getSimpleCobordismDiagram(start_pmc, insert_pos), base_gen)
 
     def getLocalDAStructure(self):
         """Returns the local type DA structure associated to this simple

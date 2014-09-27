@@ -489,21 +489,64 @@ class DAStructure(FreeModule):
         das_pmc1, das_pmc2 = self.algebra1.pmc, self.algebra2.pmc
         assert hd_pmc1.opp() == das_pmc1
         assert hd_pmc2 == das_pmc2
-        # Now attempt to match generators
-        self.hdiagram_gen_map = dict()
+
+        # Set of generators in bimodule and in diagram
         idem_size = 2 * das_pmc1.genus - len(base_gen.idem1)
         gens = self.getGenerators()
         hgens = diagram.getHFGenerators(idem_size = idem_size)
+
+        # Group generators by idempotent
+        idem_to_gen, idem_to_hgen = dict(), dict()
+        self.hdiagram_gen_map = dict()
         for gen in gens:
-            for hgen in hgens:
-                hgen_idem1, hgen_idem2 = hgen.getDIdem()[0], hgen.getIdem()[1]
-                if (gen.idem1, gen.idem2) == (hgen_idem1, hgen_idem2):
-                    self.hdiagram_gen_map[gen] = hgen
-                    break
-            assert gen in self.hdiagram_gen_map
-        # Compute grading and check consistency with algebra actions
-        base_hgen = self.hdiagram_gen_map[base_gen]
+            key = (gen.idem1, gen.idem2)
+            if key not in idem_to_gen:
+                idem_to_gen[key] = []
+            idem_to_gen[key].append(gen)
+        for hgen in hgens:
+            key = hgen.getDIdem()[0], hgen.getIdem()[1]
+            if key not in idem_to_hgen:
+                idem_to_hgen[key] = []
+            idem_to_hgen[key].append(hgen)
+
+        # Check counts of generators in each idempotent agree, and that there
+        # are at most two generators in each idempotent.
+        assert len(idem_to_gen) == len(idem_to_hgen)
+        for idem in idem_to_gen:
+            assert len(idem_to_gen[idem]) <= 2
+            assert idem in idem_to_hgen
+            assert len(idem_to_hgen[idem]) == len(idem_to_gen[idem])
+
+        # Compute grading in hdiagram
+        base_key = (base_gen.idem1, base_gen.idem2)
+        assert len(idem_to_gen[base_key]) == 1
+        assert base_gen == idem_to_gen[base_key][0]
+        base_hgen = idem_to_hgen[base_key][0]
         self.gr_set, gr = self.hdiagram.computeDAGrading(base_hgen, base_gr)
+
+        # Compute the map from gen to hgen
+        for idem in idem_to_gen:
+            if len(idem_to_gen[idem]) == 1:
+                gen, hgen = idem_to_gen[idem][0], idem_to_hgen[idem][0]
+                self.hdiagram_gen_map[gen] = hgen
+            else:
+                # Two generators on each side. Exchange x and y so there is an
+                # arrow x -> i_D(y) * y in the DA action. Exchange hx and hy so
+                # that hx has grading one higher than hy. Then x is matched to
+                # hx and y is matched to hy.
+                x, y = idem_to_gen[idem]
+                hx, hy = idem_to_hgen[idem]
+                if gr[hy] - 1 == gr[hx]:
+                    hx, hy = hy, hx
+                assert gr[hx] - 1 == gr[hy]
+                # Algebra element corresponding to the left idempotent.
+                idem_alg = x.idem1.toAlgElt(self.algebra1)
+                if (idem_alg * x).getElt() in self.delta(y, []):
+                    x, y = y, x
+                assert (idem_alg * y).getElt() in self.delta(x, [])
+                self.hdiagram_gen_map[x] = hx
+                self.hdiagram_gen_map[y] = hy
+
         self.grading = dict()
         for gen in gens:
             self.grading[gen] = gr[self.hdiagram_gen_map[gen]]

@@ -17,6 +17,11 @@ class CobordismDATest(unittest.TestCase):
             ori_ddstr = c.getDDStructure()
             self.assertTrue(ddstr.compareDDStructures(ori_ddstr))
 
+    def testGrading(self):
+        for genus, c_pair in [(2, 0), (2, 1), (2, 3)]:
+            c_da = CobordismDALeft(Cobordism(genus, c_pair, LEFT))
+            c_da.toSimpleDAStructure().checkGrading()
+
     def testRightCobordismDA(self):
         for genus, c_pair in [(2, 0), (2, 1), (2, 2), (2, 3),
                               (3, 0), (3, 1), (3, 2), (3, 3), (3, 4), (3, 5)]:
@@ -43,6 +48,11 @@ class SimpleCobordismDATest(unittest.TestCase):
             self.assertEquals(
                 sorted(len(gen.delta()) for gen in ddstr.getGenerators()),
                 [2, 6])
+
+    def testGrading(self):
+        for insert_pos in [1, 2, 3]:
+            c_da = SimpleCobordismDA(splitPMC(1), insert_pos)
+            c_da.toSimpleDAStructure().checkGrading()
 
     def slideSeq(self, start_pmc, slides):
         # Given a sequence of arcslides tau_1, ... tau_n specified by the

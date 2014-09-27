@@ -1142,3 +1142,107 @@ def getArcslideDiagram(slide):
                                 length_border = [n,n],
                                 alpha_arcs = a_arcs, beta_cycles = b_cycles,
                                 crossing_orientation = [1,-1]*num_pair+[-1])
+
+def getSimpleCobordismDiagram(start_pmc, insert_pos):
+    """Get Heegaard diagram for a simple cobordism (see SimpleCobordismDA in
+    cobordismda.py).
+
+    """
+    n, num_pair = start_pmc.n, start_pmc.num_pair
+    a_arcs, b_cycles = [], []
+    for i in range(num_pair):
+        pt1, pt2 = 2*i, 2*i+1
+        p, q = start_pmc.pairs[i]
+        rp, rq = p, q
+        if p >= insert_pos:
+            rp += 4
+        if q >= insert_pos:
+            rq += 4
+        op, oq = n-1-p, n-1-q  # index at left, from top
+        a_arcs.append([(1, rp), pt1, (1, rq)])
+        a_arcs.append([(0, oq), pt2, (0, op)])
+        b_cycles.append([pt1, pt2])
+    # Now draw the cobordism part, using points 2*num_pair+(0, 1, 2)
+    pt0, pt1, pt2 = [2*num_pair+i for i in (0, 1, 2)]
+    a_arcs.append([(1, insert_pos), pt2, pt1, (1, insert_pos+2)])
+    a_arcs.append([(1, insert_pos+1), pt0, (1, insert_pos+3)])
+    b_cycles.append([pt0, pt1, pt2])
+    return diagramFromCycleInfo(
+        "Diagram for cobordism starting at %s inserting at position %s" % (
+            start_pmc, insert_pos),
+        num_interior_point = 2 * num_pair + 3,
+        length_border = [n, n + 4],
+        alpha_arcs = a_arcs, beta_cycles = b_cycles,
+        crossing_orientation = [1, -1]*num_pair + [-1, 1, -1])
+
+def getCobordismDiagramLeft(cob):
+    """Get Heegaard diagram for a cobordism on the linear PMC, with larger PMC
+    on the left. cob is of type Cobordism (cobordism.py)
+
+    """
+    genus_l = cob.genus
+    genus_r = genus_l - 1
+    num_pair_l = genus_l * 2
+    start_pmc, end_pmc = cob.large_pmc, cob.small_pmc
+    start_n = start_pmc.n
+    pt_count = [0]
+    a_arcs, b_cycles = [], []
+
+    def process_pair(left_pair):
+        # Given the index of a pair on the left, draw the same a_arcs and
+        # b_cycles as in the identity diagram for that pair.
+        p, q = start_pmc.pairs[left_pair]
+        rp, rq = cob.to_s[p], cob.to_s[q]
+        op, oq = start_n-1-p, start_n-1-q
+        pt1, pt2 = pt_count[0], pt_count[0] + 1
+        pt_count[0] += 2
+        a_arcs.append([(1, rp), pt1, (1, rq)])
+        a_arcs.append([(0, oq), pt2, (0, op)])
+        b_cycles.append([pt1, pt2])
+
+    if cob.is_degenerate:
+        c_pair, p_pair = cob.c_pair, cob.p_pair
+        for i in range(num_pair_l):
+            if i not in (c_pair, p_pair):
+                process_pair(i)
+        # Now consider the c-pair and p-pair
+        c1, c2 = start_pmc.pairs[c_pair]
+        p1, p2 = start_pmc.pairs[p_pair]
+        oc1, oc2, op1, op2 = [start_n-1-p for p in (c1, c2, p1, p2)]
+        pt = pt_count[0]
+        pt_count[0] += 1
+        a_arcs.append([(0, oc2), (0, oc1)])
+        a_arcs.append([(0, op2), pt, (0, op1)])
+        b_cycles.append([pt])
+        crossing_orientation = [1, -1] * (num_pair_l - 2) + [1]
+
+    else:  # cob is not degenerate
+        c_pair, d_pair, u_pair = cob.c_pair, cob.d_pair, cob.u_pair
+        du_pair = cob.du_pair  # for the right side
+        for i in range(num_pair_l):
+            if i not in (c_pair, d_pair, u_pair):
+                process_pair(i)
+        # Now consider the remaining pairs
+        c1, c2 = start_pmc.pairs[c_pair]
+        d1, d2 = start_pmc.pairs[d_pair]
+        u1, u2 = start_pmc.pairs[u_pair]
+        rdu1, rdu2 = end_pmc.pairs[du_pair]
+        oc1, oc2, od1, od2, ou1, ou2 = [start_n-1-p
+                                        for p in (c1, c2, d1, d2, u1, u2)]
+        pt0, pt1, pt2, pt3 = [pt_count[0] + i for i in (0, 1, 2, 3)]
+        pt_count[0] += 4
+        a_arcs.append([(0, oc2), (0, oc1)])
+        a_arcs.append([(0, ou2), pt0, pt2, (0, ou1)])
+        a_arcs.append([(0, od2), pt3, (0, od1)])
+        a_arcs.append([(1, rdu1), pt1, (1, rdu2)])
+        b_cycles.append([pt0, pt1])
+        b_cycles.append([pt2, pt3])
+        crossing_orientation = [1, -1] * (num_pair_l - 3) + [-1, 1, 1, -1]
+
+    return diagramFromCycleInfo(
+        "Diagram for cobordism on linear PMC starting at genus %s and "
+        "reducing pair %s " % (genus_l, c_pair),
+        num_interior_point = pt_count[0],
+        length_border = [start_n, start_n - 4],
+        alpha_arcs = a_arcs, beta_cycles = b_cycles,
+        crossing_orientation = crossing_orientation)

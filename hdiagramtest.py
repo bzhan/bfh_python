@@ -4,6 +4,8 @@ from hdiagram import *
 from hdiagram import _Point, _Segment, _OrientedSegment, _Path, _Cell, \
     _Domain, _OneChain
 from arcslide import Arcslide
+from cobordism import Cobordism
+from cobordism import LEFT
 from pmc import antipodalPMC, linearPMC, splitPMC
 import unittest
 
@@ -165,6 +167,17 @@ class CommonDiagramsTest(unittest.TestCase):
         diagram = getZeroFrameAdmDiagram(2)
         # Uncomment to see full printout of diagrams
         # print repr(diagram)
+
+    def testSimpleCobordismDiagram(self):
+        diagram = getSimpleCobordismDiagram(splitPMC(1), 1)
+        # Uncomment to see full printout of diagrams
+        # print repr(diagram)
+
+    def testGetCobordismDiagramLeft(self):
+        for c_pair in [0, 2, 3]:
+            diagram = getCobordismDiagramLeft(Cobordism(2, c_pair, LEFT))
+            # Uncomment to see full printout of diagrams
+            # print repr(diagram)
 
     def testConnectingDomain(self):
         diagram = getIdentityDiagram(splitPMC(2))
