@@ -7,7 +7,7 @@ local PMC's like this.
 from algebra import DGAlgebra, Element, Generator
 from algebra import E0
 from pmc import Strands, StrandDiagram
-from utility import memorize, subset
+from utility import memorize, memorizeHash, subset
 from utility import F2
 import itertools
 
@@ -338,6 +338,7 @@ class LocalStrandDiagram(Generator):
         return hash((self.parent, tuple(self.left_idem),
                      tuple(self.strands)))
 
+    @memorize
     def removeSingleHor(self, idems = None):
         """Return a local strand diagram that is just like this, except with
         some single horizontal lines removed.
@@ -463,12 +464,25 @@ class PMCSplitting:
 
         """
         self.pmc = pmc
+        self.local_intervals_tuple = tuple(intervals)  # used for eq and hash
         outer_intervals = PMCSplitting.complementIntervals(self.pmc, intervals)
         self.local_pmc, self.local_mapping = \
             PMCSplitting.restrictPMC(self.pmc, intervals)
         self.outer_pmc, self.outer_mapping = \
             PMCSplitting.restrictPMC(self.pmc, outer_intervals)
 
+    def __eq__(self, other):
+        return self.pmc == other.pmc and \
+            self.local_intervals_tuple == other.local_intervals_tuple
+
+    def __ne__(self, other):
+        return not (self == other)
+
+    @memorizeHash
+    def __hash__(self):
+        return hash(("PMCSplitting", self.pmc, self.local_intervals_tuple))
+
+    @memorize
     def restrictStrandDiagramLocal(self, sd):
         """Returns the local strand diagram that is the restriction of sd to
         local_pmc.
@@ -477,6 +491,7 @@ class PMCSplitting:
         return PMCSplitting.restrictStrandDiagram(
             self.pmc, sd, self.local_pmc, self.local_mapping)
 
+    @memorize
     def restrictStrandDiagramOuter(self, sd):
         """Returns the local strand diagram that is the restriction of sd to
         outer_pmc.

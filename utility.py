@@ -9,21 +9,24 @@ def memorize(function):
 
     """
     memo = {}
+    class NoneSymbol:
+        pass
+
     def wrapper(*args, **kwargs):
         key = args + tuple((k, v) for k, v in kwargs.items())
-        # First see if args is hashable. If not, just run function
+        # Use memorization. Don't keep NotImplemented values
         try:
-            exists = memo.has_key(key)
+            val = memo.get(key, NoneSymbol)
+            if val is not NoneSymbol:
+                return val
+            else:
+                rv = function(*args, **kwargs)
+                if rv is not NotImplemented:
+                    memo[key] = rv
+                return rv
         except TypeError:
-            return function(*args, **kwargs)
-        # Now use memorization. Don't keep NotImplemented values
-        if key in memo:
-            return memo[key]
-        else:
-            rv = function(*args, **kwargs)
-            if rv is not NotImplemented:
-                memo[key] = rv
-            return rv
+            assert False, "Please use hashable parameters in memorized "
+            "functions."
     return wrapper
 
 def memorizeHash(function):

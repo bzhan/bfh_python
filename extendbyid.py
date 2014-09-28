@@ -358,10 +358,10 @@ class ExtendedDAStructure(DAStructure):
         for i in range(len(algGens)):
             alg = algGens[i]
             outer_sd = self.splitting2.restrictStrandDiagramOuter(alg)
-            outer_sd = outer_sd.removeSingleHor(
+            outer_sd = outer_sd.removeSingleHor(tuple(
                 [self.single_idems_outer[single_id]
                  for single_id in range(self.num_singles)
-                 if assignments[single_id][i] == self.LOCAL])
+                 if assignments[single_id][i] == self.LOCAL]))
             if prod_d is None:
                 prod_d = 1*outer_sd
             else:
@@ -384,10 +384,10 @@ class ExtendedDAStructure(DAStructure):
         for i in range(len(algGens)):
             cur_alg_local = \
                 self.splitting2.restrictStrandDiagramLocal(algGens[i])
-            cur_alg_local = cur_alg_local.removeSingleHor(
+            cur_alg_local = cur_alg_local.removeSingleHor(tuple(
                 [self.single_idems2[single_id]
                  for single_id in range(self.num_singles)
-                 if assignments[single_id][i] == self.OUTER])
+                 if assignments[single_id][i] == self.OUTER]))
             alg_local.append(cur_alg_local)
         alg_local = tuple(alg_local)
 
@@ -431,8 +431,6 @@ class ExtendedDAStructure(DAStructure):
                 for i in range(len(algGens)-1)]):
             return False
 
-        # Note: Testing shows probably not worth it to multiply outside.
-        # Just test inside.
         def testWithAssignment(assignments):
             # Test with a specific single assignments
             local_MGen = MGen.local_gen
@@ -440,10 +438,10 @@ class ExtendedDAStructure(DAStructure):
             for i in range(len(algGens)):
                 cur_alg_local = \
                     self.splitting2.restrictStrandDiagramLocal(algGens[i])
-                cur_alg_local = cur_alg_local.removeSingleHor(
+                cur_alg_local = cur_alg_local.removeSingleHor(tuple(
                     [self.single_idems2[single_id]
                      for single_id in range(self.num_singles)
-                     if assignments[single_id][i] == self.OUTER])
+                     if assignments[single_id][i] == self.OUTER]))
                 alg_local.append(cur_alg_local)
             alg_local = tuple(alg_local)
 
@@ -454,7 +452,29 @@ class ExtendedDAStructure(DAStructure):
                     if local_MGen not in self.local_da.u_maps[i]:
                         return False  # need test case
                     local_MGen = self.local_da.u_maps[i][local_MGen]
-            return self.local_da.deltaPrefix(local_MGen, alg_local)
+            if not self.local_da.deltaPrefix(local_MGen, alg_local):
+                return False
+
+            # Test that the product on the outside is nonzero.
+            has_product = True
+            prod_d = None
+            for i in range(len(algGens)):
+                alg = algGens[i]
+                outer_sd = self.splitting2.restrictStrandDiagramOuter(alg)
+                outer_sd = outer_sd.removeSingleHor(tuple(
+                    [self.single_idems_outer[single_id]
+                     for single_id in range(self.num_singles)
+                     if assignments[single_id][i] == self.LOCAL]))
+                if prod_d is None:
+                    prod_d = 1*outer_sd
+                else:
+                    prod_d = prod_d * outer_sd
+                if prod_d == 0:
+                    has_product = False
+                    break
+                else:
+                    prod_d = prod_d.getElt()
+            return has_product
 
         assignments = self.getSingleAssignments(algGens)
         if assignments is None:

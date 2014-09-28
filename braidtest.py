@@ -182,6 +182,27 @@ class HFTest(unittest.TestCase):
                                 int(s) for s in output_lines[i].split()])
                         print "Time elapsed (s): ", time.time() - start_time
 
+    def testTorusSpecSeq(self):
+        def singleTest(m, n):
+            start_time = time.time()
+            cap = list(range(2*m, 0, -1))
+            half_twist = list(range(m-1, 0, -1))
+            br = BridgePresentation("T%d_%d" % (m, n), cap, n*half_twist, cap)
+            filt_grs = br.getSpecSeq()
+            print
+            for filt_gr in filt_grs:
+                print filt_gr
+            print "Time elapsed (s): ", time.time() - start_time
+
+        for n in [1,2,4,5,7,8,10,20,50,100]:
+            singleTest(3, n)
+        for n in [1,3,5,7,9,11,13,15,17,19]:
+            singleTest(4, n)
+        for n in [4,6]:
+            singleTest(5, n)
+        for n in [1,5]:
+            singleTest(6, n)
+
     def testGetSpecSeqProfile(self):
         cProfile.runctx('self.testGetSpecSeq()', globals(), locals(), 'restats')
         p = pstats.Stats('restats')
