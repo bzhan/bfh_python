@@ -14,19 +14,16 @@ def memorize(function):
 
     def wrapper(*args, **kwargs):
         key = args + tuple((k, v) for k, v in kwargs.items())
-        # Use memorization. Don't keep NotImplemented values
-        try:
-            val = memo.get(key, NoneSymbol)
-            if val is not NoneSymbol:
-                return val
-            else:
-                rv = function(*args, **kwargs)
-                if rv is not NotImplemented:
-                    memo[key] = rv
-                return rv
-        except TypeError:
-            assert False, "Please use hashable parameters in memorized "
-            "functions."
+        # Use memorization. Don't keep NotImplemented values.
+        # Will throw TypeError if key is not hashable.
+        val = memo.get(key, NoneSymbol)
+        if val is not NoneSymbol:
+            return val
+        else:
+            rv = function(*args, **kwargs)
+            if rv is not NotImplemented:
+                memo[key] = rv
+            return rv
     return wrapper
 
 def memorizeHash(function):
@@ -42,6 +39,15 @@ def memorizeHash(function):
             rv = function(*args)
             _self._hash_val = rv
             return rv
+    return wrapper
+
+def trace(function):
+    """Decorator: print input and ouput for every invocation of the function."""
+    def wrapper(*args):
+        print "\nInputs:", args
+        rv = function(*args)
+        print "Output:", rv
+        return rv
     return wrapper
 
 def tolist(obj):

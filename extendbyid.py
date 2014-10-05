@@ -2,9 +2,12 @@
 
 from algebra import TensorGenerator
 from algebra import E0
-from dastructure import DAGenerator, DAStructure, MorDAtoDAComplex, \
-    SimpleDAGenerator, SimpleDAStructure
+from dastructure import DAGenerator, DAStructure, DATensorDGenerator, \
+    MorDAtoDAComplex, SimpleDAGenerator, SimpleDAStructure
+from dstructure import SimpleDStructure
+from grading import GeneralGradingSet, GeneralGradingSetElement
 from localpmc import LocalStrandAlgebra, PMCSplitting
+from utility import subset
 from utility import ACTION_LEFT, ACTION_RIGHT, F2
 
 class ExtendedDAGenerator(SimpleDAGenerator):
@@ -193,9 +196,9 @@ class ExtendedDAStructure(DAStructure):
         self.idem_size1 = self.pmc1.genus
         self.idem_size2 = self.pmc2.genus
 
-        # Possible values of single assignments, for use in delta and
+        # Possible values of single assignments, for use in tensorD, delta and
         # deltaPrefix (through the function getSingleAssignments).
-        self.NONE, self.LOCAL, self.OUTER = 0, 1, 2
+        self.NONE, self.LOCAL, self.OUTER, self.DOUBLE = 0, 1, 2, 3
 
         # Record the local and outer single idempotents.
         # Everything is indexed by 0 ... self.num_single-1
@@ -265,78 +268,282 @@ class ExtendedDAStructure(DAStructure):
     def getGenerators(self):
         return self.generators
 
-    def getSingleAssignments(self, algGens):
-        """Compute how to assign the smeared pair to local or outside. Return
-        None if there is no valid assignment.
+    def adjustLocalMGen(self, local_MGen, alg_local0):
+        """Assigning the smeared idempotents for the starting generator,
+        according to the rule that local_MGen.idem2 (A-side idempotent) must
+        match the left idempotent of the first algebra input (if there is any).
 
         """
-        # The final result. This will be a list with self.num_singles elements,
-        # each element will be a list of length len(algGens), with each entry
-        # one of self.LOCAL and self.OUTER (referring to the assignment of the
-        # single horizontal line to either local or outer PMC.
-        all_assignments = []
+        for i in range(self.num_singles):
+            single2 = self.single_idems2[i]
+            if single2 in local_MGen.idem2 and \
+               single2 not in alg_local0.left_idem:
+                if local_MGen not in self.local_da.u_maps[i]:
+                    return None  # need test case
+                local_MGen = self.local_da.u_maps[i][local_MGen]
+        return local_MGen
 
-        for idem_id in self.smeared_idems2:
-            # Current list of assignments.
-            assignments = [self.NONE] * len(algGens)
+    def testPrefix(self, local_MGen, algs_local):
+        """Query deltaPrefix for the given set of local algebra inputs. Perform
+        the adjustment on local_MGen if necessary.
 
-            # Enforce as much as possible constraints from the previous algebra
-            # input.
-            for i in range(1, len(algGens)):
-                alg_prev, alg = algGens[i-1], algGens[i]
-                if idem_id in alg.double_hor:
-                    # Note cur_assign[i] will stay NONE if there is not enough
-                    # information.
-                    if assignments[i-1] != self.NONE:
-                        assignments[i] = assignments[i-1]
-                    elif idem_id not in alg_prev.double_hor:
-                        # There should be a moving strand in alg_prev ending at
-                        # one of the points in the idempotent. Find whether the
-                        # point is local or on the outside.
-                        for t in [t for s, t in alg_prev.strands
-                                  if self.pmc2.pairid[t] == idem_id]:
-                            if t in self.mapping2:
-                                assignments[i] = self.LOCAL
-                            else:
-                                assignments[i] = self.OUTER
+        """
+        if len(algs_local) > 0:
+            local_MGen = self.adjustLocalMGen(local_MGen, algs_local[0])
+            if local_MGen is None:
+                return False
+        return self.local_da.deltaPrefix(local_MGen, tuple(algs_local))
 
-            # Now enforce constraints from next algebra input. Return None if
-            # there is a contradiction.
-            for i in reversed(range(len(algGens)-1)):  # need test case
-                alg_next, alg = algGens[i+1], algGens[i]
-                if idem_id in alg.double_hor:
-                    to_assign = self.NONE
-                    if assignments[i+1] != self.NONE:
-                        to_assign = assignments[i+1]
-                    elif idem_id not in alg_next.double_hor:
-                        # Now find the moving strand in alg_next starting at one
-                        # of the points in the idempotent. Find whether the
-                        # point is local or on the outside.
-                        for s in [s for s, t in alg_next.strands
-                                  if self.pmc2.pairid[s] == idem_id]:
-                            if s in self.mapping2:
-                                to_assign = self.LOCAL
-                            else:
-                                to_assign = self.OUTER
-                    # Return no assignment if there is a contradiction
-                    if assignments[i] != self.NONE and to_assign != self.NONE \
-                            and assignments[i] != to_assign:
-                        return None  # need test case
-                    if to_assign != self.NONE:
-                        assignments[i] = to_assign
-            # There is one final case where everything is double horizontal.
-            # Assign all to local (this agrees with how generators are created
-            # for the extended bimodule, where the smeared pair always goes to
-            # local).
-            if all([idem_id in alg.double_hor for alg in algGens]):
-                assignments = [self.LOCAL] * len(algGens)
+    def extendRestrictions(self, last_assign, algs_local, prod_d, new_alg):
+        """Update the idempotent assignments when a new algebra input, new_alg,
+        is considered. Apply possible changes to previous idempotent assignments
+        to both algs_local and prod_d. Adds the local restriction of new_alg to
+        algs_local, but does NOT multiply outer restriction of new_alg to
+        prod_d (this is done in a separate function getNewProdD for efficiency
+        considerations.
 
-            all_assignments.append(assignments)
+        """
+        # Update single assignments
+        new_assign = []
+        for i in range(self.num_singles):
+            idem_id = self.smeared_idems2[i]
+            if idem_id in new_alg.double_hor:
+                # Double horizontal in the new algebra element. Just continue
+                # the previous assignment.
+                assert last_assign[i] != self.NONE
+                new_assign.append(last_assign[i])
+            else:
+                # First determine new assignment.
+                if idem_id in new_alg.right_idem:
+                    end_pt = [t for s, t in new_alg.strands
+                              if self.pmc2.pairid[t] == idem_id]
+                    assert len(end_pt) == 1
+                    end_pt = end_pt[0]
+                    if end_pt in self.mapping2:
+                        new_assign.append(self.LOCAL)
+                    else:
+                        new_assign.append(self.OUTER)
+                else:
+                    new_assign.append(self.NONE)
 
-        return all_assignments
+                # Now correct previous assignment if necessary.
+                if idem_id in new_alg.left_idem:
+                    assert last_assign[i] != self.NONE
+                    start_pt = [s for s, t in new_alg.strands
+                                if self.pmc2.pairid[s] == idem_id]
+                    assert len(start_pt) == 1
+                    start_pt = start_pt[0]
+                    if start_pt in self.mapping2:
+                        if last_assign[i] == self.OUTER:
+                            return (None, None, None)  # conflict
+                    else:
+                        if last_assign[i] == self.LOCAL:
+                            return (None, None, None)  # conflict
+                        elif last_assign[i] == self.DOUBLE:
+                            # Previous assignment changes from DOUBLE to local.
+                            # Need to update algs_local and prod_d.
+                            to_remove = (self.single_idems2[i],)
+                            algs_local = [alg.removeSingleHor(to_remove)
+                                          for alg in algs_local]
+                            to_add = (self.single_idems_outer[i],)
+                            prod_d = prod_d.addSingleHor(to_add)
+
+        # Restrict current algebra element to local and form new_local.
+        new_local = [alg for alg in algs_local]
+        cur_alg_local = self.splitting2.restrictStrandDiagramLocal(new_alg)
+        idems_to_remove = [self.single_idems2[single_id]
+                           for single_id in range(self.num_singles)
+                           if new_assign[single_id] == self.OUTER]
+        cur_alg_local = cur_alg_local.removeSingleHor(tuple(idems_to_remove))
+        if len(new_local) != 0:
+            assert new_local[-1].right_idem == cur_alg_local.left_idem
+        new_local.append(cur_alg_local)
+
+        return (new_assign, new_local, prod_d)
+
+    def getNewProdD(self, new_assign, new_alg, last_prod_d):
+        """Multiplies the outer restriction of new_alg onto last_prod_d."""
+        outer_sd = self.splitting2.restrictStrandDiagramOuter(new_alg)
+        outer_sd = outer_sd.removeSingleHor(tuple(
+            [self.single_idems_outer[single_id]
+             for single_id in range(self.num_singles)
+             if new_assign[single_id] in (self.LOCAL, self.DOUBLE)]))
+
+        assert last_prod_d.right_idem == outer_sd.left_idem
+        new_prod_d = last_prod_d * outer_sd
+        if new_prod_d == 0:
+            return None
+        else:
+            return new_prod_d.getElt()
+
+    def getAssignments(self, MGen, algs):
+        """Returns the triple (assignment, algs_local, prod_d)."""
+        assignment = [self.DOUBLE] * self.num_singles
+        algs_local = []
+        prod_d = self.splitting2.restrictIdempotentOuter(MGen.idem2).toAlgElt()
+        prod_d = prod_d.removeSingleHor()
+
+        for alg in algs:
+            assignment, algs_local, prod_d = self.extendRestrictions(
+                assignment, algs_local, prod_d, alg)
+            if assignment is None:
+                return (None, None, None)
+            prod_d = self.getNewProdD(assignment, alg, prod_d)
+            if prod_d is None:
+                return (None, None, None)
+        return (assignment, algs_local, prod_d)
+
+    def joinOutput(self, local_d, local_y, outer_d):
+        """Joins local_d and outer_d. Adjust idempotents if necessary."""
+        alg_d = self.splitting1.joinStrandDiagram(local_d, outer_d)
+        if alg_d is None:
+            return (None, None)
+        outer_idem = outer_d.right_idem
+        for i in range(self.num_singles):
+            single1 = self.single_idems1[i]
+            single_outer = self.single_idems_outer[i]
+            if single_outer in outer_idem:
+                # If the split idempotent ended up on the outside, switch it to
+                # the inside.
+                if single1 not in local_y.idem1:
+                    local_y = self.local_da.uinv_maps[i][local_y]
+                outer_idem = outer_idem.removeSingleHor([single_outer])
+        y = self.gen_index[(local_y, outer_idem)]
+        return (alg_d, y)
+
+    def tensorD(self, dstr):
+        """Compute the box tensor product DA * D of this bimodule with the given
+        type D structure. Returns the resulting type D structure. Uses delta()
+        and deltaPrefix() functions of this type DA structure.
+
+        """
+        dstr_result = SimpleDStructure(F2, self.algebra1)
+        # Compute list of generators in the box tensor product
+        for gen_left in self.getGenerators():
+            for gen_right in dstr.getGenerators():
+                if gen_left.idem2 == gen_right.idem:
+                    dstr_result.addGenerator(DATensorDGenerator(
+                        dstr_result, gen_left, gen_right))
+
+        def search(start_gen, cur_dgen, algs, last_assign, algs_local,
+                   last_prod_d):
+            """Searching for an arrow in the box tensor product.
+            - start_gen: starting generator in the box tensor product. The
+              resulting arrow will start from here.
+            - cur_dgen: current location in the type D structure.
+            - algs: current list of A-side inputs to the type DA structure (or
+              alternatively, list of algebra outputs produced by the existing
+              path through the type D structure).
+            - algs_local: current list of local restrictions of algs.
+            - last_assign: a list of length self.num_singles. For each split
+              idempotent, specify the single assignments at the last algebra
+              input.
+            - prod_d: product of the outer restrictions, except for the last
+              algebra input.
+
+            """
+            start_dagen, start_dgen = start_gen
+            local_MGen = start_dagen.local_gen
+
+            # Preliminary tests
+            if len(algs) > 0:
+                assert algs[0].left_idem == start_dagen.idem2
+            for i in range(len(algs)-1):
+                assert algs[i].right_idem == algs[i+1].left_idem
+            if any(alg.isIdempotent() for alg in algs):
+                return
+
+            # First, adjust local module generator, and check for delta.
+            if len(algs_local) > 0:
+                local_MGen = self.adjustLocalMGen(local_MGen, algs_local[0])
+                if local_MGen is None:
+                    return
+            local_delta = self.local_da.delta(local_MGen, tuple(algs_local))
+            has_delta = (local_delta != E0)
+
+            # Second, check for delta prefix.
+            has_delta_prefix = False
+            if len(algs) == 0:
+                has_delta_prefix = True
+            else:
+                dbls = [self.single_idems2[i] for i in range(self.num_singles)
+                        if last_assign[i] == self.DOUBLE]
+                for to_remove in subset(dbls):
+                    if len(to_remove) != 0:
+                        cur_algs_local = tuple([alg.removeSingleHor(to_remove)
+                                                for alg in algs_local])
+                    else:
+                        cur_algs_local = algs_local
+                    if self.testPrefix(local_MGen, cur_algs_local):
+                        has_delta_prefix = True
+                        break
+
+            if (not has_delta) and (not has_delta_prefix):
+                return
+
+            # Now, compute new prod_d.
+            if len(algs) > 0:
+                prod_d = self.getNewProdD(last_assign, algs[-1], last_prod_d)
+            else:
+                prod_d = last_prod_d
+            if prod_d is None:
+                return
+
+            # If has_delta is True, add to delta
+            for (local_d, local_y), ring_coeff in local_delta.items():
+                alg_d, y = self.joinOutput(local_d, local_y, prod_d)
+                if alg_d is not None:
+                    dstr_result.addDelta(start_gen, DATensorDGenerator(
+                        dstr_result, y, cur_dgen), alg_d, 1)
+
+            if not has_delta_prefix:
+                return
+            for (new_alg, dgen_to), ring_coeff in dstr.delta(cur_dgen).items():
+                new_assign, new_local, last_prod_d = self.extendRestrictions(
+                    last_assign, algs_local, prod_d, new_alg)
+                if new_assign is not None:
+                    search(start_gen, dgen_to, algs + [new_alg],
+                           new_assign, new_local, last_prod_d)
+
+        # Perform search for each generator in dstr_result.
+        for x in dstr_result.getGenerators():
+            dagen, dgen = x
+            prod_d = \
+                self.splitting2.restrictIdempotentOuter(dagen.idem2).toAlgElt()
+            prod_d = prod_d.removeSingleHor()  # always goes to LOCAL
+            search(x, dgen, [], [self.DOUBLE] * self.num_singles, [], prod_d)
+            # Add arrows coming from idempotent output on the D-side
+            for (coeff_out, dgen_to), ring_coeff in dstr.delta(dgen).items():
+                if coeff_out.isIdempotent():
+                    dstr_result.addDelta(
+                        x, DATensorDGenerator(dstr_result, dagen, dgen_to),
+                        dagen.idem1.toAlgElt(self.algebra1), 1)
+
+        # Find grading set if available on both components
+        def tensorGradingSet():
+            """Find the grading set of the new type D structure."""
+            return GeneralGradingSet([self.gr_set, dstr.gr_set])
+
+        def tensorGrading(gr_set, dagen, dgen):
+            """Find the grading of the generator (x, y) in the tensor type D
+            structure. The grading set need to be provided as gr_set.
+
+            """
+            return GeneralGradingSetElement(
+                gr_set, [self.grading[dagen], dstr.grading[dgen]])
+
+        if hasattr(self, "gr_set") and hasattr(dstr, "gr_set"):
+            dstr_result.gr_set = tensorGradingSet()
+            dstr_result.grading = dict()
+            for x in dstr_result.getGenerators():
+                dagen, dgen = x
+                dstr_result.grading[x] = tensorGrading(
+                    dstr_result.gr_set, dagen, dgen)
+
+        return dstr_result
 
     def delta(self, MGen, algGens):
-        # Idempotent must match
+        # Preliminary tests
         if len(algGens) > 0 and algGens[0].left_idem != MGen.idem2:
             return E0
         if any([algGens[i].right_idem != algGens[i+1].left_idem
@@ -345,84 +552,28 @@ class ExtendedDAStructure(DAStructure):
         if any([alg.isIdempotent() for alg in algGens]):
             return E0
 
-        result = E0
-        mod_gens = self.getGenerators()
-
-        assignments = self.getSingleAssignments(algGens)
-        if assignments is None:
+        assignment, algs_local, prod_d = self.getAssignments(MGen, algGens)
+        if assignment is None:
             return E0
 
-        # Restrict and multiply on the outside
-        has_product = True
-        prod_d = None
-        for i in range(len(algGens)):
-            alg = algGens[i]
-            outer_sd = self.splitting2.restrictStrandDiagramOuter(alg)
-            outer_sd = outer_sd.removeSingleHor(tuple(
-                [self.single_idems_outer[single_id]
-                 for single_id in range(self.num_singles)
-                 if assignments[single_id][i] == self.LOCAL]))
-            if prod_d is None:
-                prod_d = 1*outer_sd
-            else:
-                prod_d = prod_d * outer_sd
-            if prod_d == 0:
-                has_product = False
-                break
-            else:
-                prod_d = prod_d.getElt()
-        if not has_product:
-            return E0
-        if prod_d is None:  # Case len(algGens) == 0.
-            prod_d = \
-                self.splitting2.restrictIdempotentOuter(MGen.idem2).toAlgElt()
-            prod_d = prod_d.removeSingleHor()  # always goes to LOCAL
-
-        # Test the inside
         local_MGen = MGen.local_gen
-        alg_local = []
-        for i in range(len(algGens)):
-            cur_alg_local = \
-                self.splitting2.restrictStrandDiagramLocal(algGens[i])
-            cur_alg_local = cur_alg_local.removeSingleHor(tuple(
-                [self.single_idems2[single_id]
-                 for single_id in range(self.num_singles)
-                 if assignments[single_id][i] == self.OUTER]))
-            alg_local.append(cur_alg_local)
-        alg_local = tuple(alg_local)
+        if len(algs_local) > 0:
+            local_MGen = self.adjustLocalMGen(local_MGen, algs_local[0])
+            if local_MGen is None:
+                return E0
 
-        # Assigning the smeared idempotents for the starting generator,
-        # according to the rule that local_MGen.idem2 (A-side idempotent) must
-        # match the left idempotent of the first algebra input (if there is
-        # any).
-        for i in range(self.num_singles):
-            single2 = self.single_idems2[i]
-            if single2 in local_MGen.idem2 and len(alg_local) > 0 and \
-                    single2 not in alg_local[0].left_idem:
-                if local_MGen not in self.local_da.u_maps[i]:
-                    return E0  # need test case
-                local_MGen = self.local_da.u_maps[i][local_MGen]
-        local_delta = self.local_da.delta(local_MGen, alg_local)
+        local_delta = self.local_da.delta(local_MGen, tuple(algs_local))
+        if local_delta == 0:
+            return E0
 
+        result = E0
         for (local_d, local_y), ring_coeff in local_delta.items():
-            alg_d = self.splitting1.joinStrandDiagram(local_d, prod_d)
-            if alg_d is None:
-                continue
-            outer_idem = prod_d.right_idem
-            for i in range(self.num_singles):
-                single1 = self.single_idems1[i]
-                single_outer = self.single_idems_outer[i]
-                if single_outer in prod_d.right_idem:
-                    # If the split idempotent ended up on the outside, switch it
-                    # to the inside.
-                    if single1 not in local_y.idem1:
-                        local_y = self.local_da.uinv_maps[i][local_y]
-                    outer_idem = outer_idem.removeSingleHor([single_outer])
-            y = self.gen_index[(local_y, outer_idem)]
+            alg_d, y = self.joinOutput(local_d, local_y, prod_d)
             result += 1 * TensorGenerator((alg_d, y), self.AtensorM)
         return result
 
     def deltaPrefix(self, MGen, algGens):
+        # Preliminary tests
         if len(algGens) == 0:
             return True
         if algGens[0].left_idem != MGen.idem2:
@@ -431,80 +582,22 @@ class ExtendedDAStructure(DAStructure):
                 for i in range(len(algGens)-1)]):
             return False
 
-        def testWithAssignment(assignments):
-            # Test with a specific single assignments
-            local_MGen = MGen.local_gen
-            alg_local = []
-            for i in range(len(algGens)):
-                cur_alg_local = \
-                    self.splitting2.restrictStrandDiagramLocal(algGens[i])
-                cur_alg_local = cur_alg_local.removeSingleHor(tuple(
-                    [self.single_idems2[single_id]
-                     for single_id in range(self.num_singles)
-                     if assignments[single_id][i] == self.OUTER]))
-                alg_local.append(cur_alg_local)
-            alg_local = tuple(alg_local)
+        assignment, algs_local, prod_d = self.getAssignments(MGen, algGens)
+        if assignment is None:
+            return E0
 
-            for i in range(self.num_singles):
-                single2 = self.single_idems2[i]
-                if single2 in local_MGen.idem2 and len(alg_local) > 0 and \
-                        single2 not in alg_local[0].left_idem:
-                    if local_MGen not in self.local_da.u_maps[i]:
-                        return False  # need test case
-                    local_MGen = self.local_da.u_maps[i][local_MGen]
-            if not self.local_da.deltaPrefix(local_MGen, alg_local):
-                return False
-
-            # Test that the product on the outside is nonzero.
-            has_product = True
-            prod_d = None
-            for i in range(len(algGens)):
-                alg = algGens[i]
-                outer_sd = self.splitting2.restrictStrandDiagramOuter(alg)
-                outer_sd = outer_sd.removeSingleHor(tuple(
-                    [self.single_idems_outer[single_id]
-                     for single_id in range(self.num_singles)
-                     if assignments[single_id][i] == self.LOCAL]))
-                if prod_d is None:
-                    prod_d = 1*outer_sd
-                else:
-                    prod_d = prod_d * outer_sd
-                if prod_d == 0:
-                    has_product = False
-                    break
-                else:
-                    prod_d = prod_d.getElt()
-            return has_product
-
-        assignments = self.getSingleAssignments(algGens)
-        if assignments is None:
-            return False
-
-        def fix_double_horizontal(assignments, single_id):
-            """If assignments[single_id] is all self.LOCAL, return a list with
-            two entries: the original assignment and a new assignment with all
-            self.OUTER at single_id (both will need to be tested in
-            deltaPrefix). Otherwise return a list with only the original
-            assignment.
-
-            """
-            if all(a == self.LOCAL for a in assignments[single_id]):
-                outer_assign = \
-                    assignments[:single_id] + [[self.OUTER] * len(algGens)] + \
-                    assignments[single_id+1:]
-                return [assignments, outer_assign]
+        local_MGen = MGen.local_gen
+        dbls = [self.single_idems2[i] for i in range(self.num_singles)
+                if assignment[i] == self.DOUBLE]
+        for to_remove in subset(dbls):
+            if len(to_remove) != 0:
+                cur_algs_local = tuple([alg.removeSingleHor(to_remove)
+                                        for alg in algs_local])
             else:
-                return [assignments]
-
-        all_assignments = [assignments]
-        for i in range(self.num_singles):
-            tmp = []
-            for assignment in all_assignments:
-                tmp.extend(fix_double_horizontal(assignment, i))
-            all_assignments = tmp
-
-        return any(testWithAssignment(assignment)
-                   for assignment in all_assignments)
+                cur_algs_local = algs_local
+            if self.testPrefix(local_MGen, cur_algs_local):
+                return True
+        return False
 
 def identityDALocal(local_pmc):
     """Returns the identity type DA structure for a given local PMC.

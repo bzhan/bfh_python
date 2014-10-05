@@ -334,6 +334,7 @@ class LocalStrandDiagram(Generator):
     def __ne__(self, other):
         return not (self == other)
 
+    @memorizeHash
     def __hash__(self):
         return hash((self.parent, tuple(self.left_idem),
                      tuple(self.strands)))
@@ -351,6 +352,20 @@ class LocalStrandDiagram(Generator):
         for i in self.single_hor:
             if idems is None or i in idems:
                 new_left_idem.remove(i)
+        return LocalStrandDiagram(self.parent, new_left_idem, self.strands)
+
+    @memorize
+    def addSingleHor(self, idems):
+        """Opposite of removeSingleHor. Add some single idempotents. The
+        conditions on inputs are more strict than in removeSingleHor. idems must
+        be provided and must be idempotents not already in self.
+
+        """
+        new_left_idem = list(self.left_idem)
+        for i in idems:
+            assert i not in self.left_idem
+            assert len(self.parent.local_pmc.pairs[i]) == 1
+            new_left_idem.append(i)
         return LocalStrandDiagram(self.parent, new_left_idem, self.strands)
 
 # Don't need anything beyond Element at this time.
@@ -376,6 +391,7 @@ class LocalStrandAlgebra(DGAlgebra):
     def __ne__(self, other):
         return not (self == other)
 
+    @memorizeHash
     def __hash__(self):
         return hash(("LocalStrandAlgebra", self.local_pmc))
 
@@ -401,7 +417,6 @@ class LocalStrandAlgebra(DGAlgebra):
     def getGenerators(self):
         return self.local_pmc.getStrandDiagrams()
 
-    @memorize
     def multiply(self, gen1, gen2):
         if not isinstance(gen1, LocalStrandDiagram):
             return NotImplemented
@@ -464,41 +479,60 @@ class PMCSplitting:
 
         """
         self.pmc = pmc
-        self.local_intervals_tuple = tuple(intervals)  # used for eq and hash
+        self.intervals = tuple(intervals)
         outer_intervals = PMCSplitting.complementIntervals(self.pmc, intervals)
         self.local_pmc, self.local_mapping = \
             PMCSplitting.restrictPMC(self.pmc, intervals)
         self.outer_pmc, self.outer_mapping = \
             PMCSplitting.restrictPMC(self.pmc, outer_intervals)
 
+    def __str__(self):
+        return "Splitting of %s with local intervals %s.\n" % (self.pmc,
+                                                               self.intervals)
+
     def __eq__(self, other):
-        return self.pmc == other.pmc and \
-            self.local_intervals_tuple == other.local_intervals_tuple
+        return self.pmc == other.pmc and self.intervals == other.intervals
 
     def __ne__(self, other):
         return not (self == other)
 
     @memorizeHash
     def __hash__(self):
-        return hash(("PMCSplitting", self.pmc, self.local_intervals_tuple))
+        return hash(("PMCSplitting", self.pmc, self.intervals))
 
-    @memorize
     def restrictStrandDiagramLocal(self, sd):
         """Returns the local strand diagram that is the restriction of sd to
         local_pmc.
 
         """
-        return PMCSplitting.restrictStrandDiagram(
-            self.pmc, sd, self.local_pmc, self.local_mapping)
+        # Memorize within sd.
+        if not hasattr(sd, "restrictLocal"):
+            sd.restrictLocal = dict()
 
-    @memorize
+        if self not in sd.restrictLocal:
+            rv = PMCSplitting.restrictStrandDiagram(
+                self.pmc, sd, self.local_pmc, self.local_mapping)
+            sd.restrictLocal[self] = rv
+            return rv
+        else:
+            return sd.restrictLocal[self]
+
     def restrictStrandDiagramOuter(self, sd):
         """Returns the local strand diagram that is the restriction of sd to
         outer_pmc.
 
         """
-        return PMCSplitting.restrictStrandDiagram(
-            self.pmc, sd, self.outer_pmc, self.outer_mapping)
+        # Memorize within sd.
+        if not hasattr(sd, "restrictOuter"):
+            sd.restrictOuter = dict()
+
+        if self not in sd.restrictOuter:
+            rv = PMCSplitting.restrictStrandDiagram(
+                self.pmc, sd, self.outer_pmc, self.outer_mapping)
+            sd.restrictOuter[self] = rv
+            return rv
+        else:
+            return sd.restrictOuter[self]
 
     def restrictIdempotentLocal(self, idem):
         """Returns the local idempotent that is the restriction of idem to
@@ -607,9 +641,9 @@ class PMCSplitting:
         strands = zip(start_pts, end_pts)
         if not Strands(self.pmc, strands).leftCompatible(left_idem):
             return None
-        return StrandDiagram(self.pmc.getAlgebra(idem_size = len(left_idem),
-                                                 mult_one = True),
-                             left_idem, strands)
+        return self.pmc.getAlgebra(idem_size = len(left_idem),
+                                   mult_one = True).getStrandDiagram(
+                                       tuple(left_idem), tuple(strands))
 
     def joinIdempotent(self, idem1, idem2):
         """Join two local idempotents. """

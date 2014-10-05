@@ -524,6 +524,11 @@ class StrandAlgebra(DGAlgebra):
     def __hash__(self):
         return hash((self.pmc, self.idem_size, self.mult_one))
 
+    @memorize
+    def getStrandDiagram(self, left_idem, strands):
+        """Memorized version of creating new strand diagrams."""
+        return StrandDiagram(self, left_idem, strands)
+
     def opp(self):
         """Returns the opposite algebra, as the strand algebra associated to
         the opposite PMC.
@@ -546,9 +551,9 @@ class StrandAlgebra(DGAlgebra):
         def appendCandidate(new_strands, s1, s2):
             # Same info except strands, then check grading
             assert s1 < s2
-            diff_term = StrandDiagram(
-                self, gen.left_idem, new_strands, gen.right_idem)
-            if diff_term.maslov() == target_maslov:
+            diff_term = self.getStrandDiagram(
+                tuple(gen.left_idem), new_strands)
+            if self.mult_one or diff_term.maslov() == target_maslov:
                 result.append(((s1, s2), diff_term))
 
         # Uncross two moving strands
@@ -559,16 +564,17 @@ class StrandAlgebra(DGAlgebra):
                     new_strands.remove((s1, t1))
                     new_strands.remove((s2, t2))
                     new_strands.extend([(s1, t2), (s2, t1)])
-                    appendCandidate(new_strands, s1, s2)
+                    appendCandidate(tuple(sorted(new_strands)), s1, s2)
 
         # Uncross a moving strand with a double horizontal
-        for s, t in cur_strands:
+        for st_id in range(len(cur_strands)):
+            s, t = cur_strands[st_id]
             for i in gen.double_hor:
                 for p in gen.pmc.pairs[i]:
                     if s <= p and p <= t:
-                        new_strands = list(cur_strands)
-                        new_strands.remove((s, t))
-                        new_strands.extend([(s, p), (p, t)])
+                        # Automatically sorted.
+                        new_strands = cur_strands[:st_id] + \
+                                      ((s, p), (p, t)) + cur_strands[st_id+1:]
                         appendCandidate(new_strands, s, p)
         return result
 
@@ -603,21 +609,11 @@ class StrandAlgebra(DGAlgebra):
         """
         return self.pmc.getIdempotents()
 
-    @memorize
-    def multiplyRaw(self, gen1, gen2):
+    def _multiplyRaw(self, gen1, gen2):
         """If gen1 and gen2 can be multiplied, return the generator that is
         their product. Otherwise, return None.
 
         """
-        if gen1.right_idem != gen2.left_idem:
-            return None
-        if self.mult_one:
-            # Enforce the multiplicity one condition
-            total_mult = [m1+m2 for m1, m2 in zip(gen1.multiplicity,
-                                                  gen2.multiplicity)]
-            if not all([x <= 1 for x in total_mult]):
-                return None
-
         pmc = gen1.pmc
         new_strands = []
 
@@ -638,9 +634,10 @@ class StrandAlgebra(DGAlgebra):
                     strands_right.remove(sd2)
 
         new_strands.extend(strands_right)
-        mult_term = StrandDiagram(self, gen1.left_idem, new_strands,
-                                  gen2.right_idem)
-        if mult_term.getBigGrading() == \
+        new_strands = sorted(new_strands)
+        mult_term = self.getStrandDiagram(
+            tuple(gen1.left_idem), tuple(new_strands))
+        if self.mult_one or mult_term.getBigGrading() == \
                 gen1.getBigGrading() * gen2.getBigGrading():
             return mult_term
         else:
@@ -654,7 +651,16 @@ class StrandAlgebra(DGAlgebra):
         assert gen1.parent == self and gen2.parent == self, \
             "Algebra not compatible."
 
-        prod_raw = self.multiplyRaw(gen1, gen2)
+        if gen1.right_idem != gen2.left_idem:
+            return E0
+        if self.mult_one:
+            # Enforce the multiplicity one condition
+            if not all(x <= 1 for x in [
+                    m1 + m2 for m1, m2 in zip(gen1.multiplicity,
+                                              gen2.multiplicity)]):
+                return E0
+
+        prod_raw = self._multiplyRaw(gen1, gen2)
         if prod_raw is None:
             return E0
 

@@ -152,6 +152,30 @@ class BraidCap:
             dstr.simplify()
         return dstr
 
+    def getLastCobordism(self):
+        """Returns the position of the leftmost pair of adjacent points matched
+        under this braid cap. This is a pair that can be considered as last
+        added in a sequence of cobordisms forming this braid cap. Also returns
+        the braid cap before this cobordism.
+
+        """
+        if self.genus == 0:
+            return None
+        # At each step, find the left-most ending point of a matching.
+        for i in range(len(self.matching)):
+            if self.matching[i] <= i+1:
+                assert self.matching[i] == i
+                cur_move = i-1
+                new_matching = []
+                for n in self.matching[:i-1] + self.matching[i+1:]:
+                    assert n != i and n != i+1
+                    if n < i:
+                        new_matching.append(n)
+                    else:
+                        new_matching.append(n-2)
+                new_cap = BraidCap(new_matching)
+                return (cur_move, new_cap)
+
     @memorize
     def getCobordismSequence(self):
         """Returns a sequence of cobordisms that will close off this braid cap
@@ -168,21 +192,9 @@ class BraidCap:
         """
         if self.genus == 0:
             return []
-
-        # At each step, find the left-most ending point of a matching.
-        for i in range(len(self.matching)):
-            if self.matching[i] <= i+1:
-                assert self.matching[i] == i
-                cur_move = i-1
-                new_matching = []
-                for n in self.matching[:i-1] + self.matching[i+1:]:
-                    assert n != i and n != i+1
-                    if n < i:
-                        new_matching.append(n)
-                    else:
-                        new_matching.append(n-2)
-                new_cap = BraidCap(new_matching)
-                return [cur_move] + new_cap.getCobordismSequence()
+        else:
+            last_move, prev_cap = self.getLastCobordism()
+            return [last_move] + prev_cap.getCobordismSequence()
 
     @memorize
     def openCap(self):
@@ -190,20 +202,20 @@ class BraidCap:
         tensoring type DA bimodules with the genus-1 handlebody.
 
         """
-        cob_seq = list(reversed(self.getCobordismSequence()))
-        assert len(cob_seq) > 0
-        if cob_seq[0] == 0:
-            dstr = zeroTypeD(1)
+        assert self.genus > 0
+        last_move, prev_cap = self.getLastCobordism()
+        if self.genus == 1:
+            if last_move == 0:
+                return zeroTypeD(1)
+            else:
+                return infTypeD(1)
         else:
-            dstr = infTypeD(1)
-        for i in range(1, len(cob_seq)):
-            cur_da = CobordismDALeft(Cobordism(i+1, cob_seq[i], LEFT))
-            dstr = cur_da.tensorD(dstr)
+            cur_da = CobordismDALeft(Cobordism(self.genus, last_move, LEFT))
+            dstr = cur_da.tensorD(prev_cap.openCap())
             dstr.simplify()
             dstr.reindex()
         return dstr
 
-    @memorize
     def closeCap(self, dstr, cancellation_constraint = None):
         """Computes the chain complex obtained by closing off this cap on dstr.
         That is, compute the box tensor product of the type A module
@@ -214,24 +226,21 @@ class BraidCap:
         zeroTypeD(1) or infTypeD(1).
 
         """
-        cob_seq = self.getCobordismSequence()
-        assert len(cob_seq) > 0
-        assert len(cob_seq) == self.genus
-        for i in range(len(cob_seq)-1):
-            cur_da = CobordismDARight(
-                Cobordism(self.genus-i, cob_seq[i], RIGHT))
+        assert self.genus > 0
+        if self.genus <= 3:
+            # morToD is efficient up to genus = 3.
+            cx = dstr.morToD(self.openCap())
+            cx.reindex()
+            cx.simplify(cancellation_constraint = cancellation_constraint)
+            return cx
+        else:
+            last_move, prev_cap = self.getLastCobordism()
+            cur_da = CobordismDARight(Cobordism(self.genus, last_move, RIGHT))
             dstr = cur_da.tensorD(
                 dstr, cancellation_constraint = cancellation_constraint)
             dstr.reindex()
             dstr.simplify(cancellation_constraint = cancellation_constraint)
-
-        if cob_seq[-1] == 0:
-            cx = dstr.morToD(zeroTypeD(1))
-        else:
-            cx = dstr.morToD(infTypeD(1))
-        cx.reindex()
-        cx.simplify(cancellation_constraint = cancellation_constraint)
-        return cx
+            return prev_cap.closeCap(dstr, cancellation_constraint)
 
     ends = {
         # Genus 3

@@ -194,14 +194,21 @@ class HFTest(unittest.TestCase):
                 print filt_gr
             print "Time elapsed (s): ", time.time() - start_time
 
+        # Result for T(4, 5):
+        #   [1, 2, 1, 2, 2, 1, 1, 1, 1, 0, 1]
+        #   [1, 2, 1, 1, 2, 0, 0, 1, 0, 0, 1]
+        #   [1, 2, 1, 1, 1, 0, 0, 0, 0, 0, 1]
+        # Result for T(5, 6):
+        #   [1, 2, 2, 2, 3, 2, 2, 2, 1, 1, 1, 1, 0, 1]
+        #   [1, 1, 1, 1, 2, 1, 1, 1, 0, 0, 1, 0, 0, 1]
+        #   [0, 1, 1, 0, 2, 1, 1, 0, 0, 0, 0, 0, 0, 1]
+
         for n in [1,2,4,5,7,8,10,20,50,100]:
             singleTest(3, n)
         for n in [1,3,5,7,9,11,13,15,17,19]:
             singleTest(4, n)
         for n in [4,6]:
             singleTest(5, n)
-        for n in [1,5]:
-            singleTest(6, n)
 
     def testGetSpecSeqProfile(self):
         cProfile.runctx('self.testGetSpecSeq()', globals(), locals(), 'restats')
