@@ -60,7 +60,7 @@ def composeDD(dstr, ddstr_list, is_dual = False, method = "Tensor"):
 
     """
     if PRINT_PROGRESS > 0:
-        print "(compose %d)" % len(ddstr_list),
+        print "(compose %s %d)" % (method, len(ddstr_list)),
     for ddstr in ddstr_list:
         if PRINT_PROGRESS > 0:
             sys.stdout.write("%d," % len(dstr))
@@ -109,10 +109,6 @@ class BraidCap:
         self.matching = tuple(matching)
         self.num_strands = len(self.matching)
         self.genus = (len(self.matching) - 2)/2
-        if self.matching in self.ends:
-            self.fix = self.ends[self.matching]
-        else:
-            self.fix = None
 
     def __eq__(self, other):
         return self.matching == other.matching
@@ -122,35 +118,6 @@ class BraidCap:
 
     def __hash__(self):
         return hash(self.matching)
-
-    @memorize
-    def getHandlebody(self, is_dual = False):
-        """Returns the handlebody corresponding to this matching."""
-        if PRINT_PROGRESS:
-            print "Get handlebody for %s" % str(self.matching)
-        slides = Braid(self.num_strands).getArcslides(self.fix)
-        if not is_dual:
-            slides = [slide.inverse() for slide in slides]
-        slides_dd = [slide.getDDStructure() for slide in slides]
-        dstr = composeDD(platTypeD2(self.genus, is_dual), slides_dd, is_dual)
-        dstr.checkGrading()
-        return dstr
-
-    @memorize
-    def getHandlebodyByLocalDA(self):
-        """Returns the handlebody corresponding to this matching. Use local type
-        DA structures associated to arcslides. Note this corresponds to
-        dual = False case of getHandlebody().
-
-        """
-        slides = Braid(self.num_strands).getArcslides(self.fix)
-        slides = [slide.inverse() for slide in slides]
-        dstr = platTypeD(self.genus)
-        for slide in slides:
-            dstr = ArcslideDA(slide).tensorD(dstr)
-            dstr.reindex()
-            dstr.simplify()
-        return dstr
 
     def getLastCobordism(self):
         """Returns the position of the leftmost pair of adjacent points matched
@@ -242,72 +209,6 @@ class BraidCap:
             dstr.simplify(cancellation_constraint = cancellation_constraint)
             return prev_cap.closeCap(dstr, cancellation_constraint)
 
-    ends = {
-        # Genus 3
-        (6,5,4,3,2,1) : [3,4],
-        (6,3,2,5,4,1) : [],
-        (4,3,2,1,6,5) : [1,2,3,4,2,3],
-        (2,1,6,5,4,3) : [1,2],
-        (2,1,4,3,6,5) : [1,2,3,4],
-        # Genus 4
-        (8,7,6,5,4,3,2,1) : [3,4,5,4,3,2],
-        (8,7,4,3,6,5,2,1) : [3,4,5,6],
-        (8,5,4,3,2,7,6,1) : [3,4],
-        (8,3,2,7,6,5,4,1) : [5,6],
-        (8,3,2,5,4,7,6,1) : [],
-        (6,5,4,3,2,1,8,7) : [1,2,3,4,5,6,2,3,4,5,3,4],
-        (6,3,2,5,4,1,8,7) : [1,2,3,4,5,6,2,3,4,5],
-        (4,3,2,1,8,7,6,5) : [1,2,3,4,2,3],
-        (4,3,2,1,6,5,8,7) : [1,2,3,4,5,6,2,3],
-        (2,1,8,7,6,5,4,3) : [1,2,5,6],
-        (2,1,8,5,4,7,6,3) : [1,2],
-        (2,1,6,5,4,3,8,7) : [1,2,3,4,5,6,4,5],
-        (2,1,4,3,8,7,6,5) : [1,2,3,4],
-        (2,1,4,3,6,5,8,7) : [1,2,3,4,5,6],
-        # Genus 5 (incomplete)
-        (2,1,4,3,6,5,8,7,10,9) : [1,2,3,4,5,6,7,8],
-        (2,1,10,7,6,5,4,9,8,3) : [1,2,5,6],
-        (4,3,2,1,6,5,10,9,8,7) : [1,2,3,4,5,6,2,3],
-        (4,3,2,1,10,9,8,7,6,5) : [1,2,3,4,2,3,7,8],
-        (6,5,4,3,2,1,8,7,10,9) : [1,2,3,4,5,6,7,8,2,3,4,5,3,4],
-        (6,5,4,3,2,1,10,9,8,7) : [1,2,3,4,5,6,2,3,4,5,3,4],
-        (8,3,2,7,6,5,4,1,10,9) : [1,2,3,4,5,6,7,8,2,3,4,5,6,7,5,6],
-        (8,5,4,3,2,7,6,1,10,9) : [1,2,3,4,5,6,7,8,2,3,4,5,6,7,3,4],
-        (10,3,2,5,4,7,6,9,8,1) : [],
-        (10,3,2,7,6,5,4,9,8,1) : [5,6],
-        (10,9,8,7,6,5,4,3,2,1) : [3,4,5,6,7,8,4,5,6,7,5,6],
-        # Genus 6 (incomplete)
-        (12,3,2,5,4,7,6,9,8,11,10,1) : [],
-        (12,11,10,9,8,7,6,5,4,3,2,1) :
-            [3,4,5,6,7,8,9,10,4,5,6,7,8,9,5,6,7,8,6,7],
-        }
-
-    @staticmethod
-    def verifyEnds():
-        """Verify the corrections for ends below."""
-        for matching, fix in BraidCap.ends.items():
-            assert len(matching) % 2 == 0
-            num_bridge = len(matching) / 2
-            # Form starting matching
-            cur_match = [num_bridge*2]
-            for i in range(1, num_bridge):
-                cur_match += [2*i+1, 2*i]
-            cur_match += [1]
-            # Now perform exchange for each step
-            for i in range(len(fix)):
-                # Swaps points fix[i] and fix[i]+1, which are stored at IDs
-                # fix[i]-1 and fix[i] (a bit awkward).
-                id1, id2 = fix[i]-1, fix[i]
-                pt1, pt2 = fix[i], fix[i]+1
-                assert cur_match[id1] != pt2 and cur_match[id2] != pt1
-                cur_match[id1], cur_match[id2] = cur_match[id2], cur_match[id1]
-                for j in range(len(cur_match)):
-                    if cur_match[j] == pt1:
-                        cur_match[j] = pt2
-                    elif cur_match[j] == pt2:
-                        cur_match[j] = pt1
-            assert matching == tuple(cur_match)
-
 class BridgePresentation:
     """Represents a bridge presentation of a knot. Computes HF of branched
     double cover from bridge presentation.
@@ -324,16 +225,22 @@ class BridgePresentation:
         self.braid_word = braid_word
         self.end = end
 
-    def getHF(self):
+    def getHF(self, method = "Mor"):
         """Computes HF of branched double cover."""
-        start_d = BraidCap(self.start).getHandlebody(False)
+        assert method in ("Mor", "Tensor")
+        start_d = BraidCap(self.start).openCap()
         slides = Braid(self.num_strands).getArcslides(self.braid_word)
-        # Use this line only for "Tensor"
-        # slides = [slide.inverse() for slide in slides]
+        if method == "Tensor":
+            slides = [slide.inverse() for slide in slides]
         slides_dd = [slide.getDDStructure() for slide in slides]
-        end_d = BraidCap(self.end).getHandlebody(True)
-        start_d = composeDD(start_d, slides_dd, is_dual = False, method = "Mor")
-        cx = computeATensorD(end_d, start_d)
+        start_d = composeDD(
+            start_d, slides_dd, is_dual = False, method = method)
+        if method == "Tensor":
+            end_d = BraidCap(self.end).openCap().dual()
+            cx = computeATensorD(end_d, start_d)
+        else:
+            end_d = BraidCap(self.end).openCap()
+            cx = end_d.morToD(start_d)
         cx.simplify()
         cx.reindex()
         return cx

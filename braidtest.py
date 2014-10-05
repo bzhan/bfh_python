@@ -17,36 +17,17 @@ class BraidTest(unittest.TestCase):
         self.assertTrue(len(br2.getArcslides(range(1, 6))), sum(pos_size))
 
 class BraidCapTest(unittest.TestCase):
-    def testVerifyEnds(self):
-        BraidCap.verifyEnds()
-
-    def testBraidCap3(self):
-        ends3 = reversed(sorted(
-                [end for end in BraidCap.ends if len(end) == 6]))
-        dcap_len = [len(BraidCap(end).getHandlebody()) for end in ends3]
-        self.assertEqual(dcap_len, [2, 1, 2, 1, 1])
-
-    def testBraidCap3LocalDA(self):
-        ends3 = reversed(sorted(
-                [end for end in BraidCap.ends if len(end) == 6]))
-        dcap_len = [len(BraidCap(end).getHandlebodyByLocalDA())
-                    for end in ends3]
-        self.assertEqual(dcap_len, [2, 1, 2, 1, 1])
-
-    def testBraidCap4LocalDA(self):
-        ends4 = reversed(sorted(
-                [end for end in BraidCap.ends if len(end) == 8]))
-        dcap_len = [len(BraidCap(end).getHandlebodyByLocalDA())
-                    for end in ends4]
-        self.assertEqual(dcap_len, [4, 3, 2, 2, 1, 4, 3, 2, 2, 2, 1, 2, 1, 1])
-
     def testPlatTypeD2(self):
         self.assertEqual(len(platTypeD2(3, True)), 1)
 
     def testGenus2Algebra(self):
         dstrs = dict()
-        for end3 in [end for end in BraidCap.ends if len(end) == 6]:
-            dstrs[end3] = BraidCap(end3).getHandlebodyByLocalDA()
+        for end3 in [(6,5,4,3,2,1),
+                     (6,3,2,5,4,1),
+                     (4,3,2,1,6,5),
+                     (2,1,6,5,4,3),
+                     (2,1,4,3,6,5)]:
+            dstrs[end3] = BraidCap(end3).openCap()
         algs = dict()
         total_gen = 0
         for end3, dstr in dstrs.items():
@@ -69,26 +50,51 @@ class BraidCapTest(unittest.TestCase):
 
     def testCobordisms(self):
         # 6 strands (genus 2)
-        ends3 = reversed(sorted(
-                [end for end in BraidCap.ends if len(end) == 6]))
-        dcap_len = [len(BraidCap(end).openCap()) for end in ends3]
-        self.assertEqual(dcap_len, [2, 1, 2, 1, 1])
+        for end, expected_len in [
+                ((6,5,4,3,2,1), 2),
+                ((6,3,2,5,4,1), 1),
+                ((4,3,2,1,6,5), 2),
+                ((2,1,6,5,4,3), 1),
+                ((2,1,4,3,6,5), 1)]:
+            self.assertEqual(len(BraidCap(end).openCap()), expected_len)
 
         # 8 strands (genus 3)
-        ends4 = reversed(sorted(
-                [end for end in BraidCap.ends if len(end) == 8]))
-        dcap_len = [len(BraidCap(end).getHandlebodyByLocalDA())
-                    for end in ends4]
-        self.assertEqual(dcap_len, [4, 3, 2, 2, 1, 4, 3, 2, 2, 2, 1, 2, 1, 1])
+        for end, expected_len in [
+                ((8,7,6,5,4,3,2,1), 4),
+                ((8,7,4,3,6,5,2,1), 3),
+                ((8,5,4,3,2,7,6,1), 2),
+                ((8,3,2,7,6,5,4,1), 2),
+                ((8,3,2,5,4,7,6,1), 1),
+                ((6,5,4,3,2,1,8,7), 4),
+                ((6,3,2,5,4,1,8,7), 3),
+                ((4,3,2,1,8,7,6,5), 2),
+                ((4,3,2,1,6,5,8,7), 2),
+                ((2,1,8,7,6,5,4,3), 2),
+                ((2,1,8,5,4,7,6,3), 1),
+                ((2,1,6,5,4,3,8,7), 2),
+                ((2,1,4,3,8,7,6,5), 1),
+                ((2,1,4,3,6,5,8,7), 1)]:
+            self.assertEqual(len(BraidCap(end).openCap()), expected_len)
 
 class HFTest(unittest.TestCase):
     def testHFPretzel(self):
         std_cap = [6,3,2,5,4,1]
         br = BridgePresentation("pretzel_-2_3_5",
                                  std_cap, 5*[1]+3*[3]+2*[-5], std_cap)
-        # Test both methods of finding HF
-        self.assertEqual(len(br.getHF()), 1)
+        # Test three methods of finding HF
+        self.assertEqual(len(br.getHF(method = "Mor")), 1)
+        self.assertEqual(len(br.getHF(method = "Tensor")), 1)
         self.assertEqual(len(br.getHFByLocalDA()), 1)
+
+    def test11n_6(self):
+        std_cap = [6,5,4,3,2,1]
+        br = BridgePresentation("11n_6", std_cap,
+                                [-1, -4, 3, 2, -1, 2, -3, 1, 1, 2, -3, 4],
+                                std_cap)
+        # Test three methods of finding HF
+        self.assertEqual(len(br.getHF(method = "Mor")), 21)
+        self.assertEqual(len(br.getHF(method = "Tensor")), 21)
+        self.assertEqual(len(br.getHFByLocalDA()), 21)
 
     def testHFFromFile(self):
         to_test = ["3_1", "4_1",
@@ -110,7 +116,6 @@ class HFTest(unittest.TestCase):
                             (cur_br.name, cur_br.num_strands / 2 - 1)
                         start_time = time.time()
                         cx = cur_br.getHFByLocalDA()
-                        # cx = cur_br.getHF()
                         if hasattr(cx, "grading"):
                             print cx.getGradingInfo()
                         self.assertEqual(len(cx), expected_hf)
@@ -123,7 +128,11 @@ class HFTest(unittest.TestCase):
             half_twist = list(range(m-1, 0, -1))
             br = BridgePresentation("T%d_%d" % (m, n), cap, n*half_twist, cap)
             cx = br.getHFByLocalDA()
-            print br, len(cx)
+            print br,
+            if hasattr(cx, "grading"):
+                print cx.getGradingInfo()
+            else:
+                print len(cx)
             print "Time elapsed (s): ", time.time() - start_time
 
         for n in [1,2,4,5,7,8,10,20,50,100]:
