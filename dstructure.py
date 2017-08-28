@@ -59,7 +59,27 @@ class MorDtoDGenerator(Generator, MorObject):
             filt += target.filtration
         if filt != []:
             self.filtration = filt
+            
+    def apply(self,x):
+        "Return self(x) where x is a DGenerator."
+        assert self.source.parent == x.parent
+        if self.source == x:
+            return self.coeff*self.target
+        return E0
 
+    def compose(self,g,parent=None):
+        "Return composition self\circ g of two MorDtoDGenerator instances"
+        assert self.source.parent == g.target.parent
+        if parent:
+            par = parent
+        else:
+            par = g.source.parent.morToD(self.target.parent)
+        coeff = g.coeff*self.coeff
+        if self.source == g.target and coeff:
+            return MorDtoDGenerator(par, g.source, coeff.keys()[0], self.target)
+        return E0
+            
+            
 class DStructure(FreeModule):
     """Represents a type D structure. Note delta() returns an element in the
     tensor module Tensor((A,M)).
@@ -378,6 +398,16 @@ class SimpleDStructure(DStructure):
                     return False
         return True
 
+    def id(self):
+        "Return the identity map of self."
+        answer = E0
+        morcx = self.morToD(self)
+        for x in self.getGenerators():
+            idx = MorDtoDGenerator(morcx, x, x.idem.toAlgElt(self.algebra), x)
+            answer += 1*idx
+        return answer
+
+    
 def connectSumTypeD(dstr1, dstr2):
     """Form the connect sum of two type D structures."""
     algebra1, algebra2 = dstr1.algebra, dstr2.algebra

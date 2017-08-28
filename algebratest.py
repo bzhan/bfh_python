@@ -22,7 +22,9 @@ class ChainComplexTest(unittest.TestCase):
         self.assertEqual(len(cx), 3)
         cx.reindex()
         self.assertEqual(len(cx), 3)
-
+        id = cx.id()
+        self.assertTrue(id.isQI())
+        
     def testChainComplexOverZ(self):
         cx = SimpleChainComplex(ZZ)
         gens = [SimpleGenerator(cx, "gen%d"%i) for i in range(4)]

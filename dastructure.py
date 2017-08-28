@@ -601,7 +601,7 @@ class SimpleDAStructure(DAStructure):
     def delta(self, MGen, algGens):
         if len(algGens) == 1 and algGens[0].isIdempotent() and \
            algGens[0].left_idem == MGen.idem2:
-            return MGen.idem1.toAlgElt() * MGen
+               return MGen.idem1.toAlgElt(self.algebra1) * MGen
         elif (MGen, algGens) not in self.da_action:
             return E0
         else:
@@ -614,8 +614,23 @@ class SimpleDAStructure(DAStructure):
             for (gen_from, coeffs_a), target in self.da_action.items():
                 for i in range(len(coeffs_a)):
                     self.strict_prefix.add((gen_from, tuple(coeffs_a[0:i])))
-
         return (MGen, algGens) in self.strict_prefix
+
+
+    def deltaPrefixNS(self, MGen, algGens):
+        #Non-strict version of previous.
+        # Should be called only after all addDelta has completed
+        if not hasattr(self, "non_strict_prefix"):
+            self.non_strict_prefix = set()
+            for (gen_from, coeffs_a), target in self.da_action.items():
+                for i in range(len(coeffs_a)+1):
+                    self.non_strict_prefix.add((gen_from, tuple(coeffs_a[0:i])))
+            #Include actions by idempotents.
+            for gen_from in self.getGenerators():
+                self.non_strict_prefix.add((gen_from,(gen_from.idem2.toAlgElt(self.algebra2),) ))
+                self.non_strict_prefix.add((gen_from,tuple()))
+
+        return (MGen, algGens) in self.non_strict_prefix
 
     def toDDStructure(self):
         """Convert this to a type DD structure over algebra1 and cobar of
