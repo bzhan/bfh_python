@@ -247,6 +247,34 @@ class SimpleChainComplex(ChainComplex):
     def diff(self, generator):
         return self.differential[generator]
 
+    def diffElt(self,elt):
+        "Return the differential of Element elt of this SimpleChainComplex"
+        answer = E0
+        for x in elt.keys():
+            answer += elt[x]*self.diff(x)
+        return answer
+
+    def isCycle(self, elt):
+        "Return True if Element elt is a cycle in this SimpleChainComplex"
+        return not self.diffElt(elt)
+
+    def isBoundary(self, elt):
+        "Return True if Element elt is a boundary in this SimpleChainComplex"
+        if not self.isCycle(elt):
+            return False
+        cxcopy = self.copy(returnDicts=False)
+        (cxcopy2,cxcopy2_to_cx,cx_to_cxcopy2) = self.copy(returnDicts=True)
+        cxcopy.simplify()
+        newgen = SimpleGenerator(cxcopy2, "eta")
+        cxcopy2.addGenerator(newgen)
+        for y in elt.keys():
+            cxcopy2.addDifferential(newgen, cx_to_cxcopy2[y], elt[y])
+            cxcopy2.simplify()
+        if len(cxcopy2) == len(cxcopy)-1:
+            return False
+        if len(cxcopy2) == len(cxcopy)+1:
+            return True
+    
     def getGenerators(self):
         return list(self.generators)
 
@@ -354,6 +382,33 @@ class SimpleChainComplex(ChainComplex):
         return sorted([self.gr_set.eltAbsoluteGrading(self.grading[gen])
                        for gen in self.generators])
 
+    def copy(self,returnDicts=False):
+        "Return a copy of self. If returnDicts is true, also return two dictionaries, {new_gen:old_gen} and {old_gen:new_gen}"
+        new_to_old = dict()
+        old_to_new = dict()
+        answer = SimpleChainComplex(self.ring)
+        genlist = list(self.generators)
+        for i in range(len(self.generators)):
+            newgen = SimpleGenerator(answer,repr(i))
+            answer.addGenerator(newgen)
+            new_to_old[newgen] = genlist[i]
+            old_to_new[genlist[i]] = newgen
+        for x in genlist:
+            for y in self.differential[x].keys():
+                answer.addDifferential(old_to_new[x],old_to_new[y],self.differential[x][y])
+        if returnDicts:
+            return (answer, new_to_old, old_to_new)
+        return answer
+
+    def id(self):
+        "Return the identity map of self."
+        answer = SimpleChainMorphism(self,self)
+        for x in self.getGenerators():
+            answer.addMorphism(x,x,1)        
+        return answer
+
+    
+    
 class SimpleChainMorphism:
     """Represents a morphism between two simple chain complexes (which may be
     the same). Need not be a chain map (so can be used to represent homotopy,
@@ -376,6 +431,20 @@ class SimpleChainMorphism:
             self.morphism[gen_from] = E0
         self.morphism[gen_from] += coeff * gen_to
 
+    def sum(self,g):
+        "Return self+g, where g is a SimpleChainMorphism"
+        assert isinstance(self, SimpleChainMorphism) and isinstance(g, SimpleChainMorphism)
+        assert self.cx_from == g.cx_from and self.cx_to == g.cx_to
+        answer = SimpleChainMorphism(self.cx_from, self.cx_to)
+        for gen_from in self.morphism.keys():
+            for (gen_to,coeff) in self.apply(gen_from).items():
+                answer.addMorphism(gen_from, gen_to, coeff)
+        for gen_from in g.morphism.keys():
+            for (gen_to,coeff) in g.apply(gen_from).items():
+                answer.addMorphism(gen_from, gen_to, coeff)
+        return answer
+        
+        
     def apply(self, x):
         """Computes f(x), where x is either a generator or an element of
         cx_from. The returned value is always an Element of cx_to.
@@ -391,6 +460,48 @@ class SimpleChainMorphism:
             return sum([coeff * self.apply(gen)
                         for gen, coeff in x.items()], E0)
 
+    def mappingConeCx(self):
+        "Return the mapping cone of self."
+        cx_from = self.cx_from
+        cx_to = self.cx_to
+        answer = SimpleChainComplex(F2)
+        #A dictionary to keep track of identification between old generators and new ones
+        from_to_new = dict()
+        to_to_new = dict()
+        #Add the generators
+        for x in cx_from.getGenerators():
+            newx = Generator(answer)
+            from_to_new[x] = newx
+            answer.addGenerator(newx)
+        for x in cx_to.getGenerators():
+            newx = Generator(answer)
+            to_to_new[x] = newx
+            answer.addGenerator(newx)
+        #add the differential on cx_from
+        for x in cx_from.getGenerators():
+            for y in cx_from.diff(x).keys():
+                answer.addDifferential(from_to_new[x],from_to_new[y],cx_from.diff(x)[y])
+        #add the differential on cx_to
+        for x in cx_to.getGenerators():
+            for y in cx_to.diff(x).keys():
+                answer.addDifferential(to_to_new[x],to_to_new[y],cx_to.diff(x)[y])
+        #add the differential coming from self
+        for x in self.morphism.keys():
+            fx = self.apply(x)
+            for y in fx.keys():
+                answer.addDifferential(from_to_new[x],to_to_new[y],fx[y])
+        return answer
+
+    def isQI(self):
+        "Check if self is a quasi-isomorphism."
+        cone = self.mappingConeCx()
+        #Could check this is a chain map, perhaps using cone.checkDifferential()
+        cone.simplify()
+        if len(cone) == 0:
+            return True
+        return False
+
+        
     def __str__(self):
         result = "Morphism between two chain complexes.\n"
         for k, v in self.morphism.items():

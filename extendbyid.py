@@ -99,6 +99,16 @@ class LocalDAStructure(SimpleDAStructure):
                     assert len(target_gen) == 1, "Cannot autocomplete u-map"
                     self.add_u_map(i, local_gen, target_gen[0])
 
+    def delta(self, MGen, algGens):
+        if len(algGens) == 1 and algGens[0].isIdempotent() and \
+           algGens[0].left_idem == MGen.idem2:
+               return MGen.idem1.toAlgElt() * MGen
+        elif (MGen, algGens) not in self.da_action:
+            return E0
+        else:
+            return self.da_action[(MGen, algGens)]
+
+                    
 class LocalMorDAtoDAComplex(MorDAtoDAComplex):
     """Represents the complex of type DA morphisms between two local type DA
     structures.
