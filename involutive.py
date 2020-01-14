@@ -1,5 +1,3 @@
-#!/usr/bin/env python2
-# -*- coding: utf-8 -*-
 """
 Created on Wed May 31 11:22:54 2017
 
@@ -19,15 +17,15 @@ from arcslideda import ArcslideDA
 def applyDMor(f,x):
     "Apply a type D morphism, of Element class, to a DGenerator x"
     answer = E0
-    for f0 in f.keys():
+    for f0 in list(f.keys()):
         answer += f[f0]*f0.apply(x)
     return answer
 
 def composeMor(f,g, parent=None):
     "Return the composition f\circ g, if f and g are type D morphism Elements (gotten, say, from prev_meaning)"
     answer = E0
-    for g0 in g.keys(): #g0 is of type WHAT?
-        for f0 in f.keys():
+    for g0 in list(g.keys()): #g0 is of type WHAT?
+        for f0 in list(f.keys()):
             addit = (f[f0]*g[g0])* f0.compose(g0,parent)
             answer += addit
     return answer
@@ -62,7 +60,7 @@ def azDA(pmc,mult_one = True):
     #Terms in the differential coming from the differential on the algebra:
     for x in answer.generators:
         dx = x.name.diff()
-        for y in dx.keys():
+        for y in list(dx.keys()):
             ygen = SimpleDAGenerator(answer, y.left_idem.comp(), y.right_idem, y)
             answer.addDelta(x,ygen,x.idem1.toAlgElt(algebra),list(),dx[y])
     #Terms coming from multiplying by algebra elements on the right
@@ -72,7 +70,7 @@ def azDA(pmc,mult_one = True):
         for b in could_multiply:
             if not b.isIdempotent():
                 xab = xa*b
-                for y in xab.keys():
+                for y in list(xab.keys()):
                     ygen = SimpleDAGenerator(answer,y.left_idem.comp(), y.right_idem, y)
                     answer.addDelta(x,ygen,x.idem1.toAlgElt(algebra),[b,],xab[y])
     #Terms coming from differential on CFDD(Id):
@@ -81,7 +79,7 @@ def azDA(pmc,mult_one = True):
         for x in algebra.getGeneratorsForIdem(left_idem = rho.right_idem):
             xgen = SimpleDAGenerator(answer,x.left_idem.comp(), x.right_idem, x)
             rhox = rho*x
-            for y in rhox.keys():
+            for y in list(rhox.keys()):
                 ygen = SimpleDAGenerator(answer, y.left_idem.comp(), y.right_idem, y)
                 answer.addDelta(xgen, ygen, sigma, list(),rhox[y])    
     return answer
@@ -109,7 +107,7 @@ def tensorDAid(P,Q,M,MP,MQ,morcx,f):
         answer = E0
         start_dagen, start_dgen = start_gen
         cur_delta = M.delta(start_dagen, cur_coeffs_a)
-        for (coeff_d, gen_to), ring_coeff in cur_delta.items():
+        for (coeff_d, gen_to), ring_coeff in list(cur_delta.items()):
             if inTarget:
                 startelt = DATensorDGenerator(MP,start_dagen,start_dgen)
                 endelt = DATensorDGenerator(MQ,gen_to,cur_dgen)
@@ -118,12 +116,12 @@ def tensorDAid(P,Q,M,MP,MQ,morcx,f):
                 answer += 1*morph
         if M.deltaPrefixNS(start_dagen, cur_coeffs_a):
             if not inTarget:
-                for (coeff_out, dgen_to), ring_coeff in P.delta(cur_dgen).items():
+                for (coeff_out, dgen_to), ring_coeff in list(P.delta(cur_dgen).items()):
                     answer += search(start_gen, dgen_to, cur_coeffs_a + (coeff_out,), inTarget=False)
-                for (coeff_out, dgen_to), ring_coeff in applyDMor(f,cur_dgen).items(): #APPLY f
+                for (coeff_out, dgen_to), ring_coeff in list(applyDMor(f,cur_dgen).items()): #APPLY f
                     answer += search(start_gen, dgen_to, cur_coeffs_a + (coeff_out,), inTarget=True)
             if inTarget:
-                for (coeff_out, dgen_to), ring_coeff in Q.delta(cur_dgen).items():
+                for (coeff_out, dgen_to), ring_coeff in list(Q.delta(cur_dgen).items()):
                     answer += search(start_gen, dgen_to, cur_coeffs_a + (coeff_out,), inTarget=True)
         return answer
 
@@ -137,7 +135,7 @@ def tensorDAid(P,Q,M,MP,MQ,morcx,f):
 def mappingConeD(f, returnDicts = False):
     "Return the mapping cone of a morphism f (Element class) from one SimpleDStructure to another."
     #Extract some basic info from f
-    for f0 in f.keys():
+    for f0 in list(f.keys()):
         P = f0.source.parent #Source of f
         Q = f0.target.parent #Target of f
     answer = SimpleDStructure(F2,P.algebra)        
@@ -158,13 +156,13 @@ def mappingConeD(f, returnDicts = False):
     #Add the differential on P
     for x in P.getGenerators():
         dx = P.delta(x)
-        for ay in dx.keys():
+        for ay in list(dx.keys()):
             answer.addDelta(from_to_new[x],from_to_new[ay[1]],ay[0],dx[ay])
     for x in Q.getGenerators():
         dx = Q.delta(x)
-        for ay in dx.keys():
+        for ay in list(dx.keys()):
             answer.addDelta(to_to_new[x],to_to_new[ay[1]],ay[0],dx[ay])
-    for f0 in f.keys():
+    for f0 in list(f.keys()):
         answer.addDelta(from_to_new[f0.source],to_to_new[f0.target],f0.coeff,f[f0])
     if returnDicts:
         return (answer, from_to_new, to_to_new, new_to_old)
@@ -205,45 +203,45 @@ def involutiveCx(P,Q, mult_one = True, sanityTests = False, verbose = False):
     pmc = P.algebra.pmc
     M = azDA(pmc)
     if verbose:
-        print "Lengths of (P,Q,M)"+repr((len(P.getGenerators()),len(Q.getGenerators()),len(M.getGenerators())))
+        print("Lengths of (P,Q,M)"+repr((len(P.getGenerators()),len(Q.getGenerators()),len(M.getGenerators()))))
     MP = M.tensorD(P)
     if verbose:
-        print "MP has length "+repr(len(MP.getGenerators()))
+        print("MP has length "+repr(len(MP.getGenerators())))
     MQ = M.tensorD(Q)
     if verbose:
-        print "MQ has length "+repr(len(MQ.getGenerators()))
+        print("MQ has length "+repr(len(MQ.getGenerators())))
     PtoMPcx = P.morToD(MP) #This step tends to be very slow.
     if verbose:
-        print "Computed PtoMPcx. Number of generators:"+repr(len(PtoMPcx.getGenerators()))
+        print("Computed PtoMPcx. Number of generators:"+repr(len(PtoMPcx.getGenerators())))
     PtoMQcx = P.morToD(MQ)
     if verbose:
-        print "Computed PtoMQcx.  Number of generators:"+repr(len(PtoMQcx.getGenerators()))
+        print("Computed PtoMQcx.  Number of generators:"+repr(len(PtoMQcx.getGenerators())))
     MQtoQcx = MQ.morToD(Q)
     if verbose:
-        print "Computed MQtoQcx.  Number of generators:"+repr(len(MQtoQcx.getGenerators()))
+        print("Computed MQtoQcx.  Number of generators:"+repr(len(MQtoQcx.getGenerators())))
     PtoMPcx.simplify(find_homology_basis = True) #This step also slow.
     if verbose:
-        print "Simplified PtoMPcx. Number of generators: "+repr(len(PtoMPcx.getGenerators()))
+        print("Simplified PtoMPcx. Number of generators: "+repr(len(PtoMPcx.getGenerators())))
     MQtoQcx.simplify(find_homology_basis = True)
     if verbose:
-        print "Simplified MQtoQcx. Number of generators: "+repr(len(MQtoQcx.getGenerators()))
+        print("Simplified MQtoQcx. Number of generators: "+repr(len(MQtoQcx.getGenerators())))
 
     PhiPinv = findQI([x.prev_meaning for x in PtoMPcx.getGenerators()])    
     if verbose:
-        print "Found quasi-isomorphism PhiPinv"
+        print("Found quasi-isomorphism PhiPinv")
     PhiQ = findQI([x.prev_meaning for x in MQtoQcx.getGenerators()])    
     if verbose:
-        print "Found quasi-isomorphism PhiQ"
+        print("Found quasi-isomorphism PhiQ")
     if sanityTests:
         assert isQIDmor(PhiPinv)
         assert isQIDmor(PhiQ)
     PQ = P.morToD(Q)
     MPtoMQcx = MP.morToD(MQ) #Presumably this is the limiting step.
     if verbose:
-        print "Computed PQ, MPtoMQcx. Number of generators of (PQ, MPtoMQcx):"+repr((len(PQ.getGenerators()),len(MPtoMQcx.getGenerators())))
+        print("Computed PQ, MPtoMQcx. Number of generators of (PQ, MPtoMQcx):"+repr((len(PQ.getGenerators()),len(MPtoMQcx.getGenerators()))))
     PQ.simplify(find_homology_basis = True)
     if verbose:
-        print "Simplified PQ. Number of generators: "+repr(len(PQ.getGenerators()))
+        print("Simplified PQ. Number of generators: "+repr(len(PQ.getGenerators())))
     PQtarg = P.morToD(Q)
     iota = SimpleChainMorphism(PQ,PQtarg)    
     for gen_from in PQ.generators:
@@ -256,13 +254,13 @@ def involutiveCx(P,Q, mult_one = True, sanityTests = False, verbose = False):
         composedMap = composeMor(PhiQ,comp1, parent=PQtarg)
         if sanityTests:
             assert PQtarg.diffElt(composedMap) == E0
-        for gen_to in composedMap.keys():
+        for gen_to in list(composedMap.keys()):
             iota.addMorphism(gen_from, gen_to, composedMap[gen_to])
     if verbose:
-        print "Computed iota"
+        print("Computed iota")
     Id = SimpleChainMorphism(PQ,PQtarg)
     for gen_from in PQ.generators:
-        for gen_to in gen_from.prev_meaning.keys():
+        for gen_to in list(gen_from.prev_meaning.keys()):
             new_gen_to = MorDtoDGenerator(PQtarg,gen_to.source,gen_to.coeff,gen_to.target)
             Id.addMorphism(gen_from, new_gen_to, gen_from.prev_meaning[gen_to])
     if sanityTests:
@@ -271,10 +269,10 @@ def involutiveCx(P,Q, mult_one = True, sanityTests = False, verbose = False):
         assert isQIcx(iota)
     idPlusIota = Id.sum(iota)
     if verbose:
-        print "Computed Id + iota"
+        print("Computed Id + iota")
     mappingcone = idPlusIota.mappingConeCx()
     if verbose:
-        print "Computed mapping cone."
+        print("Computed mapping cone.")
     mappingcone.simplify()
     return mappingcone
 
@@ -309,7 +307,7 @@ def invOfDCovSplit(str_input, split_index, verbose=False):
     cx = P.morToD(Q)
     cx.simplify()
     if verbose:
-        print "HF = "+repr(len(cx))+". Working on IHF next."
+        print("HF = "+repr(len(cx))+". Working on IHF next.")
     invcx = involutiveCx(P,Q)
     return invcx
 
@@ -338,7 +336,7 @@ def checkSplits(str_input):
         cx = P.morToD(Q)
         cxlen = len(cx)
         cx.simplify()
-        print (i,len(P.getGenerators()),len(Q.getGenerators()),cxlen,len(cx))
+        print((i,len(P.getGenerators()),len(Q.getGenerators()),cxlen,len(cx)))
         answer.append((i,len(P.getGenerators()),len(Q.getGenerators()),cxlen,len(cx)))
     return answer
 

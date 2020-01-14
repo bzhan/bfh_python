@@ -11,7 +11,7 @@ from utility import memorize
 from utility import F2, NEG, POS
 import itertools
 
-class DehnTwist:
+class DehnTwist(object):
     """Represents a Dehn twist starting at linear PMC."""
     def __init__(self, genus, c_pair, orientation):
         """Specifies genus of the starting pmc, id of the pair of Dehn twist,
@@ -157,7 +157,7 @@ class DehnTwist:
     _PChords = [_P1Chords, _P2Chords, _P3Chords, _P4Chords, _P5Chords,
                 _P6Chords, _P7Chords, _P8Chords, _P9Chords]
 
-class AntiBraid:
+class AntiBraid(object):
     """Represents the anti-braid resolution."""
     def __init__(self, genus, c_pair):
         """Specifies genus of the starting pmc and the id of the pair of
@@ -247,14 +247,14 @@ class AntiBraid:
             all_chords = self._getAdmissibleNonSpecialChordsDegenerate()
         else:
             all_chords = self._getAdmissibleNonSpecialChords()
-        for i, j in itertools.product(range(3), range(3)):
+        for i, j in itertools.product(list(range(3)), list(range(3))):
             all_chords[i][j] = [self._StrandsFromChords(chord1, chord2)
                                 for chord1, chord2 in all_chords[i][j]]
 
         # Now we emulate the logic in ddstructure.DDStrFromChords, except we
         # distinguish between ''classes'' of generators, by the first character
         # of the name of the generator.
-        for i, j in itertools.product(range(3), range(3)):
+        for i, j in itertools.product(list(range(3)), list(range(3))):
             for x, y in itertools.product(gen_set[i], gen_set[j]):
                 for l_chord, r_chord in all_chords[i][j]:
                     if l_chord.idemCompatible(x.idem1, y.idem1) and \
@@ -504,7 +504,7 @@ class AntiBraid:
                     self._B4Chords, self._B5Chords, self._B6Chords,
                     self._B7Chords, self._B8Chords]
 
-class DehnSurgery:
+class DehnSurgery(object):
     """Represents a Dehn twist starting at linear PMC."""
     def __init__(self, genus, c_pair, orientation):
         """Specifies genus of the starting pmc, id of the pair of Dehn twist,

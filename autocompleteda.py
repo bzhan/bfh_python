@@ -14,7 +14,7 @@ from linalg import F2RowSystem
 from localpmc import LocalStrandDiagram
 from utility import memorizeHash
 import itertools
-from Queue import Queue
+from queue import Queue
 
 class _DAArrow(tuple):
     """Structure representing a type DA arrow."""
@@ -38,16 +38,16 @@ class _AutoCompleteDAStructure:
             return result
         # Take anti-differential of one of coeffs_a
         for i in range(len(coeffs_a)):
-            for anti_da, coeff in coeffs_a[i].antiDiff().items():
+            for anti_da, coeff in list(coeffs_a[i].antiDiff().items()):
                 result.append(_DAArrow(
                     coeff_d, coeffs_a[:i] + (anti_da,) + coeffs_a[i+1:], x, y))
-            for (a, b), coeff in coeffs_a[i].factor().items():
+            for (a, b), coeff in list(coeffs_a[i].factor().items()):
                 if a.isIdempotent() or b.isIdempotent():
                     continue
                 result.append(_DAArrow(
                     coeff_d, coeffs_a[:i] + (a, b) + coeffs_a[i+1:], x, y))
         # Take differential of coeff_d
-        for dd, coeff in coeff_d.diff().items():
+        for dd, coeff in list(coeff_d.diff().items()):
             result.append(_DAArrow(dd, coeffs_a, x, y))
         # Multiply two together. One direction.
         for coeff_d2, coeffs_a2, x2, y2 in arrows_base_left:
@@ -79,7 +79,7 @@ class _AutoCompleteDAStructure:
         coeff_d, coeffs_a, x, y = arrow_new
         # Take differential of one of coeffs_a
         for i in range(len(coeffs_a)):
-            for da, coeff in coeffs_a[i].diff().items():
+            for da, coeff in list(coeffs_a[i].diff().items()):
                 result.append(_DAArrow(
                     coeff_d, coeffs_a[:i] + (da,) + coeffs_a[i+1:], x, y))
             if i > 0 and coeffs_a[i-1] * coeffs_a[i] != E0:
@@ -88,10 +88,10 @@ class _AutoCompleteDAStructure:
                     ((coeffs_a[i-1] * coeffs_a[i]).getElt(),) +
                     coeffs_a[i+1:], x, y))
         # Take anti-differential of coeff_d
-        for anti_dd, coeff in coeff_d.antiDiff().items():
+        for anti_dd, coeff in list(coeff_d.antiDiff().items()):
             result.append(_DAArrow(anti_dd, coeffs_a, x, y))
         # Split into two sequences
-        for (a, b), coeff in coeff_d.factor().items():
+        for (a, b), coeff in list(coeff_d.factor().items()):
             # Number of A-inputs in the first sequence
             for i in range(len(coeffs_a)):
                 if (a, coeffs_a[:i], x) in arrows_base_left_map:
@@ -331,8 +331,8 @@ class _AutoCompleteDAStructure:
             # arrows_base_right are the same.
             arrows_base, arrows_seed = [], []
             # Figure out the base arrows and new arrows in this stage.
-            for (gen_from, coeffs_a), target in raw_da.da_action.items():
-                for (coeff_d, gen_to), ring_coeff in target.items():
+            for (gen_from, coeffs_a), target in list(raw_da.da_action.items()):
+                for (coeff_d, gen_to), ring_coeff in list(target.items()):
                     arrow = _DAArrow(coeff_d, coeffs_a, gen_from, gen_to)
                     if all([coeff_d.multiplicity[p] == 0
                             for p in d_side_order[i+1:]]):
@@ -387,12 +387,12 @@ class _AutoCompleteDAStructure:
                 (dastr1.single_idems1[i], dastr1.single_idems2[i]))
 
         arrows_base_left, arrows_base_right, arrows_seed = [], [], []
-        for (gen_from, coeffs_a), target in dastr1.da_action.items():
-            for (coeff_d, gen_to), ring_coeff in target.items():
+        for (gen_from, coeffs_a), target in list(dastr1.da_action.items()):
+            for (coeff_d, gen_to), ring_coeff in list(target.items()):
                 arrows_base_left.append(
                     _DAArrow(coeff_d, coeffs_a, gen_from, gen_to))
-        for (gen_from, coeffs_a), target in dastr2.da_action.items():
-            for (coeff_d, gen_to), ring_coeff in target.items():
+        for (gen_from, coeffs_a), target in list(dastr2.da_action.items()):
+            for (coeff_d, gen_to), ring_coeff in list(target.items()):
                 arrows_base_right.append(
                     _DAArrow(coeff_d, coeffs_a, gen_from, gen_to))
         for gen in raw_morphism:

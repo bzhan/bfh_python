@@ -60,9 +60,9 @@ class PathTest(unittest.TestCase):
 
     def testToOneChain(self):
         """Testing toOneChain function in Path."""
-        self.assertEqual(self.path1.toOneChain().values(), [])
-        self.assertEqual(self.path5.toOneChain().values(), [2]*self.n)
-        self.assertEqual(self.path6.toOneChain().values(), [-1]*self.n)
+        self.assertEqual(list(self.path1.toOneChain().values()), [])
+        self.assertEqual(list(self.path5.toOneChain().values()), [2]*self.n)
+        self.assertEqual(list(self.path6.toOneChain().values()), [-1]*self.n)
 
 class CellTest(unittest.TestCase):
     def testCell(self):

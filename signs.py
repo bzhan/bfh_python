@@ -12,7 +12,7 @@ from pmc import StrandAlgebra, StrandDiagram
 from utility import memorize
 from utility import F2
 
-class AbsZ2Grading:
+class AbsZ2Grading(object):
     """Computes absolute Z/2Z grading for the strand algebra."""
     def __init__(self, algebra):
         """Creates data needed for computation of Z/2Z grading for the given
@@ -396,7 +396,7 @@ class PreStrandAlgebra(DGAlgebra):
                 self.multiplySign(a, l1_b) * \
                 self.multiplySign(self._multiplyRaw(a, l1_b), l2_b)
 
-class SignLinAlg():
+class SignLinAlg(object):
     """Try to obtain a sign convention by solving a linear algebra problem. """
     def __init__(self, algebra):
         self.algebra = algebra
@@ -414,7 +414,7 @@ class SignLinAlg():
         """
         all_gens = [gen for gen in self.algebra.getGenerators()
                     if not gen.isIdempotent()]
-        print "Number of generators:", len(all_gens)
+        print("Number of generators:", len(all_gens))
         # Maps multiplication / differential to the column index
         self.index = dict()
         for gen1 in all_gens:
@@ -426,7 +426,7 @@ class SignLinAlg():
             for dgen_term in gen.diff():
                 self.index[("D", gen, dgen_term)] = len(self.index)
         num_row = len(self.index)
-        print "Number of operations:", num_row
+        print("Number of operations:", num_row)
 
         # Linear combination of rows to look for.
         expected_sums = []
@@ -451,7 +451,7 @@ class SignLinAlg():
                         dd_to_d_map[ddgen] = []
                     dd_to_d_map[ddgen].append(dgen)
             # Now use that map to produce the relations in d^2=0
-            for ddgen, dgen_list in dd_to_d_map.items():
+            for ddgen, dgen_list in list(dd_to_d_map.items()):
                 assert len(dgen_list) == 2
                 dgen1, dgen2 = dgen_list
                 addColumn([("D", gen, dgen1), ("D", gen, dgen2),
@@ -494,7 +494,7 @@ class SignLinAlg():
                         0)
                     num_col += 1
 
-        print "Number of constraints:", num_col
+        print("Number of constraints:", num_col)
 
         # Use the following to find a solution
         # matrix = [[0] * num_col for i in range(num_row)]
@@ -508,7 +508,7 @@ class SignLinAlg():
 
         # Use simplify method
         row_rank = findRankOverF2(num_row, num_col, entries)
-        print "Rank:", row_rank
+        print("Rank:", row_rank)
 
         # Form row system of gauge equivalences
         gen_index = dict()
@@ -518,7 +518,7 @@ class SignLinAlg():
         # matrix.
         gauge_entries = []
 
-        for op, index in self.index.items():
+        for op, index in list(self.index.items()):
             assert op[1] != op[2]
             gauge_entries.append((index, gen_index[op[1]]))
             gauge_entries.append((index, gen_index[op[2]]))
@@ -526,5 +526,5 @@ class SignLinAlg():
                 gauge_entries.append((index, gen_index[(op[1]*op[2]).getElt()]))
 
         gauge_rank = findRankOverF2(num_row, len(all_gens), gauge_entries)
-        print "Rank of gauge equivalences:", gauge_rank
-        print "Free choice:", num_row - row_rank - gauge_rank
+        print("Rank of gauge equivalences:", gauge_rank)
+        print("Free choice:", num_row - row_rank - gauge_rank)

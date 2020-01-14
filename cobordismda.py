@@ -165,7 +165,7 @@ class CobordismDALeft(ExtendedDAStructure):
         local_dastr.auto_u_map()
 
         # Add arrows according to arrow_pattern.
-        for coeffs_a in arrow_patterns.keys():
+        for coeffs_a in list(arrow_patterns.keys()):
             if len(coeffs_a) == 1 and coeffs_a[0].isIdempotent():
                 continue
             for coeff_d in arrow_patterns[coeffs_a]:
@@ -370,7 +370,7 @@ class SimpleCobordismDA(ExtendedDAStructure):
         local_da.auto_u_map()
 
         # Add arrows according to arrow_pattern
-        for key in arrow_patterns.keys():
+        for key in list(arrow_patterns.keys()):
             start_class, end_class, coeffs_a = key
             if len(coeffs_a) == 1 and coeffs_a[0].isIdempotent():
                 continue
@@ -383,8 +383,8 @@ class SimpleCobordismDA(ExtendedDAStructure):
                         local_da.addDelta(x, y, coeff_d, coeffs_a, 1)
                         used = True
                 if not used:
-                    print "Warning: unused arrow: %s %s" % \
-                        (coeffs_a, coeff_d)
+                    print("Warning: unused arrow: %s %s" % \
+                        (coeffs_a, coeff_d))
 
         return local_da
 

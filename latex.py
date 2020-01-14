@@ -1,6 +1,7 @@
 """A collection of latex printing code."""
 
 from utility import sumColumns
+from functools import cmp_to_key
 
 def beginDoc():
     return "\\documentclass{article}\n" + \
@@ -115,8 +116,8 @@ def showDAStructure(dastr, pmc_map1 = None, pmc_map2 = None):
 
     to_print = []
 
-    for (gen_from, coeffs_a), target in dastr.da_action.items():
-        for (coeff_d, gen_to), ring_coeff in target.items():
+    for (gen_from, coeffs_a), target in list(dastr.da_action.items()):
+        for (coeff_d, gen_to), ring_coeff in list(target.items()):
             to_print.append((gen_from, coeffs_a, coeff_d, gen_to))
 
     # Sort the to_print by the following comparison function
@@ -144,7 +145,7 @@ def showDAStructure(dastr, pmc_map1 = None, pmc_map2 = None):
         return compare_mult(mult_a1, mult_a2)
 
     for gen_from, coeffs_a, coeff_d, gen_to in sorted(to_print,
-                                                      cmp = compare_arrow):
+                                                      key = cmp_to_key(compare_arrow)):
         result += "\\begin{equation}\n"
         result += "\\delta^1\\left( \n"
         result += showDAGenerator(gen_from, pmc_map1, pmc_map2)

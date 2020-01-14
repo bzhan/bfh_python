@@ -12,19 +12,19 @@ from pmc import Strands, StrandDiagram
 from utility import memorize
 from utility import F2
 
-class DiGraph:
+class DiGraph(object):
     """Interface for a general directed graph."""
     def getOutEdges(self, node):
         """Get the list of outward edges from a node."""
         raise NotImplementedError("Get list of outward edges not implemented.")
 
-class DiGraphNode():
+class DiGraphNode(object):
     """A general node in a digraph."""
     def __init__(self, parent):
         """Every node needs a parent graph."""
         self.parent = parent
 
-class DiGraphEdge():
+class DiGraphEdge(object):
     """A general edge in a digraph."""
     def __init__(self, source, target):
         """Every edge needs a source and target (nodes from the same digraph).
@@ -43,7 +43,7 @@ class ConcreteDiGraph(DiGraph):
 
     def __str__(self):
         result = "Di-graph with %d nodes." % len(self.nodes)
-        for node, outs in self.edges.items():
+        for node, outs in list(self.edges.items()):
             node_str = "Node %s with outward edges:\n" % str(node)
             node_str += "\n".join([str(edge) for edge in outs])
             result += ("\n" + node_str)
@@ -130,7 +130,7 @@ class TypeDGraph(ConcreteDiGraph):
             self.graph_node[dgen] = cur_node
         # Add edges
         for gen_from in dstr.getGenerators():
-            for (alg_coeff, gen_to), ring_coeff in gen_from.delta().items():
+            for (alg_coeff, gen_to), ring_coeff in list(gen_from.delta().items()):
                 self.addEdge(TypeDGraphEdge(
                         self.graph_node[gen_from], self.graph_node[gen_to],
                         alg_coeff))
@@ -246,7 +246,7 @@ class TypeDDGraph(ConcreteDiGraph):
     def getOutEdges(self, gen_from):
         result = []
         x, sd = gen_from.ddgen, gen_from.sd
-        for (a, b, y), ring_coeff in x.delta().items():
+        for (a, b, y), ring_coeff in list(x.delta().items()):
             if self.tensor_side == 2:
                 output_a, tensor_a = a, b
             else:
@@ -288,7 +288,7 @@ class TypeAAGraphEdge(DiGraphEdge):
 
     """
     # Possible values of edge_type
-    ALG_LEFT, ALG_RIGHT, HOMOTOPY = range(3)
+    ALG_LEFT, ALG_RIGHT, HOMOTOPY = list(range(3))
 
     def __init__(self, source, target, edge_type, coeff = None):
         """Specifies type of edge and algebra coefficient. coeff should be None
@@ -514,7 +514,7 @@ class TypeAAGraph(DiGraph):
         assert d_graph.algebra == self.pmc_alg
         dstr = SimpleDStructure(F2, dd_graph.algebra1)
         # Generators of the type D structure:
-        for ddgen, node1 in dd_graph.ddgen_node.items():
+        for ddgen, node1 in list(dd_graph.ddgen_node.items()):
             for node2 in d_graph.getNodes():
                 if node1.idem2 == node2.idem.opp().comp():
                     cur_gen = DATensorDGenerator(dstr, ddgen, node2.dgen)
@@ -545,7 +545,7 @@ class TypeAAGraph(DiGraph):
         dstr = SimpleDStructure(F2, dd_graph.algebra2)
         # Generators of the type D structure:
         for node1 in d_graph.getNodes():
-            for ddgen, node2 in dd_graph.ddgen_node.items():
+            for ddgen, node2 in list(dd_graph.ddgen_node.items()):
                 if node1.idem == node2.idem1.opp().comp():
                     cur_gen = ATensorDDGenerator(dstr, node1.dgen, ddgen)
                     dstr.addGenerator(cur_gen)
@@ -570,8 +570,8 @@ class TypeAAGraph(DiGraph):
         assert dd_graph2.algebra1 == self.pmc_alg
         ddstr = SimpleDDStructure(F2, dd_graph1.algebra1, dd_graph2.algebra2)
         # Generators of the type DD structure:
-        for ddgen1, node1 in dd_graph1.ddgen_node.items():
-            for ddgen2, node2 in dd_graph2.ddgen_node.items():
+        for ddgen1, node1 in list(dd_graph1.ddgen_node.items()):
+            for ddgen2, node2 in list(dd_graph2.ddgen_node.items()):
                 if node1.idem2 == node2.idem1.opp().comp():
                     cur_gen = DATensorDDGenerator(ddstr, ddgen1, ddgen2)
                     ddstr.addGenerator(cur_gen)
@@ -609,7 +609,7 @@ class TypeAAGraph(DiGraph):
             result.addGenerator(cur_gen)
 
         univ_digraph = UniversalDiGraph(alg_opp)
-        for ddgen, d2_pos in dd_graph.ddgen_node.items():
+        for ddgen, d2_pos in list(dd_graph.ddgen_node.items()):
             d1_pos = univ_digraph.getInitialNode()
             aa_pos = self.homology_node[ddgen.idem1.comp()]
             pos = [(d1_pos, d2_pos, aa_pos)]
@@ -640,7 +640,7 @@ class TypeAAGraph(DiGraph):
             result.addGenerator(cur_gen)
 
         univ_digraph = UniversalDiGraph(alg)
-        for ddgen, d1_pos in dd_graph.ddgen_node.items():
+        for ddgen, d1_pos in list(dd_graph.ddgen_node.items()):
             d2_pos = univ_digraph.getInitialNode()
             aa_pos = self.homology_node[ddgen.idem2.comp()]
             pos = [(d1_pos, d2_pos, aa_pos)]

@@ -13,7 +13,7 @@ from pmc import linearPMC, splitPMC
 from utility import memorize
 from utility import NEG, POS, PRINT_PROGRESS
 
-class Braid():
+class Braid(object):
     """Represents a braid with a fix number of strands. Each braid generator is
     represented by an integer n. If 1 <= n <= num_strands-1, it represents
     moving strand n over strand n+1. If -(num_strand-1) <= n <= -1, it
@@ -23,7 +23,7 @@ class Braid():
     def __init__(self, num_strands):
         """Specifies the number of strands in the braid."""
         self.num_strands = num_strands
-        self.genus = (num_strands - 2)/2
+        self.genus = (num_strands - 2)//2
         self.pmc = linearPMC(self.genus)
 
     def getArcslides(self, word):
@@ -60,7 +60,7 @@ def composeDD(dstr, ddstr_list, is_dual = False, method = "Tensor"):
 
     """
     if PRINT_PROGRESS > 0:
-        print "(compose %s %d)" % (method, len(ddstr_list)),
+        print("(compose %s %d)" % (method, len(ddstr_list)), end=' ')
     for ddstr in ddstr_list:
         if PRINT_PROGRESS > 0:
             sys.stdout.write("%d," % len(dstr))
@@ -78,7 +78,7 @@ def composeDD(dstr, ddstr_list, is_dual = False, method = "Tensor"):
         dstr.simplify()
         dstr.reindex()
     if PRINT_PROGRESS > 0:
-        print "%d\n" % len(dstr),
+        print("%d\n" % len(dstr), end=' ')
     return dstr
 
 @memorize
@@ -102,13 +102,13 @@ def platTypeD2(genus, is_dual = False):
     slides_dd = [slide.getDDStructure() for slide in slides]
     return composeDD(start, slides_dd, is_dual)
 
-class BraidCap:
+class BraidCap(object):
     """Represents a capping of a braid."""
     def __init__(self, matching):
         """Specifies the matching of strands."""
         self.matching = tuple(matching)
         self.num_strands = len(self.matching)
-        self.genus = (len(self.matching) - 2)/2
+        self.genus = (len(self.matching) - 2)//2
 
     def __eq__(self, other):
         return self.matching == other.matching
@@ -209,7 +209,7 @@ class BraidCap:
             dstr.simplify(cancellation_constraint = cancellation_constraint)
             return prev_cap.closeCap(dstr, cancellation_constraint)
 
-class BridgePresentation:
+class BridgePresentation(object):
     """Represents a bridge presentation of a knot. Computes HF of branched
     double cover from bridge presentation.
 
@@ -254,7 +254,7 @@ class BridgePresentation:
         slides = Braid(self.num_strands).getArcslides(self.braid_word)
         slides = [slide.inverse() for slide in slides]
         for slide in slides:
-            print "%d" % len(start_d),
+            print("%d" % len(start_d), end=' ')
             sys.stdout.flush(),
             start_d = ArcslideDA(slide).tensorD(start_d)
             start_d.reindex()
@@ -299,9 +299,9 @@ class BridgePresentation:
             return self.addStrandsAtRight().getSpecSeq()
 
         start_d = BraidCap(self.start).openCap()
-        genus = self.num_strands/2 - 1
+        genus = self.num_strands//2 - 1
         for twist in self.braid_word:
-            print "%d" % len(start_d),
+            print("%d" % len(start_d), end=' ')
             sys.stdout.flush()
             abs_twist = abs(twist)
             assert 1 <= abs_twist <= self.num_strands-2

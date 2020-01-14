@@ -131,7 +131,7 @@ class MorDDtoDDComplex(ChainComplex):
         result = E0
         new_parent = MorDDtoDDComplex(
             F2, gen1.parent.source, gen2.parent.target)
-        for gen, coeff in (gen1.coeff * gen2.coeff).items():
+        for gen, coeff in list((gen1.coeff * gen2.coeff).items()):
             result += coeff * MorDDtoDDGenerator(
                 new_parent, gen1.source, gen, gen2.target)
         return result
@@ -145,17 +145,17 @@ class MorDDtoDDComplex(ChainComplex):
         # Differential of y in (x -> ay)
         x, a, y = gen.source, gen.coeff, gen.target
         ady = a * y.delta()
-        for (b1, b2, q), coeff in ady.items():
+        for (b1, b2, q), coeff in list(ady.items()):
             b = TensorGenerator((b1, b2), tensor_alg)
             result += coeff * MorDDtoDDGenerator(self, x, b, q)
         # Differential of a
-        for da_gen, coeff in a.diff().items():
+        for da_gen, coeff in list(a.diff().items()):
             result += coeff * MorDDtoDDGenerator(self, x, da_gen, y)
         # Precompose by the differential.
         # For each p such that (b1,b2)*x is in dp, add p->((b1,b2)*a)y
         for (b1, b2, p), coeff1 in rev_delta[x]:
             b = TensorGenerator((b1, b2), tensor_alg)
-            for ba_gen, coeff2 in (b*a).items():
+            for ba_gen, coeff2 in list((b*a).items()):
                 result += coeff1 * coeff2 * MorDDtoDDGenerator(
                     self, p, ba_gen, y)
         return result
@@ -182,12 +182,12 @@ class MorDDtoDDComplex(ChainComplex):
             result.addGenerator(gen_map[gen])
 
         for x1 in self.source.getGenerators():
-            for (a1, a2, x2), coeff in x1.delta().items():
+            for (a1, a2, x2), coeff in list(x1.delta().items()):
                 result.addDelta(gen_map[x1], gen_map[x2], a1, a2, coeff)
         for y1 in self.target.getGenerators():
-            for (b1, b2, y2), coeff in y1.delta().items():
+            for (b1, b2, y2), coeff in list(y1.delta().items()):
                 result.addDelta(gen_map[y1], gen_map[y2], b1, b2, coeff)
-        for gen, ring_coeff in morphism.items():
+        for gen, ring_coeff in list(morphism.items()):
             a1, a2 = gen.coeff
             result.addDelta(
                 gen_map[gen.source], gen_map[gen.target], a1, a2, ring_coeff)
@@ -211,16 +211,19 @@ class DDStructure(FreeModule):
         # Construct A tensor A tensor M. Add diff and the left action on this
         # tensor product.
         self.AAtensorM = Tensor((algebra1, algebra2, self))
-        def _mul_AA_AAtensorM((AGen1, AGen2, MGen), (ACoeff1, ACoeff2)):
+        def _mul_AA_AAtensorM(xxx_todo_changeme, xxx_todo_changeme1):
             """To be used as rmultiply() in AAtensorM. Multiply ACoeff1 with
             AGen1 and ACoeff2 with AGen2.
 
             """
+            (AGen1, AGen2, MGen) = xxx_todo_changeme
+            (ACoeff1, ACoeff2) = xxx_todo_changeme1
             return expandTensor((ACoeff1*AGen1, ACoeff2*AGen2, MGen),
                                  self.AAtensorM)
 
-        def _diff_AAtensorM((AGen1, AGen2, MGen)):
+        def _diff_AAtensorM(xxx_todo_changeme2):
             """To be used as diff() in AAtensorM."""
+            (AGen1, AGen2, MGen) = xxx_todo_changeme2
             return expandTensor((AGen1.diff(), AGen2, MGen), self.AAtensorM) \
                 + expandTensor((AGen1, AGen2.diff(), MGen), self.AAtensorM) \
                 + (AGen1, AGen2) * (MGen.delta())
@@ -260,7 +263,7 @@ class SimpleDDStructure(DDStructure):
         assert generator.parent == self
         assert isinstance(generator, DDGenerator)
         self.generators.add(generator)
-        if not self.delta_map.has_key(generator):
+        if generator not in self.delta_map:
             self.delta_map[generator] = E0
 
     def addDelta(self, gen_from, gen_to, alg_coeff1, alg_coeff2, ring_coeff):
@@ -299,9 +302,9 @@ class SimpleDDStructure(DDStructure):
             translate_dict[gen_list[i]] = new_gen
         self.generators = set(new_gen_list)
         new_delta = dict()
-        for k, v in self.delta_map.items():
+        for k, v in list(self.delta_map.items()):
             new_v = E0
-            for (AGen1, AGen2, MGen), coeff in v.items():
+            for (AGen1, AGen2, MGen), coeff in list(v.items()):
                 target_gen = TensorGenerator(
                     (AGen1, AGen2, translate_dict[MGen]), self.AAtensorM)
                 new_v += target_gen.elt(coeff)
@@ -309,7 +312,7 @@ class SimpleDDStructure(DDStructure):
         self.delta_map = new_delta
         if hasattr(self, "grading"):
             new_grading = dict()
-            for gen, gr in self.grading.items():
+            for gen, gr in list(self.grading.items()):
                 if gen in translate_dict: # gen is still in ddstr
                     new_grading[translate_dict[gen]] = gr
             self.grading = new_grading
@@ -319,9 +322,9 @@ class SimpleDDStructure(DDStructure):
         for gen in self.generators:
             if gen.delta().diff() != 0:
                 # Print the offending terms in d^2 for one generator.
-                print gen, "==>"
-                for k, v in gen.delta().diff().items():
-                    print v, "*", k
+                print(gen, "==>")
+                for k, v in list(gen.delta().diff().items()):
+                    print(v, "*", k)
                 return False
         return True
 
@@ -337,13 +340,13 @@ class SimpleDDStructure(DDStructure):
         for x in self.generators:
             rev_delta[x] = []
         for p in self.generators:
-            for (b1, b2, q), coeff in p.delta().items():
+            for (b1, b2, q), coeff in list(p.delta().items()):
                 rev_delta[q].append(((b1, b2, p), coeff))
         return rev_delta
 
     def __str__(self):
         result = "Type DD Structure.\n"
-        for k, v in self.delta_map.items():
+        for k, v in list(self.delta_map.items()):
             result += "d(%s) = %s\n" % (k, v)
         return result
 
@@ -398,14 +401,14 @@ class SimpleDDStructure(DDStructure):
             # Differential of y in (x -> ay)
             x, a, y = gen.source, gen.coeff, gen.target
             ady = a * y.delta()
-            for (b, q), coeff in ady.items():
+            for (b, q), coeff in list(ady.items()):
                 dstr.addDelta(gen, genType(dstr, x, b, q), None, coeff)
             # Differential of a
-            for da_gen, coeff in a.diff().items():
+            for da_gen, coeff in list(a.diff().items()):
                 dstr.addDelta(gen, genType(dstr, x, da_gen, y), None, coeff)
             # For each p such that (b1,b2)*x is in dp, add opp(b2)*(p->(b1*a)y)
             for (b1, b2, p), coeff1 in rev_delta[x]:
-                for b1a_gen, coeff2 in (b1*a).items():
+                for b1a_gen, coeff2 in list((b1*a).items()):
                     dstr.addDelta(gen, genType(dstr, p, b1a_gen, y),
                                   b2.opp(), coeff1*coeff2)
 
@@ -460,7 +463,7 @@ class SimpleDDStructure(DDStructure):
 
         # Get the differentials of type DD structure maps
         for gen in gens:
-            for term, coeff in mor_cx.diff(gen).items():
+            for term, coeff in list(mor_cx.diff(gen).items()):
                 cx_term = genType(cx, term.source, term.coeff, term.target)
                 cx.addDifferential(gen, cx_term, coeff)
         return cx
@@ -487,7 +490,7 @@ class SimpleDDStructure(DDStructure):
             arrows[gen] = dict()
         bialgebra = TensorDGAlgebra((self.algebra1, self.algebra2))
         for gen in self.generators:
-            for (AGen1, AGen2, MGen), coeff in self.delta_map[gen].items():
+            for (AGen1, AGen2, MGen), coeff in list(self.delta_map[gen].items()):
                 if MGen not in arrows[gen]:
                     arrows[gen][MGen] = E0
                 arrows[gen][MGen] += TensorGenerator(
@@ -503,8 +506,8 @@ class SimpleDDStructure(DDStructure):
         for x in arrows:
             self.generators.add(x)
             self.delta_map[x] = E0
-            for y, coeff in arrows[x].items():
-                for (a1, a2), ring_coeff in coeff.items():
+            for y, coeff in list(arrows[x].items()):
+                for (a1, a2), ring_coeff in list(coeff.items()):
                     target_gen = TensorGenerator((a1, a2, y), self.AAtensorM)
                     self.delta_map[x] += ring_coeff * target_gen
 
@@ -521,7 +524,7 @@ class SimpleDDStructure(DDStructure):
             gen_map[gen] = new_gen
             dstr.addGenerator(new_gen)
         for gen_from in self.generators:
-            for (a1, a2, gen_to), coeff in self.delta_map[gen_from].items():
+            for (a1, a2, gen_to), coeff in list(self.delta_map[gen_from].items()):
                 dstr.addDelta(gen_map[gen_from], gen_map[gen_to],
                               TensorGenerator((a1, a2), bialgebra), coeff)
         return dstr
@@ -591,14 +594,14 @@ class SimpleDDStructure(DDStructure):
             dual_str.addGenerator(new_x)
             gen_map[x] = new_x
         for x in self.generators:
-            for (a, b, y), coeff in x.delta().items():
+            for (a, b, y), coeff in list(x.delta().items()):
                 dual_str.addDelta(gen_map[y], gen_map[x], b.opp(), a.opp(),
                                   coeff)
         return dual_str
 
     def checkGrading(self):
         for x in self.generators:
-            for (a1, a2, y), coeff in x.delta().items():
+            for (a1, a2, y), coeff in list(x.delta().items()):
                 gr_x = self.grading[x]
                 gr_y = self.grading[y]
                 assert gr_x - 1 == gr_y * [a1.getGrading(), a2.getGrading()]
@@ -687,7 +690,7 @@ def DDStrFromDStr(dstr, genus1):
 
     cut_point = 4 * genus1
     for x in dstr.getGenerators():
-        for (a, y), coeff in x.delta().items():
+        for (a, y), coeff in list(x.delta().items()):
             if a.multiplicity[cut_point-1] == 0:
                 # The interval (cut_point-1, cut_point) is unoccupied
                 a1, a2 = unconnectSumStrandDiagram(a, genus1)

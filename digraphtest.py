@@ -82,8 +82,8 @@ class TypeAAGraphTest(unittest.TestCase):
             self.assertEqual(len(composed_dd), result)
             composed_dd.checkGrading()
             if DEFAULT_GRADING == SMALL_GRADING:
-                ref_gr = composed_dd.grading.values()[0]
-                for gen, gr in composed_dd.grading.items():
+                ref_gr = list(composed_dd.grading.values())[0]
+                for gen, gr in list(composed_dd.grading.items()):
                     self.assertEqual(gr, ref_gr)
 
     def testGrading(self):

@@ -162,21 +162,21 @@ class MorDAtoDAComplex(ChainComplex):
         c_d, cs_a = gen.coeff  # D-side output and list of A-side inputs
 
         # Differential of coefficient
-        for dc, ring_coeff in c.diff().items():
+        for dc, ring_coeff in list(c.diff().items()):
             coeff_d, coeffs_a = dc
             result += ring_coeff * MorDAtoDAGenerator(
                 self, coeff_d, coeffs_a, x, y)
 
         # Pre-compose with differential in source
-        for (x1, coeffs_a), target in self.source.da_action.items():
-            for (coeff_d, x2), ring_coeff in target.items():
+        for (x1, coeffs_a), target in list(self.source.da_action.items()):
+            for (coeff_d, x2), ring_coeff in list(target.items()):
                 if x == x2 and coeff_d * c_d != E0:
                     result += 1*MorDAtoDAGenerator(
                         self, (coeff_d * c_d).getElt(), coeffs_a + cs_a, x1, y)
 
         # Post-compose with differential in target
-        for (y1, coeffs_a), target in self.target.da_action.items():
-            for (coeff_d, y2), ring_coeff in target.items():
+        for (y1, coeffs_a), target in list(self.target.da_action.items()):
+            for (coeff_d, y2), ring_coeff in list(target.items()):
                 if y == y1 and c_d * coeff_d != E0:
                     result += 1*MorDAtoDAGenerator(
                         self, (c_d * coeff_d).getElt(), cs_a + coeffs_a, x, y2)
@@ -206,15 +206,15 @@ class MorDAtoDAComplex(ChainComplex):
                 gen_map[gen] += gen.filtration
             result.addGenerator(gen_map[gen])
 
-        for (x1, coeffs_a), target in self.source.da_action.items():
-            for (coeff_d, x2), ring_coeff in target.items():
+        for (x1, coeffs_a), target in list(self.source.da_action.items()):
+            for (coeff_d, x2), ring_coeff in list(target.items()):
                 result.addDelta(
                     gen_map[x1], gen_map[x2], coeff_d, coeffs_a, ring_coeff)
-        for (y1, coeffs_a), target in self.target.da_action.items():
-            for (coeff_d, y2), ring_coeff in target.items():
+        for (y1, coeffs_a), target in list(self.target.da_action.items()):
+            for (coeff_d, y2), ring_coeff in list(target.items()):
                 result.addDelta(
                     gen_map[y1], gen_map[y2], coeff_d, coeffs_a, ring_coeff)
-        for gen, ring_coeff in morphism.items():
+        for gen, ring_coeff in list(morphism.items()):
             # coeffs_a is a tuple of A-side inputs
             coeff_d, coeffs_a = gen.coeff
             result.addDelta(gen_map[gen.source], gen_map[gen.target],
@@ -241,15 +241,17 @@ class DAStructure(FreeModule):
         # Construct A tensor M. Add diff and the left action of A on this
         # tensor product.
         self.AtensorM = Tensor((algebra1, self))
-        def _mul_A_AtensorM((AGen, MGen), ACoeff):
+        def _mul_A_AtensorM(xxx_todo_changeme, ACoeff):
             """To be used as rmultiply() in AtensorM. Multiply ACoeff with
             AGen.
 
             """
+            (AGen, MGen) = xxx_todo_changeme
             return (ACoeff * AGen) * MGen
 
-        def _diff_AtensorM((AGen, MGen)):
+        def _diff_AtensorM(xxx_todo_changeme1):
             """To be used as diff() in AtensorM."""
+            (AGen, MGen) = xxx_todo_changeme1
             return (AGen.diff() * MGen) + (AGen * MGen.delta())
 
         self.AtensorM.rmultiply = _mul_A_AtensorM
@@ -320,7 +322,7 @@ class DAStructure(FreeModule):
 
             """
             cur_delta = self.delta(start_gen, cur_coeffs_a)
-            for (coeff_d, gen_to), ring_coeff in cur_delta.items():
+            for (coeff_d, gen_to), ring_coeff in list(cur_delta.items()):
                 dastr.addDelta(gen_map[start_gen], gen_map[gen_to], coeff_d,
                                cur_coeffs_a, ring_coeff)
             if self.deltaPrefix(start_gen, cur_coeffs_a):
@@ -334,12 +336,12 @@ class DAStructure(FreeModule):
         if hasattr(self, "hdiagram"):
             dastr.hdiagram = self.hdiagram
             dastr.hdiagram_gen_map = dict()
-            for dagen, hgen in self.hdiagram_gen_map.items():
+            for dagen, hgen in list(self.hdiagram_gen_map.items()):
                 dastr.hdiagram_gen_map[gen_map[dagen]] = hgen
         if hasattr(self, "gr_set"):
             dastr.gr_set = self.gr_set
             dastr.grading = dict()
-            for gen, gr in self.grading.items():
+            for gen, gr in list(self.grading.items()):
                 dastr.grading[gen_map[gen]] = gr
 
         return dastr
@@ -370,19 +372,19 @@ class DAStructure(FreeModule):
             """
             start_dagen, start_dgen = start_gen
             cur_delta = self.delta(start_dagen, cur_coeffs_a)
-            for (coeff_d, gen_to), ring_coeff in cur_delta.items():
+            for (coeff_d, gen_to), ring_coeff in list(cur_delta.items()):
                 dstr_result.addDelta(start_gen, DATensorDGenerator(
                     dstr_result, gen_to, cur_dgen), coeff_d, 1)
             if self.deltaPrefix(start_dagen, cur_coeffs_a):
                 for (coeff_out, dgen_to), ring_coeff in \
-                    dstr.delta(cur_dgen).items():
+                    list(dstr.delta(cur_dgen).items()):
                     search(start_gen, dgen_to, cur_coeffs_a + (coeff_out,))
 
         for x in dstr_result.getGenerators():
             dagen, dgen = x
             search(x, dgen, ())
             # Add arrows coming from idempotent output on the D-side
-            for (coeff_out, dgen_to), ring_coeff in dstr.delta(dgen).items():
+            for (coeff_out, dgen_to), ring_coeff in list(dstr.delta(dgen).items()):
                 if coeff_out.isIdempotent():
                     dstr_result.addDelta(
                         x, DATensorDGenerator(dstr_result, dagen, dgen_to),
@@ -439,12 +441,12 @@ class DAStructure(FreeModule):
             """
             start_dagen, start_dgen = start_gen
             cur_delta = self.delta(start_dagen, cur_coeffs_a)
-            for (coeff_d, gen_to), ring_coeff in cur_delta.items():
+            for (coeff_d, gen_to), ring_coeff in list(cur_delta.items()):
                 ddstr_result.addDelta(start_gen, DATensorDDGenerator(
                     ddstr_result, gen_to, cur_ddgen), coeff_d, cur_algd, 1)
             if self.deltaPrefix(start_dagen, cur_coeffs_a):
                 for (coeff_out1, coeff_out2, dgen_to), ring_coeff in \
-                    ddstr.delta(cur_ddgen).items():
+                    list(ddstr.delta(cur_ddgen).items()):
                     new_algd = cur_algd * coeff_out2
                     if new_algd != E0:
                         search(start_gen, dgen_to, new_algd.getElt(),
@@ -455,7 +457,7 @@ class DAStructure(FreeModule):
             search(x, ddgen, ddgen.idem2.toAlgElt(ddstr.algebra2), ())
             # Add arrows coming from idempotent output on the left DD-side
             for (coeff_out1, coeff_out2, dgen_to), ring_coeff in \
-                ddstr.delta(ddgen).items():
+                list(ddstr.delta(ddgen).items()):
                 if coeff_out1.isIdempotent():
                     ddstr_result.addDelta(
                         x, DATensorDDGenerator(ddstr_result, dagen, dgen_to),
@@ -611,7 +613,7 @@ class SimpleDAStructure(DAStructure):
         # Should be called only after all addDelta has completed
         if not hasattr(self, "strict_prefix"):
             self.strict_prefix = set()
-            for (gen_from, coeffs_a), target in self.da_action.items():
+            for (gen_from, coeffs_a), target in list(self.da_action.items()):
                 for i in range(len(coeffs_a)):
                     self.strict_prefix.add((gen_from, tuple(coeffs_a[0:i])))
         return (MGen, algGens) in self.strict_prefix
@@ -622,7 +624,7 @@ class SimpleDAStructure(DAStructure):
         # Should be called only after all addDelta has completed
         if not hasattr(self, "non_strict_prefix"):
             self.non_strict_prefix = set()
-            for (gen_from, coeffs_a), target in self.da_action.items():
+            for (gen_from, coeffs_a), target in list(self.da_action.items()):
                 for i in range(len(coeffs_a)+1):
                     self.non_strict_prefix.add((gen_from, tuple(coeffs_a[0:i])))
             #Include actions by idempotents.
@@ -644,8 +646,8 @@ class SimpleDAStructure(DAStructure):
             ddgen = SimpleDDGenerator(ddstr, gen.idem1, gen.idem2, gen.name)
             dagen_to_ddgen_map[gen] = ddgen
             ddstr.addGenerator(ddgen)
-        for (gen_from, coeffs_a), target in self.da_action.items():
-            for (coeff_d, gen_to), ring_coeff in target.items():
+        for (gen_from, coeffs_a), target in list(self.da_action.items()):
+            for (coeff_d, gen_to), ring_coeff in list(target.items()):
                 idem = None
                 if len(coeffs_a) == 0:
                     idem = gen_from.idem2
@@ -662,14 +664,14 @@ class SimpleDAStructure(DAStructure):
 
     def __str__(self):
         result = "Type DA Structure.\n"
-        for (gen_from, coeffs_a), target in self.da_action.items():
+        for (gen_from, coeffs_a), target in list(self.da_action.items()):
             result += "m(%s; %s) = %s\n" % (gen_from, coeffs_a, target)
         return result
 
     def toStrWithMultA(self, mult_a):
         """Print all arrows with the given multiplicities on the D side."""
         result = "Type DA Structure.\n"
-        for (gen_from, coeffs_a), target in self.da_action.items():
+        for (gen_from, coeffs_a), target in list(self.da_action.items()):
             total_mult = sumColumns([coeff.multiplicity for coeff in coeffs_a],
                                     len(mult_a))
             if mult_a == total_mult:
@@ -692,20 +694,20 @@ class SimpleDAStructure(DAStructure):
             dastr.addGenerator(translate_dict[gen])
 
         mult_len = self.algebra1.pmc.n - 1
-        for (gen_from, coeffs_a), target in self.da_action.items():
+        for (gen_from, coeffs_a), target in list(self.da_action.items()):
             total_mult = sumColumns([coeff.multiplicity for coeff in coeffs_a],
                                     mult_len)
             if all([total_mult[i] <= 0
-                    for i in range(0, start) + range(end, mult_len)]):
-                for (coeff_d, gen_to), ring_coeff in target.items():
+                    for i in list(range(0, start)) + list(range(end, mult_len))]):
+                for (coeff_d, gen_to), ring_coeff in list(target.items()):
                     dastr.addDelta(translate_dict[gen_from],
                                    translate_dict[gen_to],
                                    coeff_d, coeffs_a, ring_coeff)
         return dastr
 
     def checkGrading(self):
-        for (x, coeffs_a), target in self.da_action.items():
-            for (coeff_d, y), ring_coeff in target.items():
+        for (x, coeffs_a), target in list(self.da_action.items()):
+            for (coeff_d, y), ring_coeff in list(target.items()):
                 gr_x1, gr_x2 = self.grading[x].data
                 gr_y1, gr_y2 = self.grading[y].data
                 for coeff_a in coeffs_a:

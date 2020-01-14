@@ -151,7 +151,7 @@ class PMCSplittingTest(unittest.TestCase):
                          (LocalPMC(6, [(1, 4)], [0, 2, 3, 5]), {4:1, 6:4}))
 
     def testComplementIntervals(self):
-        self.assertEquals(
+        self.assertEqual(
             PMCSplitting.complementIntervals(splitPMC(2), [(0, 2), (6, 6)]),
             [(3, 5), (7, 7)])
 

@@ -6,13 +6,13 @@ from linalg import RowSystem
 from utility import flatten, grTypeStr, memorize, oppSide, sideStr, tolist
 from utility import ACTION_LEFT, ACTION_RIGHT, BIG_GRADING, SMALL_GRADING
 
-class Group:
+class Group(object):
     """Represents a general group."""
     def multiply(self, elt1, elt2):
         """Returns the product of gen1 and gen2."""
         raise NotImplementedError("Multiply not implemented.")
 
-class GroupElement:
+class GroupElement(object):
     """Represents an element of a group."""
     def __init__(self, parent):
         """Specifies which group this element is in."""
@@ -429,7 +429,7 @@ def averageRefinement(pmc, idem_size = None):
 # Default function for getting refinement data
 DEFAULT_REFINEMENT = averageRefinement
 
-class GradingSet:
+class GradingSet(object):
     """Represents a general grading set. Can specify an arbitrary number of
     group actions (although only up to two is used).
 
@@ -475,7 +475,7 @@ class GradingSet:
         """
         raise NotImplementedError("Set Ropp not implemented.")
 
-class GradingSetElement:
+class GradingSetElement(object):
     """Represents an element of a grading set."""
     def __init__(self, parent):
         """Specify which grading set this element is in."""

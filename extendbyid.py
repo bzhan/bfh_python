@@ -144,15 +144,15 @@ class LocalMorDAtoDAComplex(MorDAtoDAComplex):
                 gen_map[gen] += gen.filtration
             result.addGenerator(gen_map[gen])
 
-        for (x1, coeffs_a), target in self.source.da_action.items():
-            for (coeff_d, x2), ring_coeff in target.items():
+        for (x1, coeffs_a), target in list(self.source.da_action.items()):
+            for (coeff_d, x2), ring_coeff in list(target.items()):
                 result.addDelta(
                     gen_map[x1], gen_map[x2], coeff_d, coeffs_a, ring_coeff)
-        for (y1, coeffs_a), target in self.target.da_action.items():
-            for (coeff_d, y2), ring_coeff in target.items():
+        for (y1, coeffs_a), target in list(self.target.da_action.items()):
+            for (coeff_d, y2), ring_coeff in list(target.items()):
                 result.addDelta(
                     gen_map[y1], gen_map[y2], coeff_d, coeffs_a, ring_coeff)
-        for gen, ring_coeff in morphism.items():
+        for gen, ring_coeff in list(morphism.items()):
             # coeffs_a is a tuple of A-side inputs
             coeff_d, coeffs_a = gen.coeff
             result.addDelta(gen_map[gen.source], gen_map[gen.target],
@@ -161,9 +161,9 @@ class LocalMorDAtoDAComplex(MorDAtoDAComplex):
         # Set up u_map
         num_single_idems = len(self.source.single_idems1)
         for idem_id in range(num_single_idems):
-            for x, u_x in self.source.u_maps[idem_id].items():
+            for x, u_x in list(self.source.u_maps[idem_id].items()):
                 result.add_u_map(idem_id, gen_map[x], gen_map[u_x])
-            for y, u_y in self.target.u_maps[idem_id].items():
+            for y, u_y in list(self.target.u_maps[idem_id].items()):
                 result.add_u_map(idem_id, gen_map[y], gen_map[u_y])
 
         return result
@@ -500,7 +500,7 @@ class ExtendedDAStructure(DAStructure):
                 return
 
             # If has_delta is True, add to delta
-            for (local_d, local_y), ring_coeff in local_delta.items():
+            for (local_d, local_y), ring_coeff in list(local_delta.items()):
                 alg_d, y = self.joinOutput(local_d, local_y, prod_d)
                 if alg_d is not None:
                     dstr_result.addDelta(start_gen, DATensorDGenerator(
@@ -508,7 +508,7 @@ class ExtendedDAStructure(DAStructure):
 
             if not has_delta_prefix:
                 return
-            for (new_alg, dgen_to), ring_coeff in dstr.delta(cur_dgen).items():
+            for (new_alg, dgen_to), ring_coeff in list(dstr.delta(cur_dgen).items()):
                 new_assign, new_local, last_prod_d = self.extendRestrictions(
                     last_assign, algs_local, prod_d, new_alg)
                 if new_assign is not None:
@@ -523,7 +523,7 @@ class ExtendedDAStructure(DAStructure):
             prod_d = prod_d.removeSingleHor()  # always goes to LOCAL
             search(x, dgen, [], [self.DOUBLE] * self.num_singles, [], prod_d)
             # Add arrows coming from idempotent output on the D-side
-            for (coeff_out, dgen_to), ring_coeff in dstr.delta(dgen).items():
+            for (coeff_out, dgen_to), ring_coeff in list(dstr.delta(dgen).items()):
                 if coeff_out.isIdempotent():
                     dstr_result.addDelta(
                         x, DATensorDGenerator(dstr_result, dagen, dgen_to),
@@ -577,7 +577,7 @@ class ExtendedDAStructure(DAStructure):
             return E0
 
         result = E0
-        for (local_d, local_y), ring_coeff in local_delta.items():
+        for (local_d, local_y), ring_coeff in list(local_delta.items()):
             alg_d, y = self.joinOutput(local_d, local_y, prod_d)
             result += 1 * TensorGenerator((alg_d, y), self.AtensorM)
         return result

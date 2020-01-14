@@ -3,7 +3,7 @@
 from fractions import Fraction
 from utility import fracToInt, memorize
 
-class RowSystem:
+class RowSystem(object):
     """Manage a list of row vectors of integers. Find both integer and rational
     linear combinations of these vectors that sum to zero or another row
     vector.
@@ -100,7 +100,7 @@ class RowSystem:
             # Reduce the remaining rows
             all_gcd = True
             for row in range(cur_row+1, self.num_row):
-                factor = -reduced_vecs[row][cur_col] / min_val
+                factor = -reduced_vecs[row][cur_col] // min_val
                 add_multiple(cur_row, row, factor)
                 if reduced_vecs[row][cur_col] != 0:
                     all_gcd = False
@@ -149,7 +149,7 @@ class RowSystem:
             if use_rational:
                 factor = Fraction(vec[col]) / pivot_val
             else:
-                factor = vec[col] / pivot_val # integer division
+                factor = vec[col] // pivot_val # integer division
             for i in range(self.num_col):
                 vec[i] -= self.reduced_vecs[cur_row][i] * factor
             for i in range(self.num_row):
@@ -201,7 +201,7 @@ class RowSystem:
         else:
             return None
 
-class F2RowSystem:
+class F2RowSystem(object):
     """Linear algebra over field F2. Currently using just 0 and 1's (so the F2
     from utility.py is not involved.
 

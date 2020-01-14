@@ -8,7 +8,7 @@ from utility import memorize
 # Two sides for the larger PMC:
 LEFT, RIGHT = 0, 1
 
-class Cobordism:
+class Cobordism(object):
     """Represents a cobordism."""
     def __init__(self, genus, c_pair, side):
         """Specifies the genus of the larger (linear PMC), the c-pair at which
@@ -60,7 +60,7 @@ class Cobordism:
         # both match the (u',d') pair on the left. In the degenerate case, the
         # p-pair also does not match anything.
         self.pair_to_s = dict()
-        for i in range(self.n/2):
+        for i in range(self.n//2):
             for p in self.large_pmc.pairs[i]:
                 if p in self.to_s:
                     self.pair_to_s[i] = self.small_pmc.pairid[self.to_s[p]]

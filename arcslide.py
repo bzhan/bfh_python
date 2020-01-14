@@ -12,7 +12,7 @@ from utility import ACTION_LEFT
 # Two types of arcslides:
 UNDER_SLIDE, OVER_SLIDE = 0, 1
 
-class Arcslide:
+class Arcslide(object):
     """Represents an arcslide."""
     def __init__(self, start_pmc, b1, c1):
         """Specifies the starting pmc, the sliding point (b1), and the point it
@@ -46,7 +46,7 @@ class Arcslide:
         self.end_pmc = PMC([(self.to_r[p], self.to_r[q])
                             for p, q in self.start_pmc.pairs])
         self.pair_to_r = dict()
-        for i in range(self.n/2):
+        for i in range(self.n//2):
             p, q = self.start_pmc.pairs[i]
             self.pair_to_r[i] = self.end_pmc.pairid[self.to_r[p]]
 
@@ -136,10 +136,10 @@ class Arcslide:
 
         # First step, find grading of two extreme generators, using one of
         # which as the base generator.
-        base_idem = [Idempotent(ex_start_pmc, range(2*genus)),
-                     Idempotent(ex_end_pmc.opp(), range(2*genus))]
-        base_idem2 = [Idempotent(ex_start_pmc, range(2*genus, 4*genus)),
-                      Idempotent(ex_end_pmc.opp(), range(2*genus, 4*genus))]
+        base_idem = [Idempotent(ex_start_pmc, list(range(2*genus))),
+                     Idempotent(ex_end_pmc.opp(), list(range(2*genus)))]
+        base_idem2 = [Idempotent(ex_start_pmc, list(range(2*genus, 4*genus))),
+                      Idempotent(ex_end_pmc.opp(), list(range(2*genus, 4*genus)))]
         if abs_gr_info == 0:
             base_gen = ex_hdiagram.getGeneratorByIdem(base_idem, True)
         else:
@@ -186,7 +186,7 @@ class Arcslide:
 
         # Now obtain the grading of generators
         ddstr.grading = dict()
-        for hgen, ex_gr in ex_grs.items():
+        for hgen, ex_gr in list(ex_grs.items()):
             ex_idem1, ex_idem2 = hgen.getDIdem()
             ex_gr1, ex_gr2 = ex_gr.data
             if expand_after:

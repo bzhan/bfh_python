@@ -9,11 +9,11 @@ def memorize(function):
 
     """
     memo = {}
-    class NoneSymbol:
+    class NoneSymbol(object):
         pass
 
     def wrapper(*args, **kwargs):
-        key = args + tuple((k, v) for k, v in kwargs.items())
+        key = args + tuple((k, v) for k, v in list(kwargs.items()))
         # Use memorization. Don't keep NotImplemented values.
         # Will throw TypeError if key is not hashable.
         val = memo.get(key, NoneSymbol)
@@ -44,9 +44,9 @@ def memorizeHash(function):
 def trace(function):
     """Decorator: print input and ouput for every invocation of the function."""
     def wrapper(*args):
-        print "\nInputs:", args
+        print("\nInputs:", args)
         rv = function(*args)
-        print "Output:", rv
+        print("Output:", rv)
         return rv
     return wrapper
 
@@ -114,8 +114,8 @@ def _dictAddTo(dict1, dict2):
     for curdict in dict2:
         assert type(dict1) == type(curdict), "Incompatible types: %s, %s" % \
             (str(type(dict1)), str(type(curdict)))
-        for k, v in curdict.items():
-            if dict1.has_key(k):
+        for k, v in list(curdict.items()):
+            if k in dict1:
                 dict1[k] += v
                 if dict1[k] == 0:
                     del dict1[k]
@@ -131,7 +131,7 @@ def _dictMult(dict1, scalar):
     if not isinstance(scalar, Number):
         return NotImplemented
 
-    result = type(dict1)((k, scalar * v) for k, v in dict1.items() if
+    result = type(dict1)((k, scalar * v) for k, v in list(dict1.items()) if
                              scalar * v != 0)
     return result
 
@@ -183,13 +183,13 @@ class SummableDict(dict):
         corresponding value.
 
         """
-        return type(self)([(key_map[k], v) for k, v in self.items()])
+        return type(self)([(key_map[k], v) for k, v in list(self.items())])
 
     def getElt(self):
         """Returns an arbitrary key from this dictionary. Must be non-empty."""
-        return iter(self).next()
+        return next(iter(self))
 
-class Ring:
+class Ring(object):
     def convert(self, data):
         """Try to convert data to an element of this ring."""
         raise NotImplementedError("convert function not specified for ring.")
@@ -289,7 +289,7 @@ class IntegerElement(RingElement, int):
     def __init__(self, parent, val):
         self.parent = parent
 
-class NamedObject:
+class NamedObject(object):
     """Provides functionality for an object to be described by name. If this is
     listed as a parent class, an object will use name in equality comparisons,
     hash functions, and string outputs.
@@ -304,6 +304,18 @@ class NamedObject:
     def __ne__(self, other):
         return not (self == other)
 
+    def __lt__(self, other):
+        return self.name < other.name
+
+    def __le__(self,other):
+        return self.name <= other.name
+
+    def __gt__(self, other):
+        return self.name > other.name
+
+    def __ge__(self, other):
+        return self.name >= other.name
+    
     @memorizeHash
     def __hash__(self):
         return hash(self.name)
@@ -314,7 +326,7 @@ class NamedObject:
     def __repr__(self):
         return str(self.name)
 
-class MorObject():
+class MorObject(object):
     """If this is list as a parent class, an object be treated as a generator
     of some morphism complex. It will have source, coeff, and target fields.
     These will be used for equality comparisons, hash functions, and string

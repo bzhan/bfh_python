@@ -19,13 +19,13 @@ class AbsZ2GradingTest(unittest.TestCase):
             # Test differential and multiplication
             for a in alg.getGenerators():
                 for term in a.diff():
-                    a_gr, da_gr = [abs_gr.getAbsGrading(gen) for gen in a, term]
+                    a_gr, da_gr = [abs_gr.getAbsGrading(gen) for gen in (a, term)]
                     assert (a_gr - 1) % 2 == da_gr
             for a in alg.getGenerators():
                 for b in alg.getGenerators():
                     if a * b != 0:
                         a_gr, b_gr, ab_gr = [abs_gr.getAbsGrading(gen)
-                                             for gen in a, b, (a*b).getElt()]
+                                             for gen in (a, b, (a*b).getElt())]
                         assert (a_gr + b_gr) % 2 == ab_gr
 
         for pmc in [splitPMC(1), splitPMC(2), linearPMC(2)]:
@@ -59,10 +59,10 @@ class PreStrandAlgebraTest(unittest.TestCase):
         algebra = PreStrandAlgebra(F2, splitPMC(1), 2)
         for sd, sd_diff in [([(1, 3), (2, 2)], [(1, 2), (2, 3)]),
                             ([(0, 3), (1, 2)], [(0, 2), (1, 3)])]:
-            self.assertEquals(PreStrandDiagram(algebra, sd).diff(),
+            self.assertEqual(PreStrandDiagram(algebra, sd).diff(),
                               PreStrandDiagram(algebra, sd_diff).elt())
         for sd in [[(0, 2), (1, 3)], [(1, 2), (2, 3)]]:
-            self.assertEquals(PreStrandDiagram(algebra, sd).diff(), E0)
+            self.assertEqual(PreStrandDiagram(algebra, sd).diff(), E0)
 
     def testSignedDiff(self):
         for pmc, idem_size in [(splitPMC(2), 3),
@@ -81,11 +81,11 @@ class PreStrandAlgebraTest(unittest.TestCase):
                                 [(0, 3), (1, 2)]),
                                ([(1, 3), (0, 0)], [(0, 2), (3, 3)],
                                 [(0, 2), (1, 3)])]:
-            self.assertEquals(PreStrandDiagram(algebra, sd1) *
+            self.assertEqual(PreStrandDiagram(algebra, sd1) *
                               PreStrandDiagram(algebra, sd2),
                               PreStrandDiagram(algebra, prod).elt())
         for sd1, sd2 in [([(0, 2), (1, 1)], [(1, 3), (2, 2)])]:
-            self.assertEquals(PreStrandDiagram(algebra, sd1) *
+            self.assertEqual(PreStrandDiagram(algebra, sd1) *
                               PreStrandDiagram(algebra, sd2), E0)
 
     def testSignedMultiply(self):
@@ -97,20 +97,20 @@ class PreStrandAlgebraTest(unittest.TestCase):
                                (splitPMC(2), 4),
                                (splitPMC(3), 2)]:
             algebra = PreStrandAlgebra(ZZ, pmc, idem_size)
-            print algebra
+            print(algebra)
             for gen1 in algebra.getGenerators():
                 for gen2 in algebra.getGeneratorsForPtIdem(
                     l_pt_idem = gen1.right_pt_idem):
                     if gen1 * gen2 != E0:
                         # Test d(ab) = (da)*b + (-1)^gr(a)*a*(db)
-                        self.assertEquals(
+                        self.assertEqual(
                             (gen1 * gen2).diff(), gen1.diff() * gen2 + \
                                 algebra.grSign(gen1) * gen1 * gen2.diff())
                     for gen3 in algebra.getGeneratorsForPtIdem(
                         l_pt_idem = gen2.right_pt_idem):
                         if gen2 * gen3 != E0:
                             # Tests associativity of multiplication
-                            self.assertEquals(
+                            self.assertEqual(
                                 (gen1 * gen2) * gen3, gen1 * (gen2 * gen3))
 
 class SignLinAlgTest(unittest.TestCase):

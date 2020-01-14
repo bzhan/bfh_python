@@ -24,7 +24,7 @@ class MinusAlgTest(unittest.TestCase):
         idems = {"x" : ([0], [0]),
                  "y" : ([1], [1])}
         gens = {}
-        for name, (idem1, idem2) in idems.items():
+        for name, (idem1, idem2) in list(idems.items()):
             gens[name] = SimpleDDGenerator(
                 ddstr, Idempotent(pmc, idem1), Idempotent(pmc, idem2), name)
             ddstr.addGenerator(gens[name])
@@ -37,20 +37,20 @@ class MinusAlgTest(unittest.TestCase):
                        minusSD(pmc, [(2, 3)]), minusSD(pmc, [(0, 1)]), 1)
         ddstr.addDelta(gens["y"], gens["x"],
                        minusSD(pmc, [(3, 0)]), minusSD(pmc, [(3, 0)]), 1)
-        print ddstr
+        print(ddstr)
         self.assertTrue(ddstr.testDelta())
 
         dstr = ddstr.toDStructure()
-        print dstr
+        print(dstr)
         self.assertTrue(dstr.testDelta())
         hochchild = dstr.morToD(dstr)
-        print hochchild
+        print(hochchild)
         hochchild.simplify(find_homology_basis = True)
-        print len(hochchild)
+        print(len(hochchild))
         meaning_len = [len(gen.prev_meaning)
                        for gen in hochchild.getGenerators()]
         for gen in hochchild.getGenerators():
-            print gen.prev_meaning
+            print(gen.prev_meaning)
 
     def testLargeChainComplex(self):
         getHalfIdComplex()

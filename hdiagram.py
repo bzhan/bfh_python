@@ -13,14 +13,14 @@ from utility import ACTION_LEFT, ACTION_RIGHT, BIG_GRADING, DEFAULT_GRADING, \
     NEG, POS
 
 """Constants for each type of segment."""
-ALPHA, BETA, BORDER = range(3)
+ALPHA, BETA, BORDER = list(range(3))
 
 def opp(orientation):
     """Return NEG if argument is POS, and POS otherwise."""
     if orientation == POS: return NEG
     else: return POS
 
-class _Point:
+class _Point(object):
     """Represents a point."""
     def __init__(self, name):
         self.name = name
@@ -31,7 +31,7 @@ class _Point:
     def __repr__(self):
         return "pt(%s)" % str(self.name)
 
-class _Segment:
+class _Segment(object):
     """Represents a segment."""
     def __init__(self, name, start, end):
         """Specify the name, start point, and end point of this segment."""
@@ -58,7 +58,7 @@ class _Segment:
         """Returns the zero-chain (end - start)."""
         return _ZeroChain({self.end : 1}) + _ZeroChain({self.start : -1})
 
-class _OrientedSegment:
+class _OrientedSegment(object):
     """Represents an oriented segment as a segment together with an
     orientation.
 
@@ -174,7 +174,7 @@ class _Path(list):
         else:
             return _Path(self[end:start]).opp()
 
-class _Cell:
+class _Cell(object):
     """Represents an oriented cell."""
     def __init__(self, name, boundary):
         """Specify the name of the cell, and the boundary as a Path (or a list
@@ -215,7 +215,7 @@ class _Domain(SummableDict):
     def diff(self):
         """Return the boundary of this domain as a one-chain."""
         return _OneChain().accumulate([coeff * cell.bdOneChain()
-                                       for cell, coeff in self.items()])
+                                       for cell, coeff in list(self.items())])
 
 class _OneChain(SummableDict):
     """A signed sum of oriented segments, represented as a dictionary from
@@ -225,7 +225,7 @@ class _OneChain(SummableDict):
     def diff(self):
         """Return the boundary of this one-chain as a zero-chain."""
         return _ZeroChain().accumulate([coeff * seg.bdZeroChain()
-                                        for seg, coeff in self.items()])
+                                        for seg, coeff in list(self.items())])
 
 class _ZeroChain(SummableDict):
     """A signed sum of points, represented as a dictionary from Point to
@@ -234,7 +234,7 @@ class _ZeroChain(SummableDict):
     """
     pass
 
-class HFGenerator:
+class HFGenerator(object):
     """Represents a generator of the Heegaard Floer chain complex for a certain
     Heegaard diagram.
 
@@ -281,7 +281,7 @@ class HFGenerator:
         return _ZeroChain().accumulate([_ZeroChain({pt : 1})
                                         for pt in self.points])
 
-class HeegaardDiagram:
+class HeegaardDiagram(object):
     """Represents a possibly bordered Heegaard Diagram."""
     def __init__(self, name, points, segments, cells, alpha, beta, border,
                  basept):
@@ -316,11 +316,11 @@ class HeegaardDiagram:
         assert len(self.alpha_arcs) % 2 == 0 and len(self.beta_arcs) % 2 == 0
 
         # Compute genus = number of cycles + (number of arcs / 2)
-        self.genus = len(self.alpha_cycles) + (len(self.alpha_arcs) / 2)
-        assert self.genus == len(self.beta_cycles) + (len(self.beta_arcs) / 2)
+        self.genus = len(self.alpha_cycles) + (len(self.alpha_arcs) // 2)
+        assert self.genus == len(self.beta_cycles) + (len(self.beta_arcs) // 2)
         # Compute pmc_genus = length of border / 4
         assert all([len(path) % 4 == 0 for path in self.border])
-        self.pmc_genus = [len(path) / 4 for path in self.border]
+        self.pmc_genus = [len(path) // 4 for path in self.border]
 
         # For each point, compute its position in the alpha, beta, or border
         # paths. Represent them as tuples in the alpha_pos, beta_pos, and
@@ -372,7 +372,7 @@ class HeegaardDiagram:
             pmc_matchings[start_border_id].append(idem_pair)
             path.idem_info = (start_border_id, idem_pair)
 
-        assert all([self.pmc_genus[i] == len(pmc_matchings[i]) / 2
+        assert all([self.pmc_genus[i] == len(pmc_matchings[i]) // 2
                     for i in range(len(pmc_matchings))])
         self.pmc_list = [PMC(matching) for matching in pmc_matchings]
 
@@ -479,7 +479,7 @@ class HeegaardDiagram:
         vec_rows = []
         for row in rows:
             cur_vec = [0] * self.num_interior_seg
-            for seg, coeff in row.items():
+            for seg, coeff in list(row.items()):
                 if seg.type != BORDER:
                     cur_vec[self.seg_to_id[seg]] += coeff
             vec_rows.append(cur_vec)
@@ -507,13 +507,13 @@ class HeegaardDiagram:
 
         """
         return _OneChain().accumulate([_OneChain({seg : coeff})
-                                       for seg, coeff in one_chain.items()
+                                       for seg, coeff in list(one_chain.items())
                                        if seg.type == seg_type])
 
     def restrictZeroChain(self, zero_chain):
         """Restrict the zero chain to include only points in the interior."""
         return _ZeroChain().accumulate([_ZeroChain({pt : coeff})
-                                        for pt, coeff in zero_chain.items()
+                                        for pt, coeff in list(zero_chain.items())
                                         if pt.border_info is None])
 
     def getHFGenerators(self, idem_size = None):
@@ -634,7 +634,7 @@ class HeegaardDiagram:
 
         # Now translate bdChain to vectors in the row system.
         bd_vec = [0] * self.num_interior_seg
-        for seg, coeff in bdChain.items():
+        for seg, coeff in list(bdChain.items()):
             assert seg.type != BORDER
             bd_vec[self.seg_to_id[seg]] += coeff
         vec_domain = self.row_sys.getComb(bd_vec)
@@ -657,7 +657,7 @@ class HeegaardDiagram:
         # a right angle (add 1/4 to n_x and n_y).
         maslov = Fraction(0)
         xpts, ypts = x.points, y.points
-        for cell, coeff in domain.items():
+        for cell, coeff in list(domain.items()):
             cell_maslov = 1 - len(cell.boundary) # correction to e(B)
             for boundary in cell.boundary:
                 cell_maslov += (4-len(boundary)) / Fraction(4) # e(B)
@@ -685,7 +685,7 @@ class HeegaardDiagram:
         for pmc in pmcs:
             multiplicity.append([0] * (pmc.n-1))
         bd_border = self.restrictOneChain(domain.diff(), BORDER)
-        for seg, coeff in bd_border.items():
+        for seg, coeff in list(bd_border.items()):
             assert seg.type == BORDER
             border_id, oseg_id, orientation = seg.info
             # Cannot be the edge with the basepoint
@@ -820,7 +820,7 @@ class HeegaardDiagram:
             dd_gr_set.gr_group1, ACTION_LEFT,
             dd_gr_set.gr_group2.opp(), ACTION_RIGHT, lr_domains)
         result = dict()
-        for x, gr_x in dd_result.items():
+        for x, gr_x in list(dd_result.items()):
             gr_x1, gr_x2 = gr_x.data
             gr_x_lr = SimpleDbGradingSetElement(gr_set, (gr_x1, gr_x2.Ropp()))
             result[x] = gr_x_lr
@@ -957,11 +957,11 @@ def diagramFromCycleInfo(name, num_interior_point = 0, length_border = [],
     for cur_border in border_points:
         for pt in cur_border:
             segoutborder = None # Oriented segment pointing out of border
-            if alphaout.has_key(pt):
+            if pt in alphaout:
                 segoutborder = alphaout[pt].oseg()
-            elif alphain.has_key(pt):
+            elif pt in alphain:
                 segoutborder = alphain[pt].orseg()
-            elif betaout.has_key(pt):
+            elif pt in betaout:
                 segoutborder = betaout[pt].oseg()
             else: # betain.has_key(pt)
                 segoutborder = betain[pt].orseg()

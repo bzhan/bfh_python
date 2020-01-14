@@ -44,8 +44,8 @@ class SimpleCobordismDATest(unittest.TestCase):
             ddstr = dastr.tensorDD(identityDD(c_da.end_pmc))
             ddstr.simplify()
             ddstr.reindex()
-            self.assertEquals(len(ddstr.getGenerators()), 2)
-            self.assertEquals(
+            self.assertEqual(len(ddstr.getGenerators()), 2)
+            self.assertEqual(
                 sorted(len(gen.delta()) for gen in ddstr.getGenerators()),
                 [2, 6])
 

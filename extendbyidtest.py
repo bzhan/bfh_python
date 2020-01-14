@@ -24,7 +24,7 @@ class ExtendedDAStructureTest(unittest.TestCase):
                  "x4" : ([1], [1]),
                  "x5" : ([0, 1], [0, 1])}
         gens = {}
-        for name, (l_idem, r_idem) in idems.items():
+        for name, (l_idem, r_idem) in list(idems.items()):
             gens[name] = SimpleDAGenerator(
                 local_da, LocalIdempotent(local_pmc, l_idem),
                 LocalIdempotent(local_pmc, r_idem), name)
@@ -58,15 +58,15 @@ class ExtendedDAStructureTest(unittest.TestCase):
                           "y7" : ([0, 2], [1, 2]),
                           "y8" : ([0, 3], [1, 3])}
         self.extended_gens = {}
-        for name, (l_idem, r_idem) in extended_idems.items():
+        for name, (l_idem, r_idem) in list(extended_idems.items()):
             for gen in mod_gens:
                 if gen.idem1 == Idempotent(self.pmc, l_idem) and \
                    gen.idem2 == Idempotent(self.pmc, r_idem):
                     self.extended_gens[name] = gen
 
     def testGetGenerators(self):
-        self.assertEquals(len(self.extended_da.getGenerators()), 8)
-        self.assertEquals(len(self.extended_gens), 8)
+        self.assertEqual(len(self.extended_da.getGenerators()), 8)
+        self.assertEqual(len(self.extended_gens), 8)
         
     def testDelta(self):
         for x, algs_a, alg_d, y in [
@@ -78,7 +78,7 @@ class ExtendedDAStructureTest(unittest.TestCase):
                 ("y1", [[1, (2, 4)]], [1, (2, 4)], "y4"),
                 ("y4", [[(1, 2), (4, 5)], [(0, 1), (5, 6)]],
                  [(1, 2), (4, 6)], "y7")]:
-            self.assertEquals(self.extended_da.delta(
+            self.assertEqual(self.extended_da.delta(
                 self.extended_gens[x], [self.pmc.sd(a) for a in algs_a]),
                               self.pmc.sd(alg_d) * self.extended_gens[y])
 
@@ -116,7 +116,7 @@ class AntiBraidTest(unittest.TestCase):
                  "x3" : ([0, 2], [1, 2]),
                  "x4" : ([0, 1], [1, 2])}
         gens = {}
-        for name, (l_idem, r_idem) in idems.items():
+        for name, (l_idem, r_idem) in list(idems.items()):
             gens[name] = SimpleDAGenerator(
                 local_da, LocalIdempotent(local_pmc, l_idem),
                 LocalIdempotent(local_pmc, r_idem), name)
@@ -143,21 +143,21 @@ class AntiBraidTest(unittest.TestCase):
                           "y3" : ([1, 2], [0, 2]),
                           "y4" : ([0, 1], [0, 2])}
         self.extended_gens = {}
-        for name, (l_idem, r_idem) in extended_idems.items():
+        for name, (l_idem, r_idem) in list(extended_idems.items()):
             for gen in mod_gens:
                 if gen.idem1 == Idempotent(self.pmc, l_idem) and \
                    gen.idem2 == Idempotent(self.pmc, r_idem):
                     self.extended_gens[name] = gen
 
     def testGetGenerators(self):
-        self.assertEquals(len(self.extended_da.getGenerators()), 4)
-        self.assertEquals(len(self.extended_gens), 4)
+        self.assertEqual(len(self.extended_da.getGenerators()), 4)
+        self.assertEqual(len(self.extended_gens), 4)
 
     def testDelta(self):
         for x, algs_a, alg_d, y in [
             ("y4", [], [1, (2, 3)], "y3"),
             ("y1", [[5, (2, 3)]], [1, 5], "y2")]:
-            self.assertEquals(self.extended_da.delta(
+            self.assertEqual(self.extended_da.delta(
                     self.extended_gens[x], [self.pmc.sd(a) for a in algs_a]),
                               self.pmc.sd(alg_d) * self.extended_gens[y])
 

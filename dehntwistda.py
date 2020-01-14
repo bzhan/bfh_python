@@ -115,7 +115,7 @@ class AntiBraidDA(ExtendedDAStructure):
             local_da.addGenerator(SimpleDAGenerator(
                 local_da, LocalIdempotent(self.local_pmc, l_idem),
                 LocalIdempotent(self.local_pmc, r_idem), "0_%d" % i))
-        all_idems = subset(range(self.local_pmc.num_pair))  # class 1 and 2
+        all_idems = subset(list(range(self.local_pmc.num_pair)))  # class 1 and 2
         for i in range(len(all_idems)):
             idem = LocalIdempotent(self.local_pmc, all_idems[i])
             if local_c_pair in idem:
@@ -145,7 +145,7 @@ class AntiBraidDA(ExtendedDAStructure):
         local_da.auto_u_map()
 
         # Add arrows according to arrow_pattern.
-        for key in arrow_patterns.keys():
+        for key in list(arrow_patterns.keys()):
             start_class, end_class, coeffs_a = key
             if len(coeffs_a) == 1 and coeffs_a[0].isIdempotent():
                 continue
@@ -158,7 +158,7 @@ class AntiBraidDA(ExtendedDAStructure):
                         local_da.addDelta(x, y, coeff_d, coeffs_a, 1)
                         used = True
                 if not used:
-                    print "Warning: unused arrow: %s %s" % (coeffs_a, coeff_d)
+                    print("Warning: unused arrow: %s %s" % (coeffs_a, coeff_d))
         return local_da
 
     def _get_patterns_middle(self):
@@ -213,7 +213,7 @@ class AntiBraidDA(ExtendedDAStructure):
                                            for pattern in arrow_pattern[2:]]))
         return patterns_raw
 
-class DehnSurgeryDA:
+class DehnSurgeryDA(object):
     """Responsible for computing the type DA morphism of a Dehn surgery, between
     the identity and anti-braid type DA bimodules.
 
@@ -315,7 +315,7 @@ class DehnSurgeryDA:
             arrow_patterns[key].append(self.local_pmc.sd(pattern[-1]))
 
         # Add arrows according to arrow_pattern.
-        for key in arrow_patterns.keys():
+        for key in list(arrow_patterns.keys()):
             s_class, e_class, coeffs_a = key
             if len(coeffs_a) == 1 and coeffs_a[0].isIdempotent():
                 continue
@@ -329,7 +329,7 @@ class DehnSurgeryDA:
                             morphism_cx, coeff_d, coeffs_a, x, y)
                         used = True
                 if not used:
-                    print "Warning: unused arrow: %s %s" % (coeffs_a, coeff_d)
+                    print("Warning: unused arrow: %s %s" % (coeffs_a, coeff_d))
 
         ### Uncomment to use autocompleteda to construct arrows from seeds.
         # autoCompleteMorphism(source, target, morphism)

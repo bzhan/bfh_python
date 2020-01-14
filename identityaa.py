@@ -10,7 +10,7 @@ from utility import F2
 # complex generators.
 _LEFT, _RIGHT = 0, 1
 
-class HomotopyAA:
+class HomotopyAA(object):
     """Contains the description of the large chain complex for type AA
     identity, and the homotopy needed to simplify it.
 
@@ -84,7 +84,7 @@ class HomotopyAA:
             elif all([n == 0 or n == 1 for n in diff]):
                 pos_one = [i for i in range(len(diff)) if diff[i] == 1]
                 start, end = pos_one[0], pos_one[-1]+1
-                if pos_one == range(start, end):
+                if pos_one == list(range(start, end)):
                     st_move = Strands(self.pmc, [(start, end)])
                     if not st_move.rightCompatible(left_to.getLeftIdem()):
                         return False
@@ -100,7 +100,7 @@ class HomotopyAA:
                 return False
 
         # Compute differentials
-        for total_mult, cx in self.partial_cxs.items():
+        for total_mult, cx in list(self.partial_cxs.items()):
             gens = cx.getGenerators()
             for gen_from in gens:
                 for gen_to in gens:
@@ -118,7 +118,7 @@ class HomotopyAA:
         """Computes the homotopy map on the large complex."""
         self.partial_hts = dict()
 
-        for total_mult, cx in self.partial_cxs.items():
+        for total_mult, cx in list(self.partial_cxs.items()):
             if all([n == 0 for n in total_mult]):
                 continue # No homotopy needed
             cur_homotopy = SimpleChainMorphism(cx, cx)
@@ -135,7 +135,7 @@ class HomotopyAA:
         """Test the identity for homotopy."""
         self._computeLargeChainComplex()
         self._computeHomotopy()
-        for total_mult, cx in self.partial_cxs.items():
+        for total_mult, cx in list(self.partial_cxs.items()):
             if all([n == 0 for n in total_mult]):
                 continue # No homotopy needed
             cur_homotopy = self.partial_hts[total_mult]

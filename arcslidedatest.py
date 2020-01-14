@@ -27,7 +27,7 @@ class ArcslideDATest(unittest.TestCase):
             Arcslide(PMC([(0, 3), (1, 6), (2, 4), (5, 7)]), 3, 2),
         ]
         for slide in slides_to_test:
-            print slide
+            print(slide)
             dastr = ArcslideDA(slide).toSimpleDAStructure()
             self.assertTrue(dastr.testDelta())
 
@@ -60,7 +60,7 @@ class ArcslideDATest(unittest.TestCase):
             Arcslide(PMC([(0, 5), (1, 3), (2, 6), (4, 7)]), 5, 4),
         ]
         for slide in slides_to_test:
-            print slide
+            print(slide)
             dastr = ArcslideDA(slide).toSimpleDAStructure()
             self.assertTrue(dastr.testDelta())
 
@@ -88,7 +88,7 @@ class ArcslideDATest(unittest.TestCase):
             Arcslide(antipodalPMC(2), 7, 6),
         ]
         for slide in slides_to_test:
-            print slide
+            print(slide)
             dastr = ArcslideDA(slide).toSimpleDAStructure()
             self.assertTrue(dastr.testDelta())
 
@@ -119,7 +119,7 @@ class ArcslideDATest(unittest.TestCase):
             Arcslide(PMC([(0, 3), (1, 6), (2, 4), (5, 7)]), 3, 4),
         ]
         for slide in slides_to_test:
-            print slide
+            print(slide)
             dastr = ArcslideDA(slide).toSimpleDAStructure()
             self.assertTrue(dastr.testDelta())
 
@@ -152,7 +152,7 @@ class ArcslideDATest(unittest.TestCase):
             Arcslide(PMC([(0, 5), (1, 3), (2, 6), (4, 7)]), 6, 7),
         ]
         for slide in slides_to_test:
-            print slide
+            print(slide)
             dastr = ArcslideDA(slide).toSimpleDAStructure()
             self.assertTrue(dastr.testDelta())
 
@@ -180,7 +180,7 @@ class ArcslideDATest(unittest.TestCase):
             Arcslide(antipodalPMC(2), 2, 3),
         ]
         for slide in slides_to_test:
-            print slide
+            print(slide)
             dastr = ArcslideDA(slide).toSimpleDAStructure()
             self.assertTrue(dastr.testDelta())
 
@@ -259,7 +259,7 @@ class ArcslideDATest(unittest.TestCase):
                 (Arcslide(splitPMC(2), 2, 3), (3, 0)),
                 (Arcslide(PMC([(0, 3), (1, 6), (2, 4), (5, 7)]), 5, 6),
                  (5, 0, 3, 1))]:
-            print slide, d_side_order
+            print(slide, d_side_order)
             raw_da = ArcslideDA(slide).getLocalDAStructure(seeds_only = True)
             autoCompleteDA(raw_da, d_side_order)
 

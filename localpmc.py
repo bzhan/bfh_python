@@ -11,7 +11,7 @@ from utility import memorize, memorizeHash, subset
 from utility import F2
 import itertools
 
-class LocalPMC:
+class LocalPMC(object):
     """Represents a pointed matched circle with boundaries and unmatched
     points.
 
@@ -109,7 +109,7 @@ class LocalPMC:
     def getIdempotents(self):
         """Get the list of all idempotents (no restriction on size)."""
         return [LocalIdempotent(self, data) for sz in range(self.num_pair+1)
-                for data in itertools.combinations(range(self.num_pair), sz)]
+                for data in itertools.combinations(list(range(self.num_pair)), sz)]
 
     def getStrandDiagrams(self):
         """Returns the list of generators of the local strand algebra. Note we
@@ -292,7 +292,7 @@ class LocalStrandDiagram(Generator):
             start_idem = self.local_pmc.pairid[st[0]]
             if start_idem != -1:
                 if start_idem not in self.all_hor:
-                    print left_idem, strands
+                    print(left_idem, strands)
                 self.all_hor.remove(start_idem)
         self.all_hor = tuple(self.all_hor)
         self.single_hor = tuple([i for i in self.all_hor
@@ -462,7 +462,7 @@ class LocalStrandAlgebra(DGAlgebra):
         # double-crossing. Can return now.
         return LocalStrandDiagram(self, gen1.left_idem, new_strands).elt()
 
-class PMCSplitting:
+class PMCSplitting(object):
     """Contains information about a splitting of a full PMC into two local PMCs.
 
     """
@@ -579,9 +579,9 @@ class PMCSplitting:
 
         # Construct inverse mapping from points in local_pmc to points in pmc.
         inv_mappings = {1 : {}, 2 : {}}
-        for pt, local_pt in mappings[1].items():
+        for pt, local_pt in list(mappings[1].items()):
             inv_mappings[1][local_pt] = pt
-        for pt, local_pt in mappings[2].items():
+        for pt, local_pt in list(mappings[2].items()):
             inv_mappings[2][local_pt] = pt
 
         # Create joined strands.
@@ -638,7 +638,7 @@ class PMCSplitting:
         for pt in end_pts:
             if self.pmc.otherp[pt] in end_pts:
                 return None
-        strands = zip(start_pts, end_pts)
+        strands = list(zip(start_pts, end_pts))
         if not Strands(self.pmc, strands).leftCompatible(left_idem):
             return None
         return self.pmc.getAlgebra(idem_size = len(left_idem),

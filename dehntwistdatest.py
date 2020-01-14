@@ -46,7 +46,7 @@ class DehnSurgeryDATest(unittest.TestCase):
         for genus, c_pair, orientation in [(2, 1, NEG), (2, 1, POS)]:
             ds = DehnSurgeryDA(genus, c_pair, orientation)
             morphism = ds.getLocalMorphism()
-            self.assertEquals(ds.getLocalMorphism().diff(), 0)
+            self.assertEqual(ds.getLocalMorphism().diff(), 0)
             self.assertTrue(ds.getLocalMappingCone().testDelta())
 
     def testDehnSurgeryDA(self):
@@ -74,7 +74,7 @@ class DehnSurgeryDATest(unittest.TestCase):
                 (2, 0, NEG), (2, 0, POS), (2, 3, POS)]:
             ds = DehnSurgeryDA(genus, c_pair, orientation)
             morphism = ds.getLocalMorphism()
-            self.assertEquals(ds.getLocalMorphism().diff(), 0)
+            self.assertEqual(ds.getLocalMorphism().diff(), 0)
             self.assertTrue(ds.getLocalMappingCone().testDelta())
 
     def testDehnSurgeryDAShort(self):

@@ -214,12 +214,12 @@ def getHalfIdComplex():
             return False
 
     # Compute differentials
-    for total_mult, cx in partial_cxs.items():
+    for total_mult, cx in list(partial_cxs.items()):
         gens = cx.getGenerators()
         for gen_from in gens:
             for gen_to in gens:
                 if hasDifferential(gen_from, gen_to):
                     cx.addDifferential(gen_from, gen_to, 1)
-        print total_mult, cx
+        print(total_mult, cx)
         cx.checkDifferential()
         cx.simplify()

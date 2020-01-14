@@ -14,7 +14,7 @@ class BraidTest(unittest.TestCase):
         for i in range(1, 6):
             self.assertTrue(len(br2.getArcslides(i)), pos_size[i-1])
             self.assertTrue(len(br2.getArcslides(-i)), pos_size[i-1])
-        self.assertTrue(len(br2.getArcslides(range(1, 6))), sum(pos_size))
+        self.assertTrue(len(br2.getArcslides(list(range(1, 6)))), sum(pos_size))
 
 class BraidCapTest(unittest.TestCase):
     def testPlatTypeD2(self):
@@ -30,9 +30,9 @@ class BraidCapTest(unittest.TestCase):
             dstrs[end3] = BraidCap(end3).openCap()
         algs = dict()
         total_gen = 0
-        for end3, dstr in dstrs.items():
+        for end3, dstr in list(dstrs.items()):
             algs[end3] = dict()
-            for end3to, dstrto in dstrs.items():
+            for end3to, dstrto in list(dstrs.items()):
                 algs[end3][end3to] = dstr.morToD(dstrto)
                 algs[end3][end3to].simplify()
                 total_gen += len(algs[end3][end3to])
@@ -45,7 +45,7 @@ class BraidCapTest(unittest.TestCase):
                 ((6, 3, 2, 5, 4, 1), [1, 1]),
                 ((2, 1, 6, 5, 4, 3), [0, 1]),
                 ((10, 3, 2, 7, 6, 5, 4, 9, 8, 1), [1, 2, 1, 1])]:
-            self.assertEquals(
+            self.assertEqual(
                 BraidCap(matching).getCobordismSequence(), result)
 
     def testCobordisms(self):
@@ -96,12 +96,13 @@ class HFTest(unittest.TestCase):
         self.assertEqual(len(br.getHF(method = "Tensor")), 21)
         self.assertEqual(len(br.getHFByLocalDA()), 21)
 
+class HFTestFromFile(unittest.TestCase):        
     def testHFFromFile(self):
         to_test = ["3_1", "4_1",
                    "12n_0210", # 1*[3 2 2 2 2 2]
                    "12n_0292", # 1*[1 0 2 2 0 0 2 2]
                    "11n_6", "11n_9", "11n_24", # 3-bridge
-                   "11a_14", "12n_0055", "12n_0056", # 4-bridge
+                   "11a_14", #"12n_0055", "12n_0056", # 4-bridge
                    ]
         with open('data/input_12_FL.txt', 'r') as input_file:
             with open('data/output_12.txt', 'r') as check_file:
@@ -112,15 +113,16 @@ class HFTest(unittest.TestCase):
                     expected_hf = int(check_file.readline().split()[1])
                     cur_br = readBridgePresentation(line)
                     if cur_br.name in to_test:
-                        print "Testing: %s (genus %d)" % \
-                            (cur_br.name, cur_br.num_strands / 2 - 1)
+                        print("Testing: %s (genus %d)" % \
+                            (cur_br.name, cur_br.num_strands / 2 - 1))
                         start_time = time.time()
                         cx = cur_br.getHFByLocalDA()
                         if hasattr(cx, "grading"):
-                            print cx.getGradingInfo()
+                            print(cx.getGradingInfo())
                         self.assertEqual(len(cx), expected_hf)
-                        print "Time elapsed (s): ", time.time() - start_time
+                        print("Time elapsed (s): ", time.time() - start_time)
 
+class TorusKnotTest(unittest.TestCase):
     def testTorus(self):
         def singleTest(m, n):
             start_time = time.time()
@@ -128,38 +130,39 @@ class HFTest(unittest.TestCase):
             half_twist = list(range(m-1, 0, -1))
             br = BridgePresentation("T%d_%d" % (m, n), cap, n*half_twist, cap)
             cx = br.getHFByLocalDA()
-            print br,
+            print(br, end=' ')
             if hasattr(cx, "grading"):
-                print cx.getGradingInfo()
+                print(cx.getGradingInfo())
             else:
-                print len(cx)
-            print "Time elapsed (s): ", time.time() - start_time
+                print(len(cx))
+            print("Time elapsed (s): ", time.time() - start_time)
 
-        for n in [1,2,4,5,7,8,10,20,50,100]:
+        for n in [1,2,4,5,7,8,10,20]:#,50,100]:
             singleTest(3, n)
-        for n in [1,3,5,7,9,11,13,15,17,19]:
+        for n in [1,3,5,7]:#,9,11,13,15,17,19]:
             singleTest(4, n)
-        for n in [1,2,3,4,6]:
+        for n in [1,2,3]:#,4,6]:
             singleTest(5, n)
-        for n in [1,5]:
-            singleTest(6, n)
+#        for n in [1,5]:
+#            singleTest(6, n)
 
-    def testGenus5FromFile(self):
-        # Empty means test all
-        to_test = []
-        with open('data/input_14_FL.txt', 'r') as input_file:
-            while True:
-                line = input_file.readline()
-                if len(line) == 0:
-                    break
-                cur_br = readBridgePresentation(line)
-                if len(to_test) == 0 or cur_br.name in to_test:
-                    print "Testing:", cur_br.name
-                    start_time = time.time()
-                    cx = cur_br.getHFByLocalDA()
-                    print cx.getGradingInfo()
-                    print "Time elapsed (s): ", time.time() - start_time
+#    def testGenus5FromFile(self):
+#        # Empty means test all
+#        to_test = []
+#        with open('data/input_14_FL.txt', 'r') as input_file:
+#            while True:
+#                line = input_file.readline()
+#                if len(line) == 0:
+#                    break
+#                cur_br = readBridgePresentation(line)
+#                if len(to_test) == 0 or cur_br.name in to_test:
+#                    print("Testing:", cur_br.name)
+#                    start_time = time.time()
+#                    cx = cur_br.getHFByLocalDA()
+#                    print(cx.getGradingInfo())
+#                    print("Time elapsed (s): ", time.time() - start_time)
 
+class SpecSeqTest(unittest.TestCase):
     def testGetSpecSeq(self):
         to_test = ["3_1", "4_1",
                    "11n_9", "11n_12", "11n_19", # 3-bridge
@@ -181,27 +184,36 @@ class HFTest(unittest.TestCase):
                     output_lines = [check_file.readline()
                                     for i in range(num_pages)]
                     if cur_br.name in to_test:
-                        print "Testing: %s (genus %d)" % \
-                            (cur_br.name, cur_br.num_strands / 2 - 1)
+                        print("Testing: %s (genus %d)" % \
+                            (cur_br.name, cur_br.num_strands / 2 - 1))
                         start_time = time.time()
                         filt_grs = cur_br.getSpecSeq()
                         self.assertEqual(len(filt_grs), len(output_lines))
                         for i in range(len(output_lines)):
                             self.assertEqual(filt_grs[i], [
                                 int(s) for s in output_lines[i].split()])
-                        print "Time elapsed (s): ", time.time() - start_time
+                        print("Time elapsed (s): ", time.time() - start_time)
 
+    def testGetSpecSeqProfile(self):
+        cProfile.runctx('self.testGetSpecSeq()', globals(), locals(), 'restats')
+        p = pstats.Stats('restats')
+        p.sort_stats('cumulative').print_stats(50)
+
+
+                        
+class TorusSpecSeqTest(unittest.TestCase):
     def testTorusSpecSeq(self):
         def singleTest(m, n):
+            print("Testing T(%d,%d): " % (m, n), end='  ')
             start_time = time.time()
             cap = list(range(2*m, 0, -1))
             half_twist = list(range(m-1, 0, -1))
             br = BridgePresentation("T%d_%d" % (m, n), cap, n*half_twist, cap)
             filt_grs = br.getSpecSeq()
-            print
+            print()
             for filt_gr in filt_grs:
-                print filt_gr
-            print "Time elapsed (s): ", time.time() - start_time
+                print(filt_gr)
+            print("Time elapsed (s): ", time.time() - start_time)
 
         # Result for T(4, 5):
         #   [1, 2, 1, 2, 2, 1, 1, 1, 1, 0, 1]
@@ -214,15 +226,11 @@ class HFTest(unittest.TestCase):
 
         for n in [1,2,4,5,7,8,10,20,50,100]:
             singleTest(3, n)
-        for n in [1,3,5,7,9,11,13,15,17,19]:
+        for n in [1,3,5,7,9,11]:#,13,15,17,19]:
             singleTest(4, n)
-        for n in [4,6]:
-            singleTest(5, n)
-
-    def testGetSpecSeqProfile(self):
-        cProfile.runctx('self.testGetSpecSeq()', globals(), locals(), 'restats')
-        p = pstats.Stats('restats')
-        p.sort_stats('cumulative').print_stats(50)
+#        singleTest(5, 4)
+#        for n in [4,6]:
+#            singleTest(5, n)
 
 if __name__ == "__main__":
     unittest.main()

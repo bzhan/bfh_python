@@ -76,7 +76,7 @@ class MorDtoDGenerator(Generator, MorObject):
             par = g.source.parent.morToD(self.target.parent)
         coeff = g.coeff*self.coeff
         if self.source == g.target and coeff:
-            return MorDtoDGenerator(par, g.source, coeff.keys()[0], self.target)
+            return MorDtoDGenerator(par, g.source, list(coeff.keys())[0], self.target)
         return E0
             
             
@@ -95,15 +95,17 @@ class DStructure(FreeModule):
         # Construct A tensor M. Add diff and the left action of A on this
         # tensor product.
         self.AtensorM = Tensor((algebra, self))
-        def _mul_A_AtensorM((AGen, MGen), ACoeff):
+        def _mul_A_AtensorM(xxx_todo_changeme, ACoeff):
             """To be used as rmultiply() in AtensorM. Multiply ACoeff with
             AGen.
 
             """
+            (AGen, MGen) = xxx_todo_changeme
             return (ACoeff * AGen) * MGen
 
-        def _diff_AtensorM((AGen, MGen)):
+        def _diff_AtensorM(xxx_todo_changeme1):
             """To be used as diff() in AtensorM."""
+            (AGen, MGen) = xxx_todo_changeme1
             return (AGen.diff() * MGen) + (AGen * MGen.delta())
 
         self.AtensorM.rmultiply = _mul_A_AtensorM
@@ -146,7 +148,7 @@ class SimpleDStructure(DStructure):
         assert generator.parent == self
         assert isinstance(generator, DGenerator)
         self.generators.add(generator)
-        if not self.delta_map.has_key(generator):
+        if generator not in self.delta_map:
             self.delta_map[generator] = E0
 
     def addDelta(self, gen_from, gen_to, alg_coeff, ring_coeff):
@@ -172,15 +174,15 @@ class SimpleDStructure(DStructure):
             translate_dict[gen_list[i]] = new_gen
         self.generators = set(new_gen_list)
         new_delta = dict()
-        for k, v in self.delta_map.items():
+        for k, v in list(self.delta_map.items()):
             new_v = E0
-            for (AGen, MGen), coeff in v.items():
+            for (AGen, MGen), coeff in list(v.items()):
                 new_v += (AGen * translate_dict[MGen]) * coeff
             new_delta[translate_dict[k]] = new_v
         self.delta_map = new_delta
         if hasattr(self, "grading"):
             new_grading = dict()
-            for gen, gr in self.grading.items():
+            for gen, gr in list(self.grading.items()):
                 if gen in translate_dict: # gen is still in dstr
                     new_grading[translate_dict[gen]] = gr
             self.grading = new_grading
@@ -200,15 +202,15 @@ class SimpleDStructure(DStructure):
         for gen in self.generators:
             if gen.delta().diff() != 0:
                 # Print the offending terms in d^2 for one generator.
-                print gen, "==>"
-                for k, v in gen.delta().diff().items():
-                    print v, "*", k
+                print(gen, "==>")
+                for k, v in list(gen.delta().diff().items()):
+                    print(v, "*", k)
                 return False
         return True
 
     def __str__(self):
         result = "Type D Structure.\n"
-        for k, v in self.delta_map.items():
+        for k, v in list(self.delta_map.items()):
             result += "d(%s) = %s\n" % (k, v)
         return result
 
@@ -239,7 +241,7 @@ class SimpleDStructure(DStructure):
         for x in xlist:
             rev_delta[x] = []
         for p in xlist:
-            for (b, q), coeff in p.delta().items():
+            for (b, q), coeff in list(p.delta().items()):
                 rev_delta[q].append(((b, p), coeff))
 
         # Get the list of generators
@@ -257,11 +259,11 @@ class SimpleDStructure(DStructure):
             # Differential of ay in (x -> ay)
             x, a, y = gen.source, gen.coeff, gen.target
             day = a * y.delta() + a.diff() * y
-            for (b, q), coeff in day.items():
+            for (b, q), coeff in list(day.items()):
                 cx.addDifferential(gen, genType(cx, x, b, q), coeff)
             # For each p such that b*x is in dp, add p->(ba)y
             for (b, p), coeff1 in rev_delta[x]:
-                for ba_gen, coeff2 in (b*a).items():
+                for ba_gen, coeff2 in list((b*a).items()):
                     cx.addDifferential(
                         gen, genType(cx, p, ba_gen, y), coeff1*coeff2)
 
@@ -282,7 +284,7 @@ class SimpleDStructure(DStructure):
         for gen in self.generators:
             arrows[gen] = dict()
         for gen in self.generators:
-            for (AGen, MGen), coeff in self.delta_map[gen].items():
+            for (AGen, MGen), coeff in list(self.delta_map[gen].items()):
                 if MGen not in arrows[gen]:
                     arrows[gen][MGen] = E0
                 arrows[gen][MGen] += AGen * coeff
@@ -297,7 +299,7 @@ class SimpleDStructure(DStructure):
         for x in arrows:
             self.generators.add(x)
             self.delta_map[x] = E0
-            for y, coeff in arrows[x].items():
+            for y, coeff in list(arrows[x].items()):
                 self.delta_map[x] += coeff * y
 
         # This is a good place to simplify gradings
@@ -356,7 +358,7 @@ class SimpleDStructure(DStructure):
             dual_str.addGenerator(new_x)
             gen_map[x] = new_x
         for x in self.generators:
-            for (a, y), coeff in x.delta().items():
+            for (a, y), coeff in list(x.delta().items()):
                 dual_str.addDelta(gen_map[y], gen_map[x], a.opp(), coeff)
         if hasattr(self, "gr_set"):
             dual_str.gr_set = self.gr_set.inverse().opp()
@@ -368,7 +370,7 @@ class SimpleDStructure(DStructure):
     def checkGrading(self):
         """Check grading is consistent with the type D operations."""
         for x in self.generators:
-            for (a, y), coeff in x.delta().items():
+            for (a, y), coeff in list(x.delta().items()):
                 gr_x = self.grading[x]
                 gr_y = self.grading[y]
                 assert gr_x - 1 == gr_y * [a.getGrading()]
@@ -377,10 +379,10 @@ class SimpleDStructure(DStructure):
         """Compare two type D structures, print out any differences."""
         # Some basic tests:
         if len(self) != len(other):
-            print "Different number of generators."""
+            print("Different number of generators.""")
             return False
         if self.algebra != other.algebra:
-            print "Different algebra action."
+            print("Different algebra action.")
             return False
         gen_map = dict()
         for gen1 in self.generators:
@@ -393,8 +395,8 @@ class SimpleDStructure(DStructure):
                 coeff1 = self.deltaCoeff(gen1, gen2)
                 coeff2 = other.deltaCoeff(gen_map[gen1], gen_map[gen2])
                 if coeff1 != coeff2:
-                    print "Different coefficient at %s->%s" % (gen1, gen2)
-                    print "%s vs %s" % (coeff1, coeff2)
+                    print("Different coefficient at %s->%s" % (gen1, gen2))
+                    print("%s vs %s" % (coeff1, coeff2))
                     return False
         return True
 
@@ -431,11 +433,11 @@ def connectSumTypeD(dstr1, dstr2):
             rev_pair_map[gen] = (gen1, gen2)
     for gen in dstr.getGenerators():
         gen1, gen2 = rev_pair_map[gen]
-        for (a, y), coeff in gen1.delta().items():
+        for (a, y), coeff in list(gen1.delta().items()):
             new_strands = Strands(pmc, a.strands)
             new_a = StrandDiagram(algebra, gen.idem, new_strands)
             dstr.addDelta(gen, pair_map[(y, gen2)], new_a, coeff)
-        for (a, y), coeff in gen2.delta().items():
+        for (a, y), coeff in list(gen2.delta().items()):
             new_strands = Strands(
                 pmc, [(p+pmc1.n, q+pmc1.n) for p,q in a.strands])
             new_a = StrandDiagram(algebra, gen.idem, new_strands)

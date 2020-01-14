@@ -10,7 +10,7 @@ from grading import DEFAULT_REFINEMENT
 from utility import memorize, memorizeHash
 from utility import BIG_GRADING, DEFAULT_GRADING, F2, MULT_ONE, ZZ
 
-class PMC:
+class PMC(object):
     """Represents a pointed matched circle."""
     def __init__(self, matching):
         """Creates a pointed matched circle from a list of matched pairs. The
@@ -18,8 +18,8 @@ class PMC:
 
         """
         self.n = len(matching) * 2
-        self.num_pair = self.n / 2
-        self.genus = self.n / 4
+        self.num_pair = self.n // 2
+        self.genus = self.n // 4
         # otherp[i] is the point paired to i (0 <= i < n)
         self.otherp = [0] * self.n
         for p, q in matching:
@@ -113,7 +113,7 @@ class PMC:
         """Get the list of all idempotents."""
         if idem_size == None: idem_size = self.genus
         return [Idempotent(self, data) for data in
-                itertools.combinations(range(self.num_pair), idem_size)]
+                itertools.combinations(list(range(self.num_pair)), idem_size)]
 
     def getStrandDiagrams(self, algebra):
         """Get the list of generators of the strand algebra. algebra should be
@@ -323,7 +323,7 @@ class Strands(tuple):
         for st in self:
             if idemCount[self.pmc.pairid[st[1]]] == 1: return None
             idemCount[self.pmc.pairid[st[1]]] += 1
-        right_idem = [i for i in range(self.pmc.n/2) if idemCount[i] == 1]
+        right_idem = [i for i in range(self.pmc.n//2) if idemCount[i] == 1]
         return Idempotent(self.pmc, right_idem)
 
     def propagateLeft(self, right_idem):
@@ -340,7 +340,7 @@ class Strands(tuple):
         for st in self:
             if idemCount[self.pmc.pairid[st[0]]] == 1: return None
             idemCount[self.pmc.pairid[st[0]]] += 1
-        left_idem = [i for i in range(self.pmc.n/2) if idemCount[i] == 1]
+        left_idem = [i for i in range(self.pmc.n//2) if idemCount[i] == 1]
         return Idempotent(self.pmc, left_idem)
 
     def isMultOne(self):
@@ -673,7 +673,7 @@ class StrandAlgebraElement(Element):
     """An element of strand algebra."""
     def isIdempotent(self):
         """Tests whether this element is an idempotent."""
-        for sd, coeff in self.items():
+        for sd, coeff in list(self.items()):
             if not sd.isIdempotent():
                 return False
         return True

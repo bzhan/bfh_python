@@ -31,7 +31,7 @@ class ArcslideDA(ExtendedDAStructure):
 
         n = self.pmc1.n
         b1, c1, c2 = slide.b1, slide.c1, slide.c2
-        b1p, c1p, c2p = [slide.to_r[p] for p in b1, c1, c2]
+        b1p, c1p, c2p = [slide.to_r[p] for p in (b1, c1, c2)]
 
         # Note intervals (start, end) with start > end are ignored.
         # patterns_base specifies one of the four base patterns of arcslides.
@@ -191,7 +191,7 @@ class ArcslideDA(ExtendedDAStructure):
         # of pairs), or where l_idem has the c_pair and r_idem has the b_pair.
         da_idems = []
         num_pair = self.local_pmc1.num_pair
-        for idem in subset(range(num_pair)):
+        for idem in subset(list(range(num_pair))):
             da_idems.append((list(idem), [local_pair_to_r[p] for p in idem]))
         for idem in subset([p for p in range(num_pair)
                             if p != b_pair1 and p != c_pair1]):
@@ -209,7 +209,7 @@ class ArcslideDA(ExtendedDAStructure):
         local_dastr.auto_u_map()
 
         # Add arrows according to arrow_pattern.
-        for coeffs_a in arrow_patterns.keys():
+        for coeffs_a in list(arrow_patterns.keys()):
             if len(coeffs_a) == 1 and coeffs_a[0].isIdempotent():
                 continue
             for coeff_d in arrow_patterns[coeffs_a]:

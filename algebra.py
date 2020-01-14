@@ -13,7 +13,7 @@ from utility import NamedObject, SummableDict
 from utility import fracToInt, memorize, memorizeHash, safeMultiply
 from utility import F2
 
-class FreeModule:
+class FreeModule(object):
     """Represents a free module over some ring."""
     def __init__(self, ring):
         """Specifies the ring. Should be either a subclass of Ring or a python
@@ -29,7 +29,7 @@ class FreeModule:
         """
         raise NotImplementedError("Get set of generators not implemented.")
 
-class Generator:
+class Generator(object):
     """Represents a generator of a free module. By default, generators are
     distinguished by (python) identity. Implement __eq__, __ne__, and __hash__
     for custom behavior.
@@ -40,6 +40,10 @@ class Generator:
         """Only information that every generator needs is the parent module."""
         self.parent = parent
 
+    #RL added
+    def __lt__(self, other):
+        return hash(self) < hash(other)
+        
     def elt(self, coeff = 1):
         """Returns the element coeff * self."""
         return self.ELT_CLASS({self : coeff})
@@ -129,14 +133,14 @@ class Element(SummableDict):
         SummableDict.__init__(self, data)
         if self:
             convert = self.getElt().parent.ring.convert
-            for key, value in self.items():
+            for key, value in list(self.items()):
                 self[key] = convert(value)
 
     def __str__(self):
         if self == 0:
             return "0"
         terms = []
-        for gen, coeff in self.items():
+        for gen, coeff in list(self.items()):
             if coeff == 1:
                 terms.append(str(gen))
             else:
@@ -155,11 +159,11 @@ class Element(SummableDict):
 
         # Now try to multiply each key by other on the left.
         result = E0
-        for k, v in self.items():
+        for k, v in list(self.items()):
             prod = safeMultiply(k, other)
             if prod is NotImplemented:
                 return NotImplemented
-            result += [term * (v * coeff) for term, coeff in prod.items()]
+            result += [term * (v * coeff) for term, coeff in list(prod.items())]
         return result
 
     def __rmul__(self, other):
@@ -171,16 +175,16 @@ class Element(SummableDict):
 
         # Now try to multiply key by other on the left.
         result = E0
-        for k, v in self.items():
+        for k, v in list(self.items()):
             prod = safeMultiply(other, k)
             if prod is NotImplemented:
                 return NotImplemented
-            result += [term * (v * coeff) for term, coeff in prod.items()]
+            result += [term * (v * coeff) for term, coeff in list(prod.items())]
         return result
 
     def diff(self):
         """Returns the differential of this element."""
-        return sum([coeff * gen.diff() for gen, coeff in self.items()], E0)
+        return sum([coeff * gen.diff() for gen, coeff in list(self.items())], E0)
 
 # Name of the class for elements containing this generator
 Generator.ELT_CLASS = Element
@@ -204,7 +208,7 @@ class ChainComplex(FreeModule):
         for gen in gen_list:
             antiDiffMap[gen] = E0
         for gen in gen_list:
-            for dgen, coeff in gen.diff().items():
+            for dgen, coeff in list(gen.diff().items()):
                 antiDiffMap[dgen] += coeff * gen
         return antiDiffMap
 
@@ -234,7 +238,7 @@ class SimpleChainComplex(ChainComplex):
 
     def __str__(self):
         result = "Chain complex.\n"
-        for k, v in self.differential.items():
+        for k, v in list(self.differential.items()):
             result += "d(%s) = %s\n" % (k, v)
         return result
 
@@ -250,7 +254,7 @@ class SimpleChainComplex(ChainComplex):
     def diffElt(self,elt):
         "Return the differential of Element elt of this SimpleChainComplex"
         answer = E0
-        for x in elt.keys():
+        for x in list(elt.keys()):
             answer += elt[x]*self.diff(x)
         return answer
 
@@ -267,7 +271,7 @@ class SimpleChainComplex(ChainComplex):
         cxcopy.simplify()
         newgen = SimpleGenerator(cxcopy2, "eta")
         cxcopy2.addGenerator(newgen)
-        for y in elt.keys():
+        for y in list(elt.keys()):
             cxcopy2.addDifferential(newgen, cx_to_cxcopy2[y], elt[y])
             cxcopy2.simplify()
         if len(cxcopy2) == len(cxcopy)-1:
@@ -293,12 +297,12 @@ class SimpleChainComplex(ChainComplex):
             translate_dict[gen_list[i]] = new_gen
         self.generators = set(new_gen_list)
         new_diff = dict()
-        for gen, dgen in self.differential.items():
+        for gen, dgen in list(self.differential.items()):
             new_diff[translate_dict[gen]] = dgen.translateKey(translate_dict)
         self.differential = new_diff
         if hasattr(self, "grading"):
             new_grading = dict()
-            for gen, gr in self.grading.items():
+            for gen, gr in list(self.grading.items()):
                 if gen in translate_dict: # gen is still in chain complex
                     new_grading[translate_dict[gen]] = gr
             self.grading = new_grading
@@ -307,7 +311,7 @@ class SimpleChainComplex(ChainComplex):
         """Add a generator. No effect if the generator already exists."""
         assert generator.parent == self
         self.generators.add(generator)
-        if not self.differential.has_key(generator):
+        if generator not in self.differential:
             self.differential[generator] = E0
 
     def addDifferential(self, gen_from, gen_to, coeff):
@@ -326,7 +330,7 @@ class SimpleChainComplex(ChainComplex):
         for x in self.generators:
             arrows[x] = dict()
         for x in self.generators:
-            for y, coeff in self.differential[x].items():
+            for y, coeff in list(self.differential[x].items()):
                 arrows[x][y] = coeff
 
         arrows = simplifyComplex(
@@ -338,7 +342,7 @@ class SimpleChainComplex(ChainComplex):
         self.differential = dict()
         for x in arrows:
             self.differential[x] = E0
-            for y, coeff in arrows[x].items():
+            for y, coeff in list(arrows[x].items()):
                 self.differential[x] += coeff * y
 
     def checkDifferential(self):
@@ -349,7 +353,7 @@ class SimpleChainComplex(ChainComplex):
     def checkGrading(self):
         """Check grading is consistent with differentials."""
         for x in self.generators:
-            for y, coeff in x.diff().items():
+            for y, coeff in list(x.diff().items()):
                 assert self.grading[x] - 1 == self.grading[y]
 
     def getGradingInfo(self):
@@ -366,7 +370,7 @@ class SimpleChainComplex(ChainComplex):
                 distr_by_spinc[spinc] = []
             distr_by_spinc[spinc].append(maslov)
         distr_count = dict()
-        for spinc, distr in distr_by_spinc.items():
+        for spinc, distr in list(distr_by_spinc.items()):
             min_gr, max_gr = min(distr), max(distr)
             cur_count = [0] * fracToInt(max_gr - min_gr + 1)
             for gr in distr:
@@ -394,7 +398,7 @@ class SimpleChainComplex(ChainComplex):
             new_to_old[newgen] = genlist[i]
             old_to_new[genlist[i]] = newgen
         for x in genlist:
-            for y in self.differential[x].keys():
+            for y in list(self.differential[x].keys()):
                 answer.addDifferential(old_to_new[x],old_to_new[y],self.differential[x][y])
         if returnDicts:
             return (answer, new_to_old, old_to_new)
@@ -409,7 +413,7 @@ class SimpleChainComplex(ChainComplex):
 
     
     
-class SimpleChainMorphism:
+class SimpleChainMorphism(object):
     """Represents a morphism between two simple chain complexes (which may be
     the same). Need not be a chain map (so can be used to represent homotopy,
     for example). Represented explicitly.
@@ -436,11 +440,11 @@ class SimpleChainMorphism:
         assert isinstance(self, SimpleChainMorphism) and isinstance(g, SimpleChainMorphism)
         assert self.cx_from == g.cx_from and self.cx_to == g.cx_to
         answer = SimpleChainMorphism(self.cx_from, self.cx_to)
-        for gen_from in self.morphism.keys():
-            for (gen_to,coeff) in self.apply(gen_from).items():
+        for gen_from in list(self.morphism.keys()):
+            for (gen_to,coeff) in list(self.apply(gen_from).items()):
                 answer.addMorphism(gen_from, gen_to, coeff)
-        for gen_from in g.morphism.keys():
-            for (gen_to,coeff) in g.apply(gen_from).items():
+        for gen_from in list(g.morphism.keys()):
+            for (gen_to,coeff) in list(g.apply(gen_from).items()):
                 answer.addMorphism(gen_from, gen_to, coeff)
         return answer
         
@@ -458,7 +462,7 @@ class SimpleChainMorphism:
         else:
             assert isinstance(x, Element)
             return sum([coeff * self.apply(gen)
-                        for gen, coeff in x.items()], E0)
+                        for gen, coeff in list(x.items())], E0)
 
     def mappingConeCx(self):
         "Return the mapping cone of self."
@@ -479,16 +483,16 @@ class SimpleChainMorphism:
             answer.addGenerator(newx)
         #add the differential on cx_from
         for x in cx_from.getGenerators():
-            for y in cx_from.diff(x).keys():
+            for y in list(cx_from.diff(x).keys()):
                 answer.addDifferential(from_to_new[x],from_to_new[y],cx_from.diff(x)[y])
         #add the differential on cx_to
         for x in cx_to.getGenerators():
-            for y in cx_to.diff(x).keys():
+            for y in list(cx_to.diff(x).keys()):
                 answer.addDifferential(to_to_new[x],to_to_new[y],cx_to.diff(x)[y])
         #add the differential coming from self
-        for x in self.morphism.keys():
+        for x in list(self.morphism.keys()):
             fx = self.apply(x)
-            for y in fx.keys():
+            for y in list(fx.keys()):
                 answer.addDifferential(from_to_new[x],to_to_new[y],fx[y])
         return answer
 
@@ -504,7 +508,7 @@ class SimpleChainMorphism:
         
     def __str__(self):
         result = "Morphism between two chain complexes.\n"
-        for k, v in self.morphism.items():
+        for k, v in list(self.morphism.items()):
             result += "f(%s) = %s\n" % (k, v)
         return result
 
@@ -537,7 +541,7 @@ class DGAlgebra(ChainComplex):
         parent = Tensor((self, self))
         for gen1 in gen_list:
             for gen2 in gen_list_by_left_idem[gen1.right_idem]:
-                for prod, coeff in (gen1*gen2).items():
+                for prod, coeff in list((gen1*gen2).items()):
                     tensor_gen = TensorGenerator((gen1, gen2), parent)
                     factorMap[prod] += coeff * tensor_gen
         return factorMap
@@ -617,7 +621,7 @@ class TensorElement(Element):
         if data is None:
             data = {}
         data_processed = {}
-        for term, coeff in dict(data).items():
+        for term, coeff in list(dict(data).items()):
             if isinstance(term, TensorGenerator):
                 data_processed[term] = coeff
             else:
@@ -630,7 +634,7 @@ class TensorElement(Element):
 
         """
         result = E0
-        for term, coeff in self.items():
+        for term, coeff in list(self.items()):
             if term[-1] == gen:
                 if len(term) > 2:
                     result += coeff * TensorGenerator(term[:-1], parent)
@@ -640,7 +644,7 @@ class TensorElement(Element):
 
     def invertible(self):
         """Tests whether this element is invertible."""
-        for term, coeff in self.items():
+        for term, coeff in list(self.items()):
             for comp in term:
                 if not (1*comp).invertible():
                     return False
@@ -680,7 +684,7 @@ def expandTensor(prod, parent = None):
             continue
         expanded2 = []
         for subterm, coeff in expanded:
-            for gen, coeff2 in subterm[i].items():
+            for gen, coeff2 in list(subterm[i].items()):
                 expanded2.append(((subterm[0:i]+(gen,)+subterm[i+1:]),
                                  coeff*coeff2))
         expanded = expanded2
@@ -784,7 +788,7 @@ class TensorStarElement(Element):
         if data is None:
             data = {}
         data_processed = {}
-        for term, coeff in dict(data).items():
+        for term, coeff in list(dict(data).items()):
             if isinstance(term, TensorStarGenerator):
                 data_processed[term] = coeff
             else:
@@ -841,9 +845,9 @@ class CobarAlgebra(TensorStar, DGAlgebra):
         """
         assert gen.parent == self.baseModule
         result = E0
-        for term, coeff in gen.antiDiff().items():
+        for term, coeff in list(gen.antiDiff().items()):
             result += coeff * TensorStarGenerator((term,), self)
-        for ((a, b), coeff) in gen.factor().items():
+        for ((a, b), coeff) in list(gen.factor().items()):
             if not (a.isIdempotent() or b.isIdempotent()):
                 result += coeff * TensorStarGenerator((a, b), self)
         return result
@@ -961,10 +965,10 @@ def simplifyComplex(arrows, default_coeff = 0, find_homology_basis = False,
         inv_coeff = coeff.inverse()
 
         # List of edges going into y (other than that from x and y)
-        alist = [(term, coeff) for term, coeff in rev_arrows[y].items()
+        alist = [(term, coeff) for term, coeff in list(rev_arrows[y].items())
                  if term not in (x, y)]
         # List of edges coming from x (other than that going to x and y)
-        blist = [(term, coeff) for term, coeff in arrows[x].items()
+        blist = [(term, coeff) for term, coeff in list(arrows[x].items())
                  if term not in (x, y)]
 
         # Remove all edges going into x or y
@@ -1031,7 +1035,7 @@ def findRankOverF2(num_row, num_col, entries):
     arrows = simplifyComplex(arrows)
     cancelled = num_row + num_col - len(arrows)
     assert cancelled % 2 == 0
-    return cancelled / 2
+    return cancelled // 2
 
 class _MatrixGenerator(SimpleGenerator):
     """A generator of a chain complex coming from a matrix over F2. """
@@ -1078,7 +1082,7 @@ def solveOverF2(num_row, num_col, entries, vec):
             seed_index = i
             break
     if seed_index == -1:
-        print "System cannot be solved."
+        print("System cannot be solved.")
         return None
     else:
         # Try to find a short vector to return

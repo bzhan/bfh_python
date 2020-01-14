@@ -18,20 +18,20 @@ class ExperimentalTest(unittest.TestCase):
     def testDehnTwist(self):
         slides = Braid(8).getArcslides(-5)
         assert len(slides) == 2
-        print "Getting DD Structures"
+        print("Getting DD Structures")
         slides_dd = [slide.getDDStructure() for slide in slides]
-        print "Tensoring"
+        print("Tensoring")
         dehn_twist = computeDATensorDD(*slides_dd)
-        print "Cleaning up and checks"
+        print("Cleaning up and checks")
         dehn_twist.reindex()
         dehn_twist.checkGrading()
         self.assertTrue(dehn_twist.testDelta())
 
         twist = DehnTwist(3, 4, NEG)
-        print "Getting DD from dehntwist"
+        print("Getting DD from dehntwist")
         twist_dd = twist.getDDStructure()
-        print "Comparing"
-        print twist_dd.compareDDStructures(dehn_twist)
+        print("Comparing")
+        print(twist_dd.compareDDStructures(dehn_twist))
 
     def testAbsoluteGrading(self):
         assert DEFAULT_GRADING == SMALL_GRADING
@@ -85,12 +85,12 @@ class ExperimentalTest(unittest.TestCase):
             #     d_mid = computeDATensorD(dd, d_mid)
             # cur_cx = computeATensorD(start, d_mid)
             cur_abs_gr = cur_cx.getAbsGradingInfo()
-            print [str(n) for n in cur_abs_gr]
+            print([str(n) for n in cur_abs_gr])
 
     def testGenus2AbsoluteGrading(self):
         dd_abs_info = 0
         gr_info = [0,0]
-        print gr_info
+        print(gr_info)
         d1 = zeroTypeD(2, is_dual = False, abs_gr_info = gr_info)
         d1d = zeroTypeD(2, is_dual = True, abs_gr_info = gr_info)
         d2 = infTypeD(2, is_dual = False, abs_gr_info = gr_info)
@@ -151,7 +151,7 @@ class ExperimentalTest(unittest.TestCase):
             #     d_mid = computeDATensorD(dd, d_mid)
             # cur_cx = computeATensorD(start, d_mid)
             cur_abs_gr = cur_cx.getAbsGradingInfo()
-            print [str(n) for n in cur_abs_gr]
+            print([str(n) for n in cur_abs_gr])
 
     def testBraidAbsoluteGrading(self):
         # getHF() does not yet support absolute grading. Test using the other
@@ -168,10 +168,10 @@ class ExperimentalTest(unittest.TestCase):
             # for gen, gr in cx.grading.items():
             # print gen, gr
             abs_gr = cx.getAbsGradingInfo()
-            print [str(n) for n in abs_gr]
+            print([str(n) for n in abs_gr])
 
     def testAlgSize(self):
-        print len(splitPMC(3).getAlgebra().getGenerators())
+        print(len(splitPMC(3).getAlgebra().getGenerators()))
 
     def testTypeDInvariant(self):
         d_start = infTypeD(2, is_dual = True, abs_gr_info = [2,2])
@@ -207,11 +207,11 @@ class ExperimentalTest(unittest.TestCase):
                 d_mid.simplify()
             d_mid.reindex()
 
-            print "Case: %s" % slides
-            print d_mid
+            print("Case: %s" % slides)
+            print(d_mid)
             # Rough check that this equals the original
-            self.assertEquals(len(d_mid), 1)
-            self.assertEquals(len(d_mid.getGenerators()[0].delta()), 2)
+            self.assertEqual(len(d_mid), 1)
+            self.assertEqual(len(d_mid.getGenerators()[0].delta()), 2)
 
     def testTrefoilSurgery(self):
         """Computes HF for +1 and -1 surgery on left-handed trefoil. """
@@ -235,7 +235,7 @@ class ExperimentalTest(unittest.TestCase):
         d_p1.addGenerator(b)
         d_p1.addDelta(a, b, rho2, 1)
         d_p1.addDelta(b, a, rho123, 1)
-        print "CFD(H_+1): ", d_p1
+        print("CFD(H_+1): ", d_p1)
         # and CFD(H_-1)
         d_p2 = SimpleDStructure(F2, algebra)
         a = SimpleDGenerator(d_p2, i1, "a")
@@ -244,7 +244,7 @@ class ExperimentalTest(unittest.TestCase):
         d_p2.addGenerator(b)
         d_p2.addDelta(b, a, rho1, 1)
         d_p2.addDelta(b, a, rho3, 1)
-        print "CFD(H_-1): ", d_p2
+        print("CFD(H_-1): ", d_p2)
         # CFD(trefoil)
         d_trefoil = SimpleDStructure(F2, algebra)
         x = SimpleDGenerator(d_trefoil, i0, "x")
@@ -263,16 +263,16 @@ class ExperimentalTest(unittest.TestCase):
         d_trefoil.addDelta(z, mu1, rho123, 1)
         d_trefoil.addDelta(l, y, rho2, 1)
         d_trefoil.addDelta(z, l, rho3, 1)
-        print "CFD(trefoil): ", d_trefoil
+        print("CFD(trefoil): ", d_trefoil)
         # Compute the Mor complexes
         cx1 = d_p1.morToD(d_trefoil)
         # cx1 = computeATensorD(d_p1, d_trefoil)
         cx1.simplify()
-        print "First result: ", cx1
+        print("First result: ", cx1)
         cx2 = d_p2.morToD(d_trefoil)
         # cx2 = computeATensorD(d_p2, d_trefoil)
         cx2.simplify()
-        print "Second result: ", cx2
+        print("Second result: ", cx2)
 
     def testLinkComplement(self):
         """Computes type DD structure associated to the complement of a certain
@@ -320,39 +320,39 @@ class ExperimentalTest(unittest.TestCase):
         # slides_total = [Arcslide(start_pmc, 6, 7)]
         # slides_total = [Arcslide(start_pmc, 7, 6)]
         for slide in slides_total:
-            print slide
-            print d_mid
+            print(slide)
+            print(d_mid)
             slide_dd = slide.getDDStructure(0)
             d_mid = slide_dd.morToD(d_mid)
             d_mid.simplify()
             d_mid.reindex()
 
-        print d_mid
+        print(d_mid)
         dd_final = DDStrFromDStr(d_mid, 1)
         dd_final.testDelta()
-        print dd_final
+        print(dd_final)
         dd_final.simplify()
         dd_final.reindex()
-        print dd_final
+        print(dd_final)
 
     def testTwoStrandGenus1(self):
         # Just code to print out differential and multiplication for an algebra.
         gens = splitPMC(1).getAlgebra(
             idem_size = 2, mult_one = False).getGenerators()
         for g in gens:
-            print "d(%s) = %s" % (g, g.diff())
+            print("d(%s) = %s" % (g, g.diff()))
         for g1, g2 in itertools.product(gens, gens):
             if g1.isIdempotent() or g2.isIdempotent():
                 continue
             if g1 * g2 != 0:
-                print "%s * %s = %s" % (g1, g2, g1*g2)
+                print("%s * %s = %s" % (g1, g2, g1*g2))
 
     def testT4nTorus(self):
         # Computation for torus links T(4,n).
         for n in range(1, 15):
             knot = BridgePresentation("T4_%d" % n, (8,7,6,5,4,3,2,1),
                                       [1,2,3]*n, (8,7,6,5,4,3,2,1))
-            print knot.name, len(knot.getHFByLocalDA())
+            print(knot.name, len(knot.getHFByLocalDA()))
 
     def testDDStructureDelta(self):
         # Construct type DD structures, and test whether d^2 = 0 holds.
@@ -372,7 +372,7 @@ class ExperimentalTest(unittest.TestCase):
         idems = {"x" : ([0], [0]),
                  "y" : ([1], [1])}
         gens = {}
-        for name, (idem1, idem2) in idems.items():
+        for name, (idem1, idem2) in list(idems.items()):
             gens[name] = SimpleDDGenerator(
                 ddstr1, Idempotent(pmc, idem1), Idempotent(pmc, idem2), name)
             ddstr1.addGenerator(gens[name])
@@ -395,7 +395,7 @@ class ExperimentalTest(unittest.TestCase):
         ddstr2 = SimpleDDStructure(F2, alg, alg)
         # Add the same generators as before
         gens = {}
-        for name, (idem1, idem2) in idems.items():
+        for name, (idem1, idem2) in list(idems.items()):
             gens[name] = SimpleDDGenerator(
                 ddstr2, Idempotent(pmc, idem1), Idempotent(pmc, idem2), name)
             ddstr2.addGenerator(gens[name])
@@ -407,7 +407,7 @@ class ExperimentalTest(unittest.TestCase):
         # Prints the type DD structure. Note the code already checks that
         # idempotent matches in all added arrows (throws an error if they don't
         # match).
-        print ddstr2
+        print(ddstr2)
         # However, testDelta() fails. Prints a term in d^2(x).
         self.assertFalse(ddstr2.testDelta())
 
