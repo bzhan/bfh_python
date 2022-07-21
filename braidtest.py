@@ -1,6 +1,6 @@
 """Unit test for braid.py"""
 
-from fractions import gcd
+from math import gcd
 from braid import *
 import unittest
 import time  # benchmarking
