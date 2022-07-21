@@ -1,6 +1,6 @@
 """Various utilities useful for the project."""
 
-from fractions import gcd
+from math import gcd
 from numbers import Number
 
 def memorize(function):

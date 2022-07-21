@@ -1,6 +1,7 @@
 """Handles grading groups and grading sets."""
 
-from fractions import Fraction, gcd
+from fractions import Fraction
+from math import gcd
 from numbers import Number
 from linalg import RowSystem
 from utility import flatten, grTypeStr, memorize, oppSide, sideStr, tolist
