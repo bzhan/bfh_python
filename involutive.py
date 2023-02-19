@@ -7,7 +7,7 @@ from utility import SummableDict, F2, fracToInt, ACTION_LEFT, ACTION_RIGHT
 from algebra import Element, E0
 from dstructure import MorDtoDGenerator, DGenerator, SimpleDStructure
 from algebra import SimpleChainComplex, SimpleGenerator, SimpleChainMorphism, Generator
-from dastructure import SimpleDAStructure, SimpleDAGenerator, identityDA, DATensorDGenerator
+from dastructure import SimpleDAStructure, SimpleDAGenerator, identityDA, DATensorDGenerator, augmentationDA
 from pmc import StrandDiagram
 from grading import SmallGradingGroup, SimpleDbGradingSet, SimpleDbGradingSetElement
 from braid import Braid, BraidCap, readBridgePresentation
@@ -31,12 +31,12 @@ def composeMor(f,g, parent=None):
     return answer
 
 
-def chordPairs(pmc):
+def chordPairs(pmc, mult_one = True):
     "List of chord pairs as in differential on CFDD(Id)."
     answer = list()
-    algebra = pmc.getAlgebra()
+    algebra = pmc.getAlgebra(mult_one = mult_one)
     for i in range(pmc.n):
-        for j in range(i+1,pmc.n):
+        for j in range(i+1,pmc.n): 
             for I in pmc.getIdempotents():
                 Ipairs = [I.pmc.pairs[x] for x in I]
                 occupied = list()
@@ -74,14 +74,14 @@ def azDA(pmc,mult_one = True):
                     ygen = SimpleDAGenerator(answer,y.left_idem.comp(), y.right_idem, y)
                     answer.addDelta(x,ygen,x.idem1.toAlgElt(algebra),[b,],xab[y])
     #Terms coming from differential on CFDD(Id):
-    chord_pairs = chordPairs(pmc)
+    chord_pairs = chordPairs(pmc, mult_one)
     for (sigma, rho) in chord_pairs:
         for x in algebra.getGeneratorsForIdem(left_idem = rho.right_idem):
             xgen = SimpleDAGenerator(answer,x.left_idem.comp(), x.right_idem, x)
             rhox = rho*x
             for y in list(rhox.keys()):
                 ygen = SimpleDAGenerator(answer, y.left_idem.comp(), y.right_idem, y)
-                answer.addDelta(xgen, ygen, sigma, list(),rhox[y])    
+                answer.addDelta(xgen, ygen, sigma, list(),rhox[y])
     return answer
 
 
@@ -174,8 +174,10 @@ def isQIDmor(f):
     #Test if f is a chain map:
     if cone.testDelta():
         #Check if cone is acyclic
-        cone.simplify()
-        if len(cone) == 0:
+        augmod = augmentationDA(cone.algebra.pmc)
+        augcone = augmod.tensorD(cone)
+        augcone.simplify()
+        if len(augcone) == 0:
             return True
     return False
 
@@ -186,7 +188,7 @@ def findQI(dMors):
             return f
     assert False
 
-def involutiveCx(P,Q, mult_one = True, sanityTests = False, verbose = False):
+def involutiveCx(P,Q, sanityTests = False, verbose = False):
     """Returns the rank of involutive Floer homology of Y.s
     Input: P, Q: type D modules for handlebodies so that CF^(Y) = H_*(Mor(P,Q))
     """
@@ -200,16 +202,20 @@ def involutiveCx(P,Q, mult_one = True, sanityTests = False, verbose = False):
     #given by f -> g = tensorDAid(P,Q,MP,MQ,f) -> PhiQ\circ g\circ PhiPinv
     #Compute iota on a basis of PQsimp. Result is a morphism of chain complexes.
     #Take mapping cone of Id+iota and take homology
+    
     pmc = P.algebra.pmc
     M = azDA(pmc)
     if verbose:
-        print("Lengths of (P,Q,M)"+repr((len(P.getGenerators()),len(Q.getGenerators()),len(M.getGenerators()))))
-    MP = M.tensorD(P)
+        print("Lengths of (P,Q,M) are "+repr((len(P.getGenerators()),len(Q.getGenerators()),len(M.getGenerators()))))
+    MP = M.tensorD(P) #This seems not to give something homotopy equivalent to P for Orland's example.
     if verbose:
         print("MP has length "+repr(len(MP.getGenerators())))
+
     MQ = M.tensorD(Q)
+
     if verbose:
         print("MQ has length "+repr(len(MQ.getGenerators())))
+
     PtoMPcx = P.morToD(MP) #This step tends to be very slow.
     if verbose:
         print("Computed PtoMPcx. Number of generators:"+repr(len(PtoMPcx.getGenerators())))
@@ -265,8 +271,8 @@ def involutiveCx(P,Q, mult_one = True, sanityTests = False, verbose = False):
             Id.addMorphism(gen_from, new_gen_to, gen_from.prev_meaning[gen_to])
     if sanityTests:
         #Sanity checks; should always pass
-        assert isQIcx(Id)
-        assert isQIcx(iota)
+        assert Id.isQI()
+        assert iota.isQI()
     idPlusIota = Id.sum(iota)
     if verbose:
         print("Computed Id + iota")
@@ -276,13 +282,13 @@ def involutiveCx(P,Q, mult_one = True, sanityTests = False, verbose = False):
     mappingcone.simplify()
     return mappingcone
 
-def invOfDCov(str_input, verbose=False):
+def invOfDCov(str_input, sanityTests=False, verbose=False):
     """Compute HF^ and HFI^ of the branched double cover of given knot.
     Input has the same form as readBridgePresentation (which can be found in data/input_12_FL.txt)"""
     bridgePres = readBridgePresentation(str_input)
-    return invOfDCovSplit(str_input,len(bridgePres.braid_word),verbose)
+    return invOfDCovSplit(str_input,len(bridgePres.braid_word), sanityTests=sanityTests, verbose=verbose)
 
-def invOfDCovSplit(str_input, split_index, verbose=False):
+def invOfDCovSplit(str_input, split_index, sanityTests=False, verbose=False):
     """Compute HF^ and HFI^ of the branched double cover of given knot, 
     splitting the diagram after split_index crossings to compute the involutive complex.
     Input has the same form as readBridgePresentation (which can be found in data/input_12_FL.txt)"""
@@ -308,7 +314,7 @@ def invOfDCovSplit(str_input, split_index, verbose=False):
     cx.simplify()
     if verbose:
         print("HF = "+repr(len(cx))+". Working on IHF next.")
-    invcx = involutiveCx(P,Q)
+    invcx = involutiveCx(P,Q, sanityTests=sanityTests, verbose=verbose)
     return invcx
 
 

@@ -779,3 +779,20 @@ def identityDA(pmc):
         break
     dastr.registerHDiagram(getIdentityDiagram(pmc), base_gen)
     return dastr
+
+def augmentationDA(pmc):
+    """Returns the augmentation type DA structure, coming from the projection from the algebra to the span of the basic idempotents sending all non-idempotent elements to zero."""
+    alg = pmc.getAlgebra()
+    dastr = SimpleDAStructure(F2, alg, alg)
+    idems = pmc.getIdempotents()
+    idem_to_gen_map = {}
+    for i in range(len(idems)):
+        cur_gen = SimpleDAGenerator(dastr, idems[i], idems[i], i)
+        idem_to_gen_map[idems[i]] = cur_gen
+        dastr.addGenerator(cur_gen)
+    # Now add grading. Any generator can serve as base_gen
+    for gen in dastr.getGenerators():
+        base_gen = gen
+        break
+    dastr.registerHDiagram(getIdentityDiagram(pmc), base_gen)
+    return dastr
