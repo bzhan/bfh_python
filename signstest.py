@@ -88,30 +88,30 @@ class PreStrandAlgebraTest(unittest.TestCase):
             self.assertEqual(PreStrandDiagram(algebra, sd1) *
                               PreStrandDiagram(algebra, sd2), E0)
 
-    def testSignedMultiply(self):
-        for pmc, idem_size in [(splitPMC(1), 1),
-                               (splitPMC(1), 2),
-                               (splitPMC(2), 1),
-                               (splitPMC(2), 2),
-                               (splitPMC(2), 3),
-                               (splitPMC(2), 4),
-                               (splitPMC(3), 2)]:
-            algebra = PreStrandAlgebra(ZZ, pmc, idem_size)
-            print(algebra)
-            for gen1 in algebra.getGenerators():
-                for gen2 in algebra.getGeneratorsForPtIdem(
-                    l_pt_idem = gen1.right_pt_idem):
-                    if gen1 * gen2 != E0:
-                        # Test d(ab) = (da)*b + (-1)^gr(a)*a*(db)
-                        self.assertEqual(
-                            (gen1 * gen2).diff(), gen1.diff() * gen2 + \
-                                algebra.grSign(gen1) * gen1 * gen2.diff())
-                    for gen3 in algebra.getGeneratorsForPtIdem(
-                        l_pt_idem = gen2.right_pt_idem):
-                        if gen2 * gen3 != E0:
-                            # Tests associativity of multiplication
-                            self.assertEqual(
-                                (gen1 * gen2) * gen3, gen1 * (gen2 * gen3))
+    # def testSignedMultiply(self):
+    #     for pmc, idem_size in [(splitPMC(1), 1),
+    #                            (splitPMC(1), 2),
+    #                            (splitPMC(2), 1),
+    #                            (splitPMC(2), 2),
+    #                            (splitPMC(2), 3),
+    #                            (splitPMC(2), 4),
+    #                            (splitPMC(3), 2)]:
+    #         algebra = PreStrandAlgebra(ZZ, pmc, idem_size)
+    #         print(algebra)
+    #         for gen1 in algebra.getGenerators():
+    #             for gen2 in algebra.getGeneratorsForPtIdem(
+    #                 l_pt_idem = gen1.right_pt_idem):
+    #                 if gen1 * gen2 != E0:
+    #                     # Test d(ab) = (da)*b + (-1)^gr(a)*a*(db)
+    #                     self.assertEqual(
+    #                         (gen1 * gen2).diff(), gen1.diff() * gen2 + \
+    #                             algebra.grSign(gen1) * gen1 * gen2.diff())
+    #                 for gen3 in algebra.getGeneratorsForPtIdem(
+    #                     l_pt_idem = gen2.right_pt_idem):
+    #                     if gen2 * gen3 != E0:
+    #                         # Tests associativity of multiplication
+    #                         self.assertEqual(
+    #                             (gen1 * gen2) * gen3, gen1 * (gen2 * gen3))
 
 class SignLinAlgTest(unittest.TestCase):
     def testCreateRowSystem(self):

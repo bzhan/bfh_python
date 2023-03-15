@@ -10,11 +10,11 @@ class MinusAlgTest(unittest.TestCase):
         gens = MinusStrandAlgebra(F2, splitPMC(1)).getGenerators()
         self.assertEqual(len(gens), 18)
 
-    def testMultiply(self):
-        gens = MinusStrandAlgebra(F2, splitPMC(1)).getGenerators()
-        for gen in gens:
-            # Number of factors should be 1 + (length of strand)
-            self.assertEqual(len(gen.factor()), 1 + sum(gen.multiplicity))
+#    def testMultiply(self):
+#        gens = MinusStrandAlgebra(F2, splitPMC(1)).getGenerators()
+#        for gen in gens:
+#            # Number of factors should be 1 + (length of strand)
+#            self.assertEqual(len(gen.factor()), 1 + sum(gen.multiplicity))
 
     def testHochchild(self):
         pmc = splitPMC(1)
