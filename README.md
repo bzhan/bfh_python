@@ -45,8 +45,8 @@ factor of 3.5 under macOS with an Intel (x86) processor.
 # Underlying theory
 
 Based on a previous program (written in Sage) by Robert Lipshitz,
-Peter Ozsvath and Dylan Thurston, which is [available on the former's
-webpage](https://pages.uoregon.edu/lipshitz/Code/).
+Peter Ozsvath and Dylan Thurston, which is
+[available on the former's webpage](https://pages.uoregon.edu/lipshitz/Code/).
 
 Implements various algorithms described in the following papers of
 R. Lipshitz, P. Ozsvath, and D. Thurston
