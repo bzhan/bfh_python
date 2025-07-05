@@ -25,4 +25,4 @@ from . import pmc
 from . import signs
 from . import utility
 
-__version__ = '1.0a1'
+__version__ = '1.0b1'

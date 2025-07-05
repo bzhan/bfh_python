@@ -171,7 +171,7 @@ class SpecSeqTest(unittest.TestCase):
                    "12n_0553", # 4-bridge
         ]
         with data_file('input_12_FL.txt') as input_file:
-            with data_file('output_12.txt') as check_file:
+            with data_file('output_12_sseq.txt') as check_file:
                 while True:
                     # Read input
                     line = input_file.readline()

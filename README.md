@@ -1,4 +1,4 @@
-# Computations in Bordered Heegaard Floer Homology
+# Bordered Heegaard Floer Homology
 
 This Python module does computations in Bordered Heegaard Floer
 Homology.  To install, do
@@ -14,21 +14,39 @@ and then start Python and do
 >>> right_closure = (6,3,2,5,4,1)
 >>> pretzel = BridgePresentation(name, left_closure, braid, right_closure)
 >>> pretzel.getHF()
-```
+(compose Mor 28) 1,2,3,4,7,8,11,12,15,14,10,13,16,15,11,14,17,16,14,17,20,19,17,20,23,22,20,23,26
+ Chain complex.
+d(g1) = 0
 
-For more on how to use it, see [the documentation by Robert
+```
+For more on how to use `bfh_python`, see [the documentation by Robert
 Lipshitz](https://pages.uoregon.edu/lipshitz/bfh/).
 
-After installing `bfh_python` You can run the whole test suite by
+# Test suite
+
+To makes sure everything is working, after installing `bfh_python` you
+can do
 ```
 python -m bfh_python.test
 ```
+Please note that the testing of the final `braids` module can take
+more than 20 minutes.
+
+# Performance
+
+The module `bfh_python` is pure Python and is largely self-contained
+with no dependencies outside a few modules in Python's standard
+library.  As such it can be run with [PyPy](https://pypy.org/), an
+alternate Python implementation with a Just-in-Time (JIT) compiler.
+On the test suite for `bfh_python`, PyPy bested Python 3.13 by a
+factor of 3.5 under macOS with an Intel (x86) processor.
+
 
 # Underlying theory
 
 Based on a previous program (written in Sage) by Robert Lipshitz,
 Peter Ozsvath and Dylan Thurston, which is [available on the former's
-webpage]( www.math.columbia.edu/~lipshitz/research.html).
+webpage](https://pages.uoregon.edu/lipshitz/Code/).
 
 Implements various algorithms described in the following papers of
 R. Lipshitz, P. Ozsvath, and D. Thurston
@@ -48,7 +66,8 @@ as well as other (not yet published) work.
 
 # License
 
-Copyright (C) 2013  Bohua Zhan
+Copyright (C) 2013 by Bohua Zhan.
+
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
 Foundation; either version 2 of the License, or (at your option) any later
