@@ -1,3 +1,7 @@
 *~
 *.pyc
 *.pyo
+build/
+dist/
+bfh_python.egg-info
+.DS_Store

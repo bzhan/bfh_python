@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bfh_python"
+dynamic = ["version"]
+requires-python = ">=3.7"
+description = "Computations in Bordered Heegaard Floer Homology"
+authors = [
+  { name="Bohua Zhan", email="bzhan@ios.ac.cn" },
+  { name="Robert Lipshitz", email="lipshitz@uoregon.edu"},
+]
+
+readme = "README.md"
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)",
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "bfh_python.__version__"}
+
+[tool.setuptools.package-data]
+"bfh_python.data" = ["*.txt", "*.data"]
+
+[project.urls]
+Homepage = "https://github.com/bzhan/bfh_python"
+Issues = "https://github.com/bzhan/bfh_python/issues"
+
+[tool.cibuildwheel]
+test-command = "python -m bfh_python.test"
