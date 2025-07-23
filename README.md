@@ -3,7 +3,7 @@
 This Python module does computations in Bordered Heegaard Floer
 Homology.  To install, do
 ```
-python -m pip install https://github.com/NathanDunfield/bfh_python/archive/master.zip
+python -m pip install https://github.com/bzhan/bfh_python/archive/packaged.zip
 ```
 and then start Python and do
 ```
