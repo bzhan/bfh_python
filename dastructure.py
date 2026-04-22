@@ -585,7 +585,7 @@ class SimpleDAStructure(DAStructure):
 
     def addDelta(self, gen_from, gen_to, coeff_d, coeffs_a, ring_coeff):
         """Add ring_coeff * (coeff_d * gen_to) to the delta of gen_from, with
-        coeffs_a as A-side inputs. The arguments gen_form, gen_to, and coeff_d
+        coeffs_a as A-side inputs. The arguments gen_from, gen_to, and coeff_d
         should be generators, and coeff_a should be a list of generators.
 
         """
